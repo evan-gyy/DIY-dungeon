@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>武林传说 · WuxiaDungeon</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- 背景粒子 -->
+<canvas id="bg-canvas"></canvas>
+
+<!-- 音频控制 -->
+<button id="audio-control">♪ 音乐</button>
+
+<!-- BGM -->
+<audio id="bgm" src="music/mainmusic2.mp3" loop></audio>
+
+<!-- =====================================================
+     屏幕1：主菜单
+===================================================== -->
+<div id="screen-main" class="screen active">
+  <div class="game-title">武 林 传 说</div>
+  <div class="game-subtitle">江湖 · 恩怨 · 传承</div>
+  <nav class="main-menu">
+    <button id="btn-newgame" class="btn">开 始 新 游</button>
+    <button id="btn-continue" class="btn">继 续 冒 险</button>
+  </nav>
+  <div style="position:absolute;bottom:20px;font-size:11px;color:var(--text-dim);letter-spacing:2px;">宝可梦 × 暗黑地牢 × 武侠世界</div>
+</div>
+
+<!-- =====================================================
+     屏幕S：存档选择
+===================================================== -->
+<div id="screen-saveselect" class="screen">
+  <div class="panel" style="width:560px;max-width:95vw;">
+    <div class="title-deco"><h2>选择存档</h2></div>
+    <p style="font-size:13px;color:var(--text-dim);letter-spacing:1px;margin-bottom:20px;">点击空槽位可新建存档，点击已有存档可继续冒险。</p>
+    <div id="saveselect-slots" class="saveselect-grid"></div>
+    <div style="text-align:center;margin-top:20px;">
+      <button class="btn btn-sm btn-danger" onclick="closeSaveSelect()">返 回</button>
+    </div>
+  </div>
+</div>
+
+<!-- =====================================================
+     屏幕2：角色创建
+===================================================== -->
+<div id="screen-create" class="screen">
+  <div class="create-container">
+    <!-- 左：立绘+门派选择 -->
+    <div class="panel">
+      <div class="title-deco"><h2>选择立绘</h2></div>
+      <div id="char-select-grid" class="char-select-grid"></div>
+
+      <div class="title-deco" style="margin-top:20px;"><h2>选择门派</h2></div>
+      <div id="sect-grid" class="sect-grid"></div>
+    </div>
+
+    <!-- 右：名字+确认 -->
+    <div class="panel" style="display:flex;flex-direction:column;gap:20px;">
+      <div class="title-deco"><h2>命 名 立 志</h2></div>
+
+      <div>
+        <label class="form-label">江湖名号</label>
+        <input id="char-name-input" class="name-input" type="text" maxlength="10" placeholder="输入角色名字…">
+      </div>
+
+      <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border-dim);border-radius:6px;padding:14px;min-height:80px;">
+        <div style="font-size:12px;color:var(--text-dim);letter-spacing:1px;margin-bottom:6px;">初始属性加成</div>
+        <div id="sect-preview" style="font-size:12px;color:var(--text-light);line-height:1.8;">
+          请选择门派以查看加成说明…
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:auto;">
+        <button id="btn-confirm-create" class="btn">踏 入 江 湖</button>
+        <button id="btn-back-create" class="btn btn-danger btn-sm">返 回</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- =====================================================
+     屏幕3：营地
+===================================================== -->
+<div id="screen-camp" class="screen">
+  <div class="camp-layout">
+    <!-- 顶部状态栏 -->
+    <div class="camp-topbar">
+      <span class="char-name" id="topbar-name">—</span>
+      <div class="stat-bar">
+        <label>气血</label>
+        <div class="bar-track"><div class="bar-fill-hp" id="bar-hp" style="width:100%"></div></div>
+        <span class="bar-val" id="hp-val">200/200</span>
+      </div>
+      <div class="stat-bar">
+        <label>内力</label>
+        <div class="bar-track"><div class="bar-fill-mp" id="bar-mp" style="width:100%"></div></div>
+        <span class="bar-val" id="mp-val">100/100</span>
+      </div>
+      <span class="gold" id="gold-val">💰 50 两</span>
+      <button id="btn-camp-save" class="btn btn-sm" onclick="doSaveGame()" title="保存当前进度">💾 存 档</button>
+      <button id="btn-camp-rest" class="btn btn-sm" onclick="doRest()" title="休息恢复气血与内力">🌙 休 息</button>
+      <button id="btn-camp-back" class="btn btn-sm" style="margin-left:8px;">返 回 主 界</button>
+    </div>
+
+    <!-- 左侧导航 -->
+    <nav class="camp-nav">
+      <button class="camp-nav-btn" data-tab="attr"><span class="nav-icon">📊</span>角色属性</button>
+      <button class="camp-nav-btn" data-tab="bag"><span class="nav-icon">📦</span>随身包裹</button>
+      <button class="camp-nav-btn" data-tab="skill"><span class="nav-icon">⚔️</span>技能配置</button>
+      <button class="camp-nav-btn" data-tab="learn"><span class="nav-icon">📚</span>拜师学功</button>
+      <button class="camp-nav-btn" data-tab="npc"><span class="nav-icon">💬</span>故人相逢</button>
+      <button class="camp-nav-btn" data-tab="map"><span class="nav-icon">🗺️</span>踏 入 江 湖</button>
+    </nav>
+
+    <!-- 中央内容区 -->
+    <div class="camp-content" id="camp-content"></div>
+
+    <!-- 右侧角色预览 -->
+    <aside class="camp-sidebar">
+      <img id="sidebar-char-img" class="sidebar-char-img" src="" alt="立绘">
+      <div class="sidebar-char-name" id="sidebar-name">—</div>
+      <div class="sidebar-sect" id="sidebar-sect">—</div>
+      <div class="sidebar-stats" id="sidebar-stats"></div>
+    </aside>
+  </div>
+</div>
+
+<!-- =====================================================
+     屏幕4：传功长老·学功
+===================================================== -->
+<div id="screen-learn" class="screen">
+  <div style="position:absolute;top:14px;left:18px;">
+    <button id="btn-back-learn" class="btn btn-sm">← 返 回 营 地</button>
+  </div>
+  <div class="learn-layout panel">
+    <!-- 左：传功长老列表 -->
+    <div>
+      <div class="title-deco"><h2>传功长老</h2></div>
+      <div id="elder-list" class="elder-list"></div>
+    </div>
+
+    <!-- 右：技能详情 -->
+    <div id="learn-detail" class="learn-detail panel" style="border:none;padding:0;background:transparent;">
+      <div style="color:var(--text-dim);font-size:14px;padding:40px;text-align:center;letter-spacing:2px;">← 选择传功长老</div>
+    </div>
+  </div>
+</div>
+
+<!-- =====================================================
+     屏幕5：NPC对话
+===================================================== -->
+<div id="screen-dialog" class="screen">
+  <div class="dialog-box panel">
+    <div class="dialog-npc-area">
+      <img id="dialog-npc-img" class="dialog-npc-img" src="" alt="NPC">
+      <div class="dialog-text-area">
+        <div class="dialog-speaker" id="dialog-speaker">—</div>
+        <div class="dialog-content" id="dialog-content"></div>
+        <div class="dialog-choices" id="dialog-choices"></div>
+      </div>
+    </div>
+    <button id="btn-close-dialog" class="btn btn-danger btn-sm" style="margin-top:14px;align-self:flex-end;">关 闭 对 话</button>
+  </div>
+</div>
+
+<!-- =====================================================
+     屏幕6：选关（出发）
+===================================================== -->
+<div id="screen-depart" class="screen">
+  <div class="panel" style="width:560px;max-width:95vw;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div class="title-deco" style="flex:1;margin-bottom:0;"><h2>踏 入 江 湖</h2></div>
+      <button class="btn btn-sm btn-danger" onclick="enterCamp()">← 返 回</button>
+    </div>
+    <p style="font-size:13px;color:var(--text-dim);letter-spacing:1px;margin-bottom:4px;">选择遭遇难度，迎战江湖豪客。</p>
+    <p style="font-size:12px;color:#e74c3c;margin-bottom:16px;">⚠ 战斗失败将导致气血剩余1点、内力归零，请确认已备好药品与技能。</p>
+    <div class="encounter-grid" id="encounter-grid"></div>
+  </div>
+</div>
+
+<!-- =====================================================
+     屏幕7：战斗
+===================================================== -->
+<div id="screen-battle" class="screen">
+  <div class="battle-layout">
+
+    <!-- 战场区 -->
+    <div class="battle-arena">
+      <!-- 玩家 -->
+      <div class="battle-player-side">
+        <div class="battle-player-img-wrap">
+          <img id="battle-player-img" class="battle-player-img" src="" alt="玩家">
+        </div>
+        <div class="battle-char-name" id="battle-player-name">—</div>
+        <div class="hp-block" style="width:220px;">
+          <div class="hp-label"><span class="hl">气血</span><span class="hv" id="battle-player-hp-val">—</span></div>
+          <div class="hp-track"><div class="hp-fill-p" id="battle-player-hp-bar" style="width:100%"></div></div>
+          <div class="mp-track"><div class="mp-fill-p" id="battle-player-mp-bar" style="width:100%"></div></div>
+          <div style="display:flex;justify-content:flex-end;margin-top:2px;">
+            <span style="font-size:11px;color:#5dade2;" id="battle-player-mp-val">—</span>
+          </div>
+        </div>
+        <div class="status-badges" id="battle-player-status"></div>
+      </div>
+
+      <!-- 中央VS -->
+      <div class="battle-vs">
+        <div class="battle-vs-txt">VS</div>
+        <div class="battle-round" id="battle-round-info">等待出手…</div>
+      </div>
+
+      <!-- 敌人 -->
+      <div class="battle-enemy-side">
+        <div class="battle-enemy-avatar" id="battle-enemy-icon">👊</div>
+        <div class="battle-enemy-name" id="battle-enemy-name">—</div>
+        <div class="battle-enemy-tier" id="battle-enemy-tier">—</div>
+        <div class="hp-block" style="width:220px;">
+          <div class="hp-label"><span class="hl">气血</span><span class="hv" id="battle-enemy-hp-val">—</span></div>
+          <div class="hp-track"><div class="hp-fill-e" id="battle-enemy-hp-bar" style="width:100%"></div></div>
+        </div>
+        <div class="status-badges" id="battle-enemy-status"></div>
+      </div>
+    </div>
+
+    <!-- 日志区 -->
+    <div class="battle-log-area" id="battle-log"></div>
+
+    <!-- 技能栏 -->
+    <div class="battle-skill-bar-wrap">
+      <div class="battle-skill-bar-label">选择出招 ▼</div>
+      <div id="skill-bar"></div>
+    </div>
+
+  </div>
+
+  <!-- 战斗结果遮罩 -->
+  <div id="battle-result-overlay" class="hidden">
+    <div class="battle-result-box panel">
+      <div id="battle-result-title">—</div>
+      <div id="battle-result-detail">—</div>
+      <button id="battle-result-btn" class="btn">返回营地</button>
+    </div>
+  </div>
+</div>
+
+<!-- 消息提示 -->
+<div id="toast"></div>
+
+<!-- 新手引导界面 -->
+<div id="mentor-guide" class="overlay-panel hidden">
+  <div class="mentor-card panel">
+    <div class="mentor-header">
+      <img id="mentor-avatar" src="picture/NPC/武当派-张三丰.png" alt="张三丰">
+      <div class="mentor-info">
+        <div class="mentor-name">张三丰</div>
+        <div class="mentor-title">武当派祖师</div>
+      </div>
+      <button class="mentor-close-btn" onclick="closeMentorGuide()">✕</button>
+    </div>
+    <div class="mentor-body">
+      <div class="mentor-step-label" id="mentor-step-label">第一步</div>
+      <div class="mentor-text" id="mentor-text"></div>
+      <div class="mentor-actions" id="mentor-actions"></div>
+    </div>
+  </div>
+</div>
+
+<!-- 踏入江湖前技能提醒 -->
+<div id="skill-reminder" class="overlay-panel hidden">
+  <div class="mentor-card panel">
+    <div class="mentor-header">
+      <img src="picture/NPC/武当派-张三丰.png" alt="张三丰">
+      <div class="mentor-info">
+        <div class="mentor-name">张三丰</div>
+        <div class="mentor-title">武当派祖师</div>
+      </div>
+    </div>
+    <div class="mentor-body">
+      <div class="mentor-text" id="skill-reminder-text"></div>
+      <div class="mentor-actions" id="skill-reminder-actions"></div>
+    </div>
+  </div>
+</div>
+
+<!-- JS -->
+<script src="js/data.js"></script>
+<script src="js/battle.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
