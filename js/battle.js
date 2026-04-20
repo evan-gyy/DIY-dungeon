@@ -638,7 +638,7 @@ function startBattle(enemyId) {
   }
 
   showScreen('battle');
-  switchMusic('music/battlemusic1.mp3');
+  switchMusic('https://pub-cdb8eae73d584ab0b7d006c460518c76.r2.dev/music/battlemusic1.mp3');
 
   // 渲染敌人信息
   setEl('battle-enemy-name', el => el.textContent = enemy.name);

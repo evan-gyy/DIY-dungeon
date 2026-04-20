@@ -18,7 +18,7 @@ const ELDERS = [
     id: 'wudang_elder',
     sect: 'wudang',
     name: '武当传功长老',
-    img: 'picture/NPC/武当派-传功长老.png',
+    img: 'https://pub-cdb8eae73d584ab0b7d006c460518c76.r2.dev/picture/NPC/武当派-传功长老.png',
     intro: '老夫修炼武当内功四十载，愿将毕生所学倾囊相授，只求武当之名传遍江湖。',
     skills: ['taiji', 'mianzhang', 'zixiao', 'wudang_sword'],
   },
@@ -26,7 +26,7 @@ const ELDERS = [
     id: 'emei_elder',
     sect: 'emei',
     name: '峨眉传功长老',
-    img: 'picture/NPC/峨眉派-传功长老.png',
+    img: 'https://pub-cdb8eae73d584ab0b7d006c460518c76.r2.dev/picture/NPC/峨眉派-传功长老.png',
     intro: '峨眉剑法与掌法相辅相成，女弟子习之可发挥百分百威力，男子亦有八成之功。',
     skills: ['emei_sword', 'liing_palm', 'emei_poison', 'hundred_birds'],
   },
@@ -34,7 +34,7 @@ const ELDERS = [
     id: 'shaolin_elder',
     sect: 'shaolin',
     name: '少林传功长老',
-    img: 'picture/NPC/少林派-传功长老.png',
+    img: 'https://pub-cdb8eae73d584ab0b7d006c460518c76.r2.dev/picture/NPC/少林派-传功长老.png',
     intro: '阿弥陀佛，少林七十二绝技非一日之功，习武先修心，心正则功成。',
     skills: ['vajra_palm', 'luohan_fist', '72_arts', 'yijin_jing'],
   },
@@ -42,7 +42,7 @@ const ELDERS = [
     id: 'beggar_elder',
     sect: 'beggar',
     name: '丐帮传功长老',
-    img: 'picture/NPC/丐帮-传功长老.png',
+    img: 'https://pub-cdb8eae73d584ab0b7d006c460518c76.r2.dev/picture/NPC/丐帮-传功长老.png',
     intro: '打狗棒法乃帮主秘传，降龙十八掌更是震古烁今，老夫只传有缘人。',
     skills: ['stick_art', 'dragon_palm', 'beggar_fist', 'mud_walk'],
   },
@@ -218,7 +218,7 @@ const SKILLS = {
 const NPC_DIALOGS = {
   'wudang_zhangsan': {
     name: '张三丰',
-    img: 'picture/NPC/武当派-张三丰.png',
+    img: 'https://pub-cdb8eae73d584ab0b7d006c460518c76.r2.dev/picture/NPC/武当派-张三丰.png',
     sect: '武当派掌门',
     dialogs: {
       start: {
@@ -288,7 +288,7 @@ const NPC_DIALOGS = {
 
   'emei_miejue': {
     name: '灭绝师太',
-    img: 'picture/NPC/峨眉派-灭绝师太.png',
+    img: 'https://pub-cdb8eae73d584ab0b7d006c460518c76.r2.dev/picture/NPC/峨眉派-灭绝师太.png',
     sect: '峨眉派掌门',
     dialogs: {
       start: {
@@ -328,7 +328,7 @@ const NPC_DIALOGS = {
 
   'shaolin_kongwen': {
     name: '方丈空闻',
-    img: 'picture/NPC/少林派-方丈空闻.png',
+    img: 'https://pub-cdb8eae73d584ab0b7d006c460518c76.r2.dev/picture/NPC/少林派-方丈空闻.png',
     sect: '少林寺方丈',
     dialogs: {
       start: {
@@ -362,7 +362,7 @@ const NPC_DIALOGS = {
 
   'beggar_hong': {
     name: '洪七公',
-    img: 'picture/NPC/丐帮-洪七公.png',
+    img: 'https://pub-cdb8eae73d584ab0b7d006c460518c76.r2.dev/picture/NPC/丐帮-洪七公.png',
     sect: '丐帮帮主',
     dialogs: {
       start: {
@@ -397,7 +397,7 @@ const NPC_DIALOGS = {
 
   'huashan_master': {
     name: '华山掌门',
-    img: 'picture/NPC/华山派-掌门.png',
+    img: 'https://pub-cdb8eae73d584ab0b7d006c460518c76.r2.dev/picture/NPC/华山派-掌门.png',
     sect: '华山派掌门',
     dialogs: {
       start: {
@@ -433,7 +433,7 @@ const NPC_DIALOGS = {
 
   'demon_master': {
     name: '魔教教主',
-    img: 'picture/NPC/魔教-教主.png',
+    img: 'https://pub-cdb8eae73d584ab0b7d006c460518c76.r2.dev/picture/NPC/魔教-教主.png',
     sect: '魔教',
     dialogs: {
       start: {

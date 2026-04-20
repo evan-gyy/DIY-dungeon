@@ -343,10 +343,10 @@ function renderCreateScreen() {
   createState = { charId: null, sect: null };
 
   const chars = [
-    { id: 'male_good',   label: '男·正派', img: 'picture/maincharacter/male_good.png' },
-    { id: 'male_evil',   label: '男·邪派', img: 'picture/maincharacter/male_evil.png' },
-    { id: 'female_good', label: '女·正派', img: 'picture/maincharacter/female_good.png' },
-    { id: 'female_evil', label: '女·邪派', img: 'picture/maincharacter/female_evil.png' },
+    { id: 'male_good',   label: '男·正派', img: 'https://pub-cdb8eae73d584ab0b7d006c460518c76.r2.dev/picture/maincharacter/male_good.png' },
+    { id: 'male_evil',   label: '男·邪派', img: 'https://pub-cdb8eae73d584ab0b7d006c460518c76.r2.dev/picture/maincharacter/male_evil.png' },
+    { id: 'female_good', label: '女·正派', img: 'https://pub-cdb8eae73d584ab0b7d006c460518c76.r2.dev/picture/maincharacter/female_good.png' },
+    { id: 'female_evil', label: '女·邪派', img: 'https://pub-cdb8eae73d584ab0b7d006c460518c76.r2.dev/picture/maincharacter/female_evil.png' },
   ];
 
   // 角色立绘
@@ -398,7 +398,7 @@ function confirmCreate() {
   G.player = {
     name,
     charId: createState.charId,
-    charImg: `picture/maincharacter/${createState.charId}.png`,
+    charImg: `https://pub-cdb8eae73d584ab0b7d006c460518c76.r2.dev/picture/maincharacter/${createState.charId}.png`,
     sect: createState.sect,
     ...stats,
     maxMp: stats.maxMp || 100,  // 兼容旧存档
@@ -805,12 +805,12 @@ function renderLearnEntrance(content) {
 // ---- NPC对话面板 ----
 function renderNpcPanel(content) {
   const npcs = [
-    { id: 'wudang_zhangsan', name: '武当-张三丰',   sub: '武当派掌门',  img: 'picture/NPC/武当派-张三丰.png' },
-    { id: 'emei_miejue',     name: '峨眉-灭绝师太', sub: '峨眉派掌门',  img: 'picture/NPC/峨眉派-灭绝师太.png' },
-    { id: 'shaolin_kongwen', name: '少林-空闻方丈', sub: '少林寺方丈',  img: 'picture/NPC/少林派-方丈空闻.png' },
-    { id: 'beggar_hong',     name: '丐帮-洪七公',   sub: '丐帮帮主',    img: 'picture/NPC/丐帮-洪七公.png' },
-    { id: 'huashan_master',  name: '华山-掌门',     sub: '华山派掌门',  img: 'picture/NPC/华山派-掌门.png' },
-    { id: 'demon_master',    name: '魔教-教主',     sub: '魔教',        img: 'picture/NPC/魔教-教主.png' },
+    { id: 'wudang_zhangsan', name: '武当-张三丰',   sub: '武当派掌门',  img: 'https://pub-cdb8eae73d584ab0b7d006c460518c76.r2.dev/picture/NPC/武当派-张三丰.png' },
+    { id: 'emei_miejue',     name: '峨眉-灭绝师太', sub: '峨眉派掌门',  img: 'https://pub-cdb8eae73d584ab0b7d006c460518c76.r2.dev/picture/NPC/峨眉派-灭绝师太.png' },
+    { id: 'shaolin_kongwen', name: '少林-空闻方丈', sub: '少林寺方丈',  img: 'https://pub-cdb8eae73d584ab0b7d006c460518c76.r2.dev/picture/NPC/少林派-方丈空闻.png' },
+    { id: 'beggar_hong',     name: '丐帮-洪七公',   sub: '丐帮帮主',    img: 'https://pub-cdb8eae73d584ab0b7d006c460518c76.r2.dev/picture/NPC/丐帮-洪七公.png' },
+    { id: 'huashan_master',  name: '华山-掌门',     sub: '华山派掌门',  img: 'https://pub-cdb8eae73d584ab0b7d006c460518c76.r2.dev/picture/NPC/华山派-掌门.png' },
+    { id: 'demon_master',    name: '魔教-教主',     sub: '魔教',        img: 'https://pub-cdb8eae73d584ab0b7d006c460518c76.r2.dev/picture/NPC/魔教-教主.png' },
   ];
   let html = `<div class="title-deco"><h2>营地·故人相逢</h2></div>
     <p style="font-size:13px;color:var(--text-dim);letter-spacing:1px;margin-bottom:16px;">与各大门派的重要人物交谈，推进剧情，提升好感。</p>
@@ -1037,7 +1037,7 @@ window.addEventListener('DOMContentLoaded', () => {
   // 营地右上角返回
   document.getElementById('btn-camp-back').addEventListener('click', () => {
     showScreen('main');
-    switchMusic('music/mainmusic2.mp3');
+    switchMusic('https://pub-cdb8eae73d584ab0b7d006c460518c76.r2.dev/music/mainmusic2.mp3');
   });
 
   // 尝试自动播放BGM
@@ -1233,7 +1233,7 @@ function enterCamp() {
 
   // 注意：不重置 mentorShownThisSession —— 依赖 tutorialDone=true 永久屏蔽
   showScreen('camp');
-  switchMusic('music/mainmusic2.mp3');
+  switchMusic('https://pub-cdb8eae73d584ab0b7d006c460518c76.r2.dev/music/mainmusic2.mp3');
   renderCampTopbar();
   renderSidebar();
 
