@@ -8,7 +8,7 @@
 </head>
 <body>
 
-<!-- 背景粒子 -->
+<!-- 背景粒子（主菜单用） -->
 <canvas id="bg-canvas"></canvas>
 
 <!-- 音频控制 -->
@@ -49,13 +49,10 @@
 ===================================================== -->
 <div id="screen-create" class="screen">
   <div class="create-container">
-    <!-- 左：立绘+门派选择 -->
+    <!-- 左：立绘选择 -->
     <div class="panel">
       <div class="title-deco"><h2>选择立绘</h2></div>
       <div id="char-select-grid" class="char-select-grid"></div>
-
-      <div class="title-deco" style="margin-top:20px;"><h2>选择门派</h2></div>
-      <div id="sect-grid" class="sect-grid"></div>
     </div>
 
     <!-- 右：名字+确认 -->
@@ -67,18 +64,47 @@
         <input id="char-name-input" class="name-input" type="text" maxlength="10" placeholder="输入角色名字…">
       </div>
 
-      <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border-dim);border-radius:6px;padding:14px;min-height:80px;">
-        <div style="font-size:12px;color:var(--text-dim);letter-spacing:1px;margin-bottom:6px;">初始属性加成</div>
-        <div id="sect-preview" style="font-size:12px;color:var(--text-light);line-height:1.8;">
-          请选择门派以查看加成说明…
-        </div>
-      </div>
-
       <div style="display:flex;flex-direction:column;gap:10px;margin-top:auto;">
         <button id="btn-confirm-create" class="btn">踏 入 江 湖</button>
         <button id="btn-back-create" class="btn btn-danger btn-sm">返 回</button>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- =====================================================
+     屏幕T：电影序列（开场剧情）
+===================================================== -->
+<div id="screen-story" class="screen">
+  <!-- 全屏背景 -->
+  <div id="story-bg" class="story-bg"></div>
+  <!-- 叙事文字层 -->
+  <div id="story-overlay" class="story-overlay">
+    <!-- 中央对话框 -->
+    <div id="story-dialogue-box" class="story-dialogue-box">
+      <!-- 旁白模式 -->
+      <div id="story-narration-mode" class="story-narration-mode hidden">
+        <div class="story-narration-label">旁白</div>
+        <div id="story-narration-text" class="story-narration-text"></div>
+      </div>
+      <!-- 人物对话模式 -->
+      <div id="story-dialogue-mode" class="story-dialogue-mode hidden">
+        <div class="story-dialogue-left">
+          <div class="story-speaker-name" id="story-speaker-name">—</div>
+          <div id="story-dialogue-text" class="story-dialogue-text"></div>
+          <div id="story-choices-area" class="story-choices-area"></div>
+        </div>
+        <div class="story-dialogue-right">
+          <img id="story-char-portrait" class="story-char-portrait" src="" alt="">
+        </div>
+      </div>
+    </div>
+    <!-- 继续提示 -->
+    <div id="story-continue-hint" class="story-continue-hint hidden">
+      <span>点击继续 ▾</span>
+    </div>
+    <!-- 跳过按钮 -->
+    <button id="btn-skip-story" class="btn btn-sm story-skip-btn" onclick="skipStoryIntro()">跳过序幕</button>
   </div>
 </div>
 
@@ -101,6 +127,7 @@
         <span class="bar-val" id="mp-val">100/100</span>
       </div>
       <span class="gold" id="gold-val">💰 50 两</span>
+      <button id="btn-camp-adventure" class="camp-adventure-btn" onclick="showScreen('depart');document.getElementById('depart-content').innerHTML='';renderDepartPanel()" title="踏入江湖，历练武学">🗡️ 踏 入 江 湖</button>
       <button id="btn-camp-save" class="btn btn-sm" onclick="doSaveGame()" title="保存当前进度">💾 存 档</button>
       <button id="btn-camp-rest" class="btn btn-sm" onclick="doRest()" title="休息恢复气血与内力">🌙 休 息</button>
       <button id="btn-camp-back" class="btn btn-sm" style="margin-left:8px;">返 回 主 界</button>
@@ -108,89 +135,68 @@
 
     <!-- 左侧导航 -->
     <nav class="camp-nav">
+      <button class="camp-nav-btn" data-tab="story"><span class="nav-icon">💬</span>江湖往事</button>
       <button class="camp-nav-btn" data-tab="attr"><span class="nav-icon">📊</span>角色属性</button>
       <button class="camp-nav-btn" data-tab="bag"><span class="nav-icon">📦</span>随身包裹</button>
       <button class="camp-nav-btn" data-tab="skill"><span class="nav-icon">⚔️</span>技能配置</button>
-      <button class="camp-nav-btn" data-tab="learn"><span class="nav-icon">📚</span>拜师学功</button>
-      <button class="camp-nav-btn" data-tab="npc"><span class="nav-icon">💬</span>故人相逢</button>
-      <button class="camp-nav-btn" data-tab="map"><span class="nav-icon">🗺️</span>踏 入 江 湖</button>
     </nav>
 
     <!-- 中央内容区 -->
     <div class="camp-content" id="camp-content"></div>
 
-    <!-- 右侧角色预览 -->
-    <aside class="camp-sidebar">
-      <img id="sidebar-char-img" class="sidebar-char-img" src="" alt="立绘">
-      <div class="sidebar-char-name" id="sidebar-name">—</div>
-      <div class="sidebar-sect" id="sidebar-sect">—</div>
-      <div class="sidebar-stats" id="sidebar-stats"></div>
+    <!-- 右侧剧情NPC立绘 -->
+    <aside class="camp-sidebar" id="camp-sidebar">
+      <div id="sidebar-story-npc" class="sidebar-story-npc">
+        <img id="sidebar-npc-img" class="sidebar-npc-img" src="picture/female-main/柳清寒.png" alt="NPC">
+        <div class="sidebar-npc-name" id="sidebar-npc-name">墨绐青</div>
+        <div class="sidebar-npc-sub" id="sidebar-npc-sub">隐居村妇 / 前朝国师</div>
+      </div>
     </aside>
   </div>
 </div>
 
 <!-- =====================================================
-     屏幕4：传功长老·学功
-===================================================== -->
-<div id="screen-learn" class="screen">
-  <div style="position:absolute;top:14px;left:18px;">
-    <button id="btn-back-learn" class="btn btn-sm">← 返 回 营 地</button>
-  </div>
-  <div class="learn-layout panel">
-    <!-- 左：传功长老列表 -->
-    <div>
-      <div class="title-deco"><h2>传功长老</h2></div>
-      <div id="elder-list" class="elder-list"></div>
-    </div>
-
-    <!-- 右：技能详情 -->
-    <div id="learn-detail" class="learn-detail panel" style="border:none;padding:0;background:transparent;">
-      <div style="color:var(--text-dim);font-size:14px;padding:40px;text-align:center;letter-spacing:2px;">← 选择传功长老</div>
-    </div>
-  </div>
-</div>
-
-<!-- =====================================================
-     屏幕5：NPC对话
+     屏幕4：NPC对话（营地内互动，原screen-dialog）
 ===================================================== -->
 <div id="screen-dialog" class="screen">
-  <div class="dialog-box panel">
-    <div class="dialog-npc-area">
-      <img id="dialog-npc-img" class="dialog-npc-img" src="" alt="NPC">
-      <div class="dialog-text-area">
-        <div class="dialog-speaker" id="dialog-speaker">—</div>
-        <div class="dialog-content" id="dialog-content"></div>
-        <div class="dialog-choices" id="dialog-choices"></div>
-      </div>
+  <div class="dialog-fullscreen">
+    <!-- 背景（NPC立绘大图） -->
+    <img id="dialog-bg-portrait" class="dialog-bg-portrait" src="" alt="">
+    <div class="dialog-bg-overlay"></div>
+    <!-- 对话内容 -->
+    <div class="dialog-content-area">
+      <div class="dialog-narrator-label hidden" id="dialog-narrator-label">旁白</div>
+      <div class="dialog-speaker-name" id="dialog-speaker-name">—</div>
+      <div class="dialog-text-block" id="dialog-text-block"></div>
+      <div class="dialog-choices" id="dialog-choices"></div>
     </div>
-    <button id="btn-close-dialog" class="btn btn-danger btn-sm" style="margin-top:14px;align-self:flex-end;">关 闭 对 话</button>
+    <button id="btn-close-dialog" class="btn btn-sm dialog-close-btn hidden" onclick="closeDialog()">关 闭</button>
   </div>
 </div>
 
 <!-- =====================================================
-     屏幕6：选关（出发）
+     屏幕5：选关（踏入江湖）
 ===================================================== -->
 <div id="screen-depart" class="screen">
-  <div class="panel" style="width:560px;max-width:95vw;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-      <div class="title-deco" style="flex:1;margin-bottom:0;"><h2>踏 入 江 湖</h2></div>
-      <button class="btn btn-sm btn-danger" onclick="enterCamp()">← 返 回</button>
+  <div class="depart-layout">
+    <div class="depart-inner">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+        <div class="title-deco" style="flex:1;margin-bottom:0;"><h2>踏 入 江 湖</h2></div>
+        <button class="btn btn-sm btn-danger" onclick="enterCamp()">← 返 回 营 地</button>
+      </div>
+      <p style="font-size:13px;color:var(--text-dim);letter-spacing:1px;margin-bottom:4px;">行走江湖，磨砺剑法，积累经验与金两。</p>
+      <p style="font-size:12px;color:#e74c3c;margin-bottom:20px;">⚠ 战斗失败将导致气血剩余1点、内力归零，请确认已备好药品与技能。</p>
+      <div id="depart-content"></div>
     </div>
-    <p style="font-size:13px;color:var(--text-dim);letter-spacing:1px;margin-bottom:4px;">选择遭遇难度，迎战江湖豪客。</p>
-    <p style="font-size:12px;color:#e74c3c;margin-bottom:16px;">⚠ 战斗失败将导致气血剩余1点、内力归零，请确认已备好药品与技能。</p>
-    <div class="encounter-grid" id="encounter-grid"></div>
   </div>
 </div>
 
 <!-- =====================================================
-     屏幕7：战斗
+     屏幕6：战斗
 ===================================================== -->
 <div id="screen-battle" class="screen">
   <div class="battle-layout">
-
-    <!-- 战场区 -->
     <div class="battle-arena">
-      <!-- 玩家 -->
       <div class="battle-player-side">
         <div class="battle-player-img-wrap">
           <img id="battle-player-img" class="battle-player-img" src="" alt="玩家">
@@ -206,14 +212,10 @@
         </div>
         <div class="status-badges" id="battle-player-status"></div>
       </div>
-
-      <!-- 中央VS -->
       <div class="battle-vs">
         <div class="battle-vs-txt">VS</div>
         <div class="battle-round" id="battle-round-info">等待出手…</div>
       </div>
-
-      <!-- 敌人 -->
       <div class="battle-enemy-side">
         <div class="battle-enemy-avatar" id="battle-enemy-icon">👊</div>
         <div class="battle-enemy-name" id="battle-enemy-name">—</div>
@@ -225,19 +227,12 @@
         <div class="status-badges" id="battle-enemy-status"></div>
       </div>
     </div>
-
-    <!-- 日志区 -->
     <div class="battle-log-area" id="battle-log"></div>
-
-    <!-- 技能栏 -->
     <div class="battle-skill-bar-wrap">
       <div class="battle-skill-bar-label">选择出招 ▼</div>
       <div id="skill-bar"></div>
     </div>
-
   </div>
-
-  <!-- 战斗结果遮罩 -->
   <div id="battle-result-overlay" class="hidden">
     <div class="battle-result-box panel">
       <div id="battle-result-title">—</div>
@@ -249,42 +244,6 @@
 
 <!-- 消息提示 -->
 <div id="toast"></div>
-
-<!-- 新手引导界面 -->
-<div id="mentor-guide" class="overlay-panel hidden">
-  <div class="mentor-card panel">
-    <div class="mentor-header">
-      <img id="mentor-avatar" src="https://pub-cdb8eae73d584ab0b7d006c460518c76.r2.dev/picture/NPC/武当派-张三丰.png" alt="张三丰">
-      <div class="mentor-info">
-        <div class="mentor-name">张三丰</div>
-        <div class="mentor-title">武当派祖师</div>
-      </div>
-      <button class="mentor-close-btn" onclick="closeMentorGuide()">✕</button>
-    </div>
-    <div class="mentor-body">
-      <div class="mentor-step-label" id="mentor-step-label">第一步</div>
-      <div class="mentor-text" id="mentor-text"></div>
-      <div class="mentor-actions" id="mentor-actions"></div>
-    </div>
-  </div>
-</div>
-
-<!-- 踏入江湖前技能提醒 -->
-<div id="skill-reminder" class="overlay-panel hidden">
-  <div class="mentor-card panel">
-    <div class="mentor-header">
-      <img src="https://pub-cdb8eae73d584ab0b7d006c460518c76.r2.dev/picture/NPC/武当派-张三丰.png" alt="张三丰">
-      <div class="mentor-info">
-        <div class="mentor-name">张三丰</div>
-        <div class="mentor-title">武当派祖师</div>
-      </div>
-    </div>
-    <div class="mentor-body">
-      <div class="mentor-text" id="skill-reminder-text"></div>
-      <div class="mentor-actions" id="skill-reminder-actions"></div>
-    </div>
-  </div>
-</div>
 
 <!-- JS -->
 <script src="js/data.js"></script>
