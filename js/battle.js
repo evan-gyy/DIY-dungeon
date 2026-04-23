@@ -95,6 +95,12 @@ function tickStatus(unit, statusList, isPlayer) {
       logs.push(`💧 紫霄神功恢复 <span class="log-heal">${val}</span> 点内力`);
     }
 
+    if (s.type === 'regen_mp_pct') {
+      const val = Math.max(1, Math.floor((unit.maxMp || 100) * s.value / 100));
+      unit.mp = Math.min(unit.maxMp || 100, unit.mp + val);
+      logs.push(`♟️ 弈理心经恢复 <span class="log-heal">${val}</span> 点内力（${s.value}%）`);
+    }
+
     s.duration--;
     if (s.duration <= 0) {
       // buff消退提示（可选）
@@ -338,6 +344,25 @@ function startPlayerTurn() {
 function endBattle(result) {
   Battle.state = result === 'win' ? BattleState.WIN : BattleState.LOSE;
 
+  // ─── 注定战败检测 ───
+  // 如果敌人有 scriptedDefeat 标记且玩家战败，走特殊剧情分支
+  if (result !== 'win' && Battle.enemy && Battle.enemy.scriptedDefeat) {
+    // 不走正常失败流程，直接触发故事战败回调
+    G.player.hp = 1;  // 保底1HP，防止UI异常
+    G.player.mp = 0;
+    if (G.player._slot != null) saveGame(G.player._slot);
+    else saveGame();
+    showScreen('story');  // 切回故事界面
+    // 调用战败回调（如果有的话）
+    if (typeof _storyBattleLoseCallback === 'function') {
+      _storyBattleLoseCallback();
+    } else if (typeof _storyBattleWinCallback === 'function') {
+      // 兼容：战败也推进剧情
+      _storyBattleWinCallback();
+    }
+    return;
+  }
+
   if (result === 'win') {
     const e = Battle.enemy;
     const expGain = e.reward.exp;
@@ -446,7 +471,7 @@ function renderStatusBadges(containerId, statusList) {
   const el = document.getElementById(containerId);
   if (!el) return;
   const icons = { stun: '😵眩晕', knockback: '💥击飞', poison: '☠️毒', strong_poison: '☠️剧毒',
-    weaken_def: '🔻减防', buff_atk: '⚔️攻强', def_boost: '🛡️防强', evade: '🌀闪', regen_mp: '💧回蓝' };
+    weaken_def: '🔻减防', buff_atk: '⚔️攻强', def_boost: '🛡️防强', evade: '🌀闪', regen_mp: '💧回蓝', regen_mp_pct: '♟️心经' };
   el.innerHTML = statusList.map(s =>
     `<span class="status-badge">${icons[s.type] || s.type}×${s.duration}</span>`
   ).join('');
@@ -466,6 +491,19 @@ function renderSkillBar() {
   const equipped = G.player.equippedSkills || [null, null, null, null];
   bar.innerHTML = '';
 
+  // 被动技能：始终显示在技能栏左侧，不占主动格子
+  const passiveSkills = (G.player.skills || []).filter(id => SKILLS[id]?.type === 'passive');
+  passiveSkills.forEach(skId => {
+    const sk = SKILLS[skId];
+    if (!sk) return;
+    const btn = document.createElement('button');
+    btn.className = 'skill-btn skill-btn-passive';
+    btn.innerHTML = `<span class="skill-btn-icon">${sk.icon}</span><span class="skill-btn-name">${sk.name}</span><span class="skill-btn-mp">被动</span>`;
+    btn.disabled = true;
+    btn.title = sk.battleTip || sk.desc;
+    bar.appendChild(btn);
+  });
+
   // 普通攻击（永远可用）
   const basicBtn = document.createElement('button');
   basicBtn.className = 'skill-btn skill-btn-basic';
@@ -475,6 +513,8 @@ function renderSkillBar() {
 
   equipped.forEach(skId => {
     const sk = skId ? SKILLS[skId] : null;
+    // 跳过被动技能（已单独显示）
+    if (sk && sk.type === 'passive') return;
     const btn = document.createElement('button');
     const cd = skId ? (Battle.skillCooldowns[skId] || 0) : 0;
     const noMp = sk && Battle.player.mp < sk.mp;
@@ -483,10 +523,6 @@ function renderSkillBar() {
     if (!sk) {
       btn.innerHTML = `<span class="skill-btn-icon">—</span><span class="skill-btn-name">空槽</span>`;
       btn.disabled = true;
-    } else if (sk.type === 'passive') {
-      btn.innerHTML = `<span class="skill-btn-icon">${sk.icon}</span><span class="skill-btn-name">${sk.name}</span><span class="skill-btn-mp">被动</span>`;
-      btn.disabled = true;
-      btn.classList.add('skill-btn-passive');
     } else {
       btn.innerHTML = `
         <span class="skill-btn-icon">${sk.icon}</span>
@@ -509,6 +545,35 @@ function renderSkillBar() {
   potionBtn.disabled = potionCount === 0 || Battle.state !== BattleState.PLAYER_TURN;
   potionBtn.onclick = () => useHpPotionInBattle();
   bar.appendChild(potionBtn);
+
+  // 预判提示：如果有弈理心经，在技能栏右侧显示敌人下一招
+  if (Battle.hasPrevision && Battle.enemy && Battle.state === BattleState.PLAYER_TURN) {
+    const predicted = _predictEnemyAction();
+    if (predicted) {
+      const enemyName = Battle.enemy.name || '';
+      const enemyIcon = Battle.enemy.icon || '';
+      const actionName = (predicted && predicted.name) ? predicted.name : '';
+      const actionIcon = (predicted && predicted.icon) ? predicted.icon : '';
+      const prevBtn = document.createElement('div');
+      prevBtn.className = 'skill-btn';
+      prevBtn.style.cssText = 'border-color:#8e44ad;opacity:0.85;cursor:default;min-width:110px;';
+      prevBtn.innerHTML = '<span class="skill-btn-icon" style="font-size:16px;">&#128065;</span><span class="skill-btn-name" style="font-size:10px;color:#c39bd3;">&#25937;&#28789;&#24515;&#32463;</span><span style="font-size:11px;color:#e8c87a;letter-spacing:1px;">' + enemyIcon + '&#160;' + actionIcon + '&#160;' + actionName + '</span>';
+      bar.appendChild(prevBtn);
+    }
+  }
+}
+
+// 预判敌人下一招（AI加权随机，与enemyTurn用相同逻辑）
+function _predictEnemyAction() {
+  if (!Battle.enemy || !Battle.enemy.actions) return null;
+  const actions = Battle.enemy.actions;
+  const totalWeight = actions.reduce((s, a) => s + a.weight, 0);
+  let rand = Math.random() * totalWeight;
+  for (const a of actions) {
+    rand -= a.weight;
+    if (rand <= 0) return a;
+  }
+  return actions[0];
 }
 
 // 普通攻击
@@ -589,13 +654,20 @@ function showBattleResult(result, data) {
 
   btn.onclick = () => {
     overlay.classList.add('hidden');
-    enterCamp();
-    renderCampTopbar();
-    renderSidebar();
-    // 若有修为突破，立即刷新属性面板（方便点修为）
-    const lvResult = checkLevelUp(G.player);
-    if (lvResult.leveled) {
-      renderAttrPanel(document.getElementById('camp-content'));
+    // 故事序列战斗：胜利后继续剧情
+    if (typeof _storyBattleWinCallback === 'function') {
+      const cb = _storyBattleWinCallback;
+      _storyBattleWinCallback = null;
+      showScreen('story');
+      cb();
+    } else {
+      enterCamp();
+      renderCampTopbar();
+      renderSidebar();
+      const lvResult = checkLevelUp(G.player);
+      if (lvResult.leveled) {
+        renderAttrPanel(document.getElementById('camp-content'));
+      }
     }
   };
 }
@@ -635,6 +707,11 @@ function startBattle(enemyId) {
   // 被动：金刚护体 → 战斗开始即有def_boost
   if (passiveSkills.includes('72_arts')) {
     applyStatus(Battle.playerStatus, { type: 'def_boost', value: 20, duration: 999 });
+  }
+  // 被动：弈理心经 → 每回合回复10%最大内力 + 预判敌人出招
+  if (passiveSkills.includes('yi_li_xin_jing')) {
+    applyStatus(Battle.playerStatus, { type: 'regen_mp_pct', value: 10, duration: 999 });
+    Battle.hasPrevision = true; // 标记：可预判敌人下一招
   }
 
   showScreen('battle');

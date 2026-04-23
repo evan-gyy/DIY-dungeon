@@ -76,8 +76,8 @@ function doRest() {
 }
 
 // ─── 修为突破升级系统 ───
-// 境界名称（从第1层到第N层）
-const REALM_NAMES = ['炼气', '筑基', '结丹', '元婴', '化神', '渡劫', '大乘', '飞升', '天人', '不灭'];
+// 境界名称（从第1层到第N层，第0层为凡人）
+const REALM_NAMES = ['凡人', '炼气', '筑基', '结丹', '元婴', '化神', '渡劫', '大乘', '飞升', '天人', '不灭'];
 
 function getExpForLevel(lv) {
   // 每级所需修为 = 50 * lv^1.5
@@ -85,7 +85,7 @@ function getExpForLevel(lv) {
 }
 
 function getRealmName(lv) {
-  if (lv <= 10) return REALM_NAMES[lv - 1] || `第${lv}层`;
+  if (lv < REALM_NAMES.length) return REALM_NAMES[lv] || `第${lv}层`;
   return `第${lv}层`;
 }
 
@@ -365,49 +365,37 @@ function renderCreateScreen() {
     grid.appendChild(div);
   });
 
-  // 门派按钮
-  const sectGrid = document.getElementById('sect-grid');
-  sectGrid.innerHTML = '';
-  Object.entries(SECTS).forEach(([key, val]) => {
-    const btn = document.createElement('button');
-    btn.className = 'sect-btn';
-    btn.dataset.sect = key;
-    btn.textContent = val.name;
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.sect-btn').forEach(b => b.classList.remove('selected'));
-      btn.classList.add('selected');
-      createState.sect = key;
-      updateCreatePreview();
-    });
-    sectGrid.appendChild(btn);
-  });
+  // 门派已固定为武当，无需选择
+  createState.sect = 'wudang';
 }
 
 function updateCreatePreview() {
-  // 可在此更新预览区的门派说明
+  // 门派固定为武当，预览区在 HTML 中已写死
 }
 
 function confirmCreate() {
   const name = document.getElementById('char-name-input').value.trim();
   if (!name) { showToast('请先输入角色名字'); return; }
   if (!createState.charId) { showToast('请选择角色立绘'); return; }
-  if (!createState.sect) { showToast('请选择初始门派'); return; }
   if (pendingSlot === null) { showToast('存档槽异常，请重新选择'); return; }
 
-  const stats = getDefaultStats(createState.sect);
+  // 主角默认武当派（第一章剧情决定，不再让玩家选择宗门）
+  const defaultSect = 'wudang';
+  const stats = getDefaultStats(defaultSect);
   G.player = {
     name,
     charId: createState.charId,
     charImg: `https://pub-cdb8eae73d584ab0b7d006c460518c76.r2.dev/picture/maincharacter/${createState.charId}.png`,
-    sect: createState.sect,
+    sect: defaultSect,
     ...stats,
     maxMp: stats.maxMp || 100,  // 兼容旧存档
-    skills: [],           // 已学技能id列表
+    skills: ['yi_li_xin_jing'], // 初始被动技能（弈理心经）
     equippedSkills: [null, null, null, null], // 上阵技能（最多4个）
     inventory: DEFAULT_INVENTORY.map(i => ({ ...i })),
     cultivationPoints: 0, // 修为突破点数
     attrBoosts: { hp: 0, atk: 0, def: 0, agi: 0, mp: 0 }, // 修为已投入的各属性加成
     tutorialDone: false,   // 新手引导未完成
+    storyPhase: 0,         // 剧情阶段（0=未开始序幕）
     wudangMissionAccepted: false, // 武当主线任务
     wudangGateCleared: false,    // 武当第一关
     wudangMidCleared: false,     // 武当第二关
@@ -415,8 +403,8 @@ function confirmCreate() {
   };
   saveGame(pendingSlot);
   showToast(`存档已创建，欢迎，${name}！`);
-  closeSaveSelect(false); // false = 不切回主菜单，由 enterCamp 接管
-  enterCamp();
+  closeSaveSelect(false); // false = 不切回主菜单，由 runStoryIntro 接管
+  runStoryIntro();
 }
 
 // =========================================================
@@ -436,22 +424,14 @@ function renderCampTopbar() {
   document.getElementById('gold-val').textContent = `💰 ${p.gold || 0} 两`;
 }
 
+// 更新营地右侧栏：显示当前剧情NPC（由 renderStoryPanel 调用）
 function renderSidebar() {
   const p = G.player;
-  if (!p) return; // 防御
-  const img = document.getElementById('sidebar-char-img');
-  img.src = p.charImg || '';
-  img.onerror = () => { img.src = 'data:image/svg+xml,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'180\' height=\'260\'><rect fill=\'%231a1a2e\' width=\'180\' height=\'260\'/><text x=\'90\' y=\'140\' text-anchor=\'middle\' fill=\'%23c9a84c\' font-size=\'14\'>立绘加载中</text></svg>'; };
-  document.getElementById('sidebar-name').textContent = p.name || '—';
-  document.getElementById('sidebar-sect').textContent = SECTS[p.sect]?.name || '';
-  document.getElementById('sidebar-stats').innerHTML = `
-    <div class="stat-row"><span class="stat-name">境界</span><span class="stat-val">Lv.${p.level || 1}</span></div>
-    <div class="stat-row"><span class="stat-name">攻击</span><span class="stat-val">${p.atk || 0}</span></div>
-    <div class="stat-row"><span class="stat-name">防御</span><span class="stat-val">${p.def || 0}</span></div>
-    <div class="stat-row"><span class="stat-name">速度</span><span class="stat-val">${p.agi || 0}</span></div>
-    <div class="stat-row"><span class="stat-name">暴击</span><span class="stat-val">${p.crit || 0}%</span></div>
-    <div class="stat-row"><span class="stat-name">修为点</span><span class="stat-val">${p.cultivationPoints || 0}</span></div>
-  `;
+  if (!p) return;
+  // 每次进入营地时，同步显示当前阶段对应的剧情NPC
+  const phase = getStoryPhase(p);
+  const scene = STORY_SCENES[phase] || STORY_SCENES[0];
+  updateStorySidebar(scene);
 }
 
 function switchCampTab(tab) {
@@ -461,9 +441,7 @@ function switchCampTab(tab) {
   if (tab === 'attr')    renderAttrPanel(content);
   else if (tab === 'bag')    renderBagPanel(content);
   else if (tab === 'skill')  renderSkillPanel(content);
-  else if (tab === 'learn')  renderLearnEntrance(content);
-  else if (tab === 'npc')    renderNpcPanel(content);
-  else if (tab === 'map')    renderDepartPanel(content);
+  else if (tab === 'story')  renderStoryPanel(content);
 }
 
 // ---- 属性面板 ----
@@ -624,20 +602,42 @@ function renderSkillPanel(content) {
   if (p.skills.length === 0) {
     listHtml += `<p style="color:var(--text-dim);font-size:13px;padding:20px 0;letter-spacing:1px;">尚未学会任何武功，前往「学功」处跟传功长老学习吧。</p>`;
   } else {
-    p.skills.forEach(skId => {
-      const sk = SKILLS[skId];
-      if (!sk) return;
-      const equipped = p.equippedSkills.includes(skId);
-      listHtml += `<div class="skill-item ${equipped ? 'equipped' : ''}" onclick="toggleEquipSkillById('${skId}')">
-        <span class="skill-icon">${sk.icon}</span>
-        <div class="skill-info">
-          <div class="skill-name">${sk.name} ${equipped ? '✓' : ''}</div>
-          <div class="skill-desc">${sk.desc}</div>
-        </div>
-        <span class="skill-tag ${typeClass[sk.type] || ''}">${typeTag[sk.type] || sk.type}</span>
-        <span class="skill-mp">${sk.mp > 0 ? '💧' + sk.mp : '被动'}</span>
-      </div>`;
-    });
+    // 先显示被动技能（不可装备，始终生效）
+    const passives = p.skills.filter(id => SKILLS[id]?.type === 'passive');
+    const actives = p.skills.filter(id => SKILLS[id]?.type !== 'passive');
+    if (passives.length > 0) {
+      listHtml += `<div style="font-size:11px;color:#8e44ad;letter-spacing:2px;margin-bottom:6px;">── 被动天赋（始终生效，无需装备） ──</div>`;
+      passives.forEach(skId => {
+        const sk = SKILLS[skId];
+        if (!sk) return;
+        listHtml += `<div class="skill-item" style="border-color:rgba(142,68,173,0.3);">
+          <span class="skill-icon">${sk.icon}</span>
+          <div class="skill-info">
+            <div class="skill-name">${sk.name}</div>
+            <div class="skill-desc">${sk.desc}</div>
+          </div>
+          <span class="skill-tag tag-passive">被动</span>
+          <span class="skill-mp">永久</span>
+        </div>`;
+      });
+    }
+    if (actives.length > 0) {
+      listHtml += `<div style="font-size:11px;color:var(--text-dim);letter-spacing:2px;margin-top:12px;margin-bottom:6px;">── 主动武学（点击装备/卸下） ──</div>`;
+      actives.forEach(skId => {
+        const sk = SKILLS[skId];
+        if (!sk) return;
+        const equipped = p.equippedSkills.includes(skId);
+        listHtml += `<div class="skill-item ${equipped ? 'equipped' : ''}" onclick="toggleEquipSkillById('${skId}')">
+          <span class="skill-icon">${sk.icon}</span>
+          <div class="skill-info">
+            <div class="skill-name">${sk.name} ${equipped ? '✓' : ''}</div>
+            <div class="skill-desc">${sk.desc}</div>
+          </div>
+          <span class="skill-tag ${typeClass[sk.type] || ''}">${typeTag[sk.type] || sk.type}</span>
+          <span class="skill-mp">${sk.mp > 0 ? '💧' + sk.mp : '被动'}</span>
+        </div>`;
+      });
+    }
   }
   listHtml += '</div>';
 
@@ -678,7 +678,10 @@ function toggleEquipSkill(skId, slotIdx) {
 }
 
 // ---- 踏入江湖·选关面板 ----
-function renderDepartPanel(content) {
+// ---- 踏入江湖·选关面板（渲染到 #depart-content）----
+function renderDepartPanel() {
+  const content = document.getElementById('depart-content');
+  if (!content) return;
   const p = G.player;
   const equippedCount = (p.equippedSkills || []).filter(Boolean).length;
   const learnedCount = p.skills ? p.skills.length : 0;
@@ -727,8 +730,6 @@ function renderDepartPanel(content) {
     </div>` : '';
 
   content.innerHTML = `
-    <div class="title-deco"><h2>踏 入 江 湖</h2></div>
-    <p style="font-size:13px;color:var(--text-dim);letter-spacing:1px;margin-bottom:8px;">行走江湖，磨砺剑法，积累经验与金两。</p>
     ${skillHint}
 
     <!-- 武当山主线分区 -->
@@ -767,30 +768,7 @@ function renderDepartPanel(content) {
 
 function showDepartScreen() {
   showScreen('depart');
-  renderDepartSelectScreen();
-}
-
-function renderDepartSelectScreen() {
-  const grid = document.getElementById('encounter-grid');
-  if (!grid) return;
-  grid.innerHTML = '';
-  ENCOUNTER_TIERS.forEach((enc, i) => {
-    const div = document.createElement('div');
-    div.className = 'encounter-card';
-    div.innerHTML = `
-      <span class="enc-icon">${['⚔️','🔥','💀'][i]}</span>
-      <div>
-        <div class="enc-label">${enc.label}</div>
-        <div class="enc-desc">${enc.desc}</div>
-      </div>
-      <span class="enc-tier-badge tier-${enc.tier}">${['练习', '普通', '困难'][i]}</span>
-    `;
-    div.addEventListener('click', () => {
-      const enemy = getRandomEnemy(enc.tier);
-      startBattle(enemy.id);
-    });
-    grid.appendChild(div);
-  });
+  renderDepartPanel();
 }
 
 // ---- 学功入口 ----
@@ -802,27 +780,167 @@ function renderLearnEntrance(content) {
   `;
 }
 
-// ---- NPC对话面板 ----
-function renderNpcPanel(content) {
-  const npcs = [
-    { id: 'wudang_zhangsan', name: '武当-张三丰',   sub: '武当派掌门',  img: 'https://pub-cdb8eae73d584ab0b7d006c460518c76.r2.dev/picture/NPC/武当派-张三丰.png' },
-    { id: 'emei_miejue',     name: '峨眉-灭绝师太', sub: '峨眉派掌门',  img: 'https://pub-cdb8eae73d584ab0b7d006c460518c76.r2.dev/picture/NPC/峨眉派-灭绝师太.png' },
-    { id: 'shaolin_kongwen', name: '少林-空闻方丈', sub: '少林寺方丈',  img: 'https://pub-cdb8eae73d584ab0b7d006c460518c76.r2.dev/picture/NPC/少林派-方丈空闻.png' },
-    { id: 'beggar_hong',     name: '丐帮-洪七公',   sub: '丐帮帮主',    img: 'https://pub-cdb8eae73d584ab0b7d006c460518c76.r2.dev/picture/NPC/丐帮-洪七公.png' },
-    { id: 'huashan_master',  name: '华山-掌门',     sub: '华山派掌门',  img: 'https://pub-cdb8eae73d584ab0b7d006c460518c76.r2.dev/picture/NPC/华山派-掌门.png' },
-    { id: 'demon_master',    name: '魔教-教主',     sub: '魔教',        img: 'https://pub-cdb8eae73d584ab0b7d006c460518c76.r2.dev/picture/NPC/魔教-教主.png' },
-  ];
-  let html = `<div class="title-deco"><h2>营地·故人相逢</h2></div>
-    <p style="font-size:13px;color:var(--text-dim);letter-spacing:1px;margin-bottom:16px;">与各大门派的重要人物交谈，推进剧情，提升好感。</p>
-    <div class="npc-grid">`;
-  npcs.forEach(n => {
-    html += `<div class="npc-card" onclick="openDialog('${n.id}')">
-      <img src="${n.img}" alt="${n.name}" onerror="this.style.height='120px';this.style.background='#1a1a2e'">
-      <div class="npc-label"><div class="npc-title">${n.name}</div><div class="npc-sub">${n.sub}</div></div>
+// =========================================================
+// 营地剧情交互面板「江湖往事」
+// =========================================================
+// 剧情阶段定义：key = storyPhase 值，value = 场景数据
+// storyPhase: 0=第一章·寒斋棋声, 1=惊雷入梦, 2=暗道夺命, 3=雪中惊鸿
+const STORY_SCENES = {
+  // 第一幕·寒斋棋声：古村石屋，墨绐青教学棋理（默认阶段）
+  0: {
+    id: 'act1_chess',
+    title: '第一章 · 寒斋棋声',
+    bg: 'picture/scene/古村棋舍.png',         // AI生成的CG背景
+    npc: {
+      name: '墨绐青',
+      sub: '隐居村妇 / 前朝国师',
+      img: 'picture/female-main/女国师.png',   // 墨绐青立绘
+    },
+    desc: '小石屋内，窗外雪意未消。一盘残局，一盏油灯，她等你多时了。',
+    actionLabel: '聆听教诲',
+    actionEvent: 'act1_chess',
+  },
+  // 第二幕·惊雷入梦：雷雨将至，黑白供奉逼近
+  1: {
+    id: 'act2_thunder',
+    title: '第一章 · 惊雷入梦',
+    bg: 'picture/scene/古村棋舍.png',         // 同场景，剧情推进后替换
+    npc: {
+      name: '墨绐青',
+      sub: '隐居村妇 / 前朝国师',
+      img: 'picture/female-main/女国师.png',
+    },
+    desc: '天色骤变，雷声隐隐。她忽然起身，目光如电——',
+    actionLabel: '追问变故',
+    actionEvent: 'act2_thunder',
+  },
+  // 第三幕·暗道夺命：逃亡战斗
+  2: {
+    id: 'act3_escape',
+    title: '第一章 · 暗道夺命',
+    bg: 'picture/scene/暗道.png',              // 待生成
+    npc: null,                                  // 暗道中无NPC立绘
+    desc: '暗道幽深，身后杀机逼近。你必须闯过这道关卡。',
+    actionLabel: '进入暗道',
+    actionEvent: 'act3_escape',
+  },
+  // 第四幕·雪中惊鸿：柳清寒救场
+  3: {
+    id: 'act4_snow',
+    title: '第一章 · 雪中惊鸿',
+    bg: 'picture/scene/武当雪夜.png',          // 待生成
+    npc: {
+      name: '柳清寒',
+      sub: '武当大师姐 / 命中妻子',
+      img: 'picture/female-main/柳清寒.png',   // 柳清寒立绘
+    },
+    desc: '风雪漫天，一道白衣身影立于山门之前——',
+    actionLabel: '上前相见',
+    actionEvent: 'act4_snow',
+  },
+};
+
+// 当前剧情阶段（兼容旧存档，未定义的默认从第一幕开始）
+function getStoryPhase(p) {
+  if (p.storyPhase == null || p.storyPhase === undefined) return 0;
+  return p.storyPhase;
+}
+
+// ---- 渲染营地剧情交互面板 ----
+function renderStoryPanel(content) {
+  const p = G.player;
+  const phase = getStoryPhase(p);
+  const scene = STORY_SCENES[phase] || STORY_SCENES[0];
+
+  // 侧边栏同步更新当前NPC
+  updateStorySidebar(scene);
+
+  // 章节标题
+  const chapterBadge = `<div style="margin-bottom:16px;display:flex;align-items:center;gap:12px;">
+    <span style="font-size:11px;color:var(--text-dim);letter-spacing:3px;padding:3px 10px;background:rgba(201,168,76,0.1);border:1px solid rgba(201,168,76,0.3);border-radius:20px;">${scene.title}</span>
+  </div>`;
+
+  // NPC立绘区（居中大立绘）
+  const npcHtml = scene.npc ? `
+    <div class="story-npc-portrait">
+      <img src="${scene.npc.img}" alt="${scene.npc.name}"
+           onerror="this.src='picture/female-main/柳清寒.png'"
+           class="story-npc-img">
+      <div class="story-npc-name">${scene.npc.name}</div>
+      <div class="story-npc-sub">${scene.npc.sub}</div>
+    </div>` : '';
+
+  // 场景描述
+  const descHtml = `<div class="story-desc">${scene.desc}</div>`;
+
+  // 剧情触发按钮
+  const actionHtml = `
+    <div class="story-action-area">
+      <button class="btn story-action-btn" onclick="triggerStoryEvent('${scene.actionEvent}')">
+        ▶ ${scene.actionLabel}
+      </button>
     </div>`;
-  });
-  html += '</div>';
-  content.innerHTML = html;
+
+  content.innerHTML = `
+    <div class="story-scene-wrap">
+      <!-- 场景背景 -->
+      <div class="story-scene-bg">
+        <img src="${scene.bg}" alt="场景"
+             onerror="this.style.display='none'"
+             style="width:100%;height:100%;object-fit:cover;border-radius:8px;opacity:0.5;">
+        <div class="story-scene-overlay"></div>
+      </div>
+      <!-- 场景内容层 -->
+      <div class="story-scene-content">
+        ${chapterBadge}
+        ${descHtml}
+        ${npcHtml}
+        ${actionHtml}
+      </div>
+    </div>
+  `;
+}
+
+// 更新营地右侧栏的剧情NPC
+function updateStorySidebar(scene) {
+  const imgEl = document.getElementById('sidebar-npc-img');
+  const nameEl = document.getElementById('sidebar-npc-name');
+  const subEl = document.getElementById('sidebar-npc-sub');
+  if (!scene.npc) return;
+  if (imgEl) imgEl.src = scene.npc.img;
+  if (nameEl) nameEl.textContent = scene.npc.name;
+  if (subEl) subEl.textContent = scene.npc.sub;
+}
+
+// 触发剧情事件（由剧情按钮调用）
+// 后续扩展：按 actionEvent 分发到具体剧情脚本
+function triggerStoryEvent(eventId) {
+  // 示例：act1_chess → 打开墨绐青对话
+  if (eventId === 'act1_chess') {
+    // TODO: 接入墨绐青对话数据（NPC_DIALOGS['mo_jiangqing']）
+    if (NPC_DIALOGS['mo_jiangqing']) {
+      openDialog('mo_jiangqing');
+    } else {
+      showToast('墨绐青的对话正在酝酿中…');
+    }
+  } else if (eventId === 'act2_thunder') {
+    // 第二幕：切换到暗道阶段
+    if (G.player) { G.player.storyPhase = 2; }
+    showToast('突变发生——必须立刻离开！');
+    renderStoryPanel(document.getElementById('camp-content'));
+  } else if (eventId === 'act3_escape') {
+    // 暗道战斗 → 触发教学战
+    startBattle('shadow_assassin'); // TODO: 定义敌人ID
+  } else if (eventId === 'act4_snow') {
+    // TODO: 接入柳清寒对话数据（NPC_DIALOGS['liu_qinghan']）
+    if (NPC_DIALOGS['liu_qinghan']) {
+      openDialog('liu_qinghan');
+    } else {
+      showToast('柳清寒的对话正在酝酿中…');
+    }
+  } else {
+    showToast('剧情即将到来…');
+  }
 }
 
 // =========================================================
@@ -997,13 +1115,244 @@ function applyDialogEffect(effect) {
   }
 }
 
+// =========================================================
+//  电影序列引擎（开场序幕·第一章）
+// =========================================================
+let _storyNodeId = 'start';
+let _storyAutoTimer = null;
+let _storyWaiting = false; // 等待用户点击
+let _storyBattleWinCallback = null;
+let _storyBattleLoseCallback = null;
+
+function runStoryIntro() {
+  // 创建角色后进入序幕
+  _storyNodeId = 'start';
+  showScreen('story');
+  document.getElementById('story-bg').classList.remove('visible');
+  document.getElementById('story-bg').style.backgroundImage = '';
+  // 绑定点击继续
+  document.getElementById('story-overlay').onclick = _storyHandleClick;
+  document.getElementById('story-continue-hint').classList.add('hidden');
+  showStoryNode('start');
+}
+
+function _storyHandleClick(e) {
+  if (e.target.closest('.story-skip-btn')) return;
+  if (e.target.closest('.story-choice-btn')) return;
+  // 打字动画还在运行：先显示完当前文字，不跳转
+  if (_storyAutoTimer) {
+    clearInterval(_storyAutoTimer);
+    _storyAutoTimer = null;
+    // 安全检查：确保 node.text 有效才显示
+    const node = STORY_INTRO[_storyNodeId];
+    if (node && node.text != null) {
+      let text = String(node.text || '');
+      if (node.speaker === '我' && G.player) text = text.replace('%s%', G.player.name || '少年');
+      const textEl = document.getElementById('story-dialogue-text') || document.getElementById('story-narration-text');
+      if (textEl) textEl.textContent = text;
+    }
+    document.getElementById('story-continue-hint').classList.remove('hidden');
+    return;
+  }
+  // 打字完成，才跳转到 next
+  const node = STORY_INTRO[_storyNodeId];
+  if (!node) return;
+  if (node.next) showStoryNode(node.next);
+  else if (node.choices) { /* 选项节点，等待点击 */ }
+}
+
+function showStoryNode(nodeId) {
+  if (nodeId === 'END') { finishStoryIntro(); return; }
+  const node = STORY_INTRO[nodeId];
+  if (!node) { finishStoryIntro(); return; }
+  _storyNodeId = nodeId;
+  document.getElementById('story-continue-hint').classList.add('hidden');
+  document.getElementById('story-narration-mode').classList.add('hidden');
+  document.getElementById('story-dialogue-mode').classList.add('hidden');
+  if (_storyAutoTimer) { clearInterval(_storyAutoTimer); _storyAutoTimer = null; }
+
+  if (node.type === 'narration') {
+    _showStoryNarration(node);
+  } else if (node.type === 'dialogue') {
+    _showStoryDialogue(node);
+  } else if (node.type === 'cg') {
+    _showStoryCG(node);
+  } else if (node.type === 'flash') {
+    _doFlash(node.next);
+  } else if (node.type === 'choice') {
+    _showStoryChoices(node);
+  } else if (node.type === 'battle') {
+    _startStoryBattle(node);
+  } else {
+    // 未知类型：安全跳转，不留空白
+    if (node.next) showStoryNode(node.next);
+    else finishStoryIntro();
+  }
+}
+
+function _showStoryNarration(node) {
+  const el = document.getElementById('story-narration-mode');
+  const textEl = document.getElementById('story-narration-text');
+  el.classList.remove('hidden');
+  _typeText(textEl, node.text, 28, () => {
+    document.getElementById('story-continue-hint').classList.remove('hidden');
+    _storyWaiting = false;
+    if (node.next) { _storyWaiting = true; /* 点击继续 */ }
+    else { _storyWaiting = true; }
+  });
+  _storyWaiting = true;
+}
+
+function _showStoryDialogue(node) {
+  const el = document.getElementById('story-dialogue-mode');
+  el.classList.remove('hidden');
+  // 处理玩家名字中的 %s%
+  let displayText = node.text;
+  if (node.speaker === '我' && G.player) {
+    displayText = displayText.replace('%s%', G.player.name || '少年');
+  }
+  // 说话者名称
+  document.getElementById('story-speaker-name').textContent = node.speaker;
+  // 立绘
+  const portraitEl = document.getElementById('story-char-portrait');
+  if (node.portrait) {
+    portraitEl.src = node.portrait;
+    portraitEl.style.display = 'block';
+    portraitEl.onerror = () => { portraitEl.style.display = 'none'; };
+  } else {
+    portraitEl.style.display = 'none';
+  }
+  // 背景图
+  if (node.bg) {
+    const bg = document.getElementById('story-bg');
+    bg.style.backgroundImage = `url('${node.bg}')`;
+    bg.classList.add('visible');
+  }
+  // 对话文字
+  const textEl = document.getElementById('story-dialogue-text');
+  _typeText(textEl, displayText, 25, () => {
+    document.getElementById('story-continue-hint').classList.remove('hidden');
+    _storyWaiting = false;
+    _storyWaiting = true;
+  });
+  _storyWaiting = true;
+  // 清空选项
+  document.getElementById('story-choices-area').innerHTML = '';
+}
+
+function _showStoryCG(node) {
+  const bg = document.getElementById('story-bg');
+  bg.style.backgroundImage = `url('${node.bg}')`;
+  bg.classList.remove('visible');
+  // 先淡出
+  setTimeout(() => {
+    bg.classList.add('visible');
+    _storyAutoTimer = setTimeout(() => {
+      if (node.next) showStoryNode(node.next);
+    }, node.delay || 3000);
+  }, 200);
+}
+
+function _doFlash(next) {
+  const bg = document.getElementById('story-bg');
+  bg.style.backgroundImage = '';
+  bg.style.background = '#ffffff';
+  bg.classList.add('visible');
+  setTimeout(() => {
+    bg.classList.remove('visible');
+    bg.style.background = '';
+    setTimeout(() => {
+      if (next) showStoryNode(next);
+    }, 300);
+  }, 400);
+}
+
+function _showStoryChoices(node) {
+  const area = document.getElementById('story-choices-area');
+  area.innerHTML = '';
+  node.choices.forEach(choice => {
+    const btn = document.createElement('button');
+    btn.className = 'story-choice-btn';
+    btn.textContent = choice.text;
+    btn.onclick = () => {
+      if (_storyAutoTimer) { clearInterval(_storyAutoTimer); _storyAutoTimer = null; }
+      showStoryNode(choice.next);
+    };
+    area.appendChild(btn);
+  });
+  _storyWaiting = false;
+  document.getElementById('story-continue-hint').classList.add('hidden');
+}
+
+function _startStoryBattle(node) {
+  _storyBattleWinCallback = () => {
+    if (node.nextOnWin) showStoryNode(node.nextOnWin);
+  };
+  _storyBattleLoseCallback = () => {
+    if (node.nextOnLose) showStoryNode(node.nextOnLose);
+    else if (node.nextOnWin) showStoryNode(node.nextOnWin);
+  };
+  // 触发战斗
+  if (typeof startBattle === 'function') {
+    startBattle(node.enemyId);
+  } else {
+    // 敌人未定义时，直接跳过
+    showToast('（暗道已通过）');
+    if (node.nextOnWin) showStoryNode(node.nextOnWin);
+  }
+}
+
+function skipStoryIntro() {
+  // 跳过序幕，直接进入营地
+  if (_storyAutoTimer) { clearInterval(_storyAutoTimer); _storyAutoTimer = null; }
+  finishStoryIntro();
+}
+
+function finishStoryIntro() {
+  // 序幕结束：标记剧情完成，进入营地
+  // 入武当后，主角从凡人属性升级为门派标准属性
+  if (G.player) {
+    G.player.storyPhase = 3; // 第一章完成，进入营地后的阶段
+    G.player.tutorialDone = true;
+    // 凡人→武当弟子：属性重置为门派标准
+    const wudangStats = {
+      hp: 230, maxHp: 230, mp: 130, maxMp: 130,
+      atk: 30, def: 15, agi: 15, crit: 5,
+      level: 1,  // 炼气入门
+    };
+    Object.assign(G.player, wudangStats);
+    // 入武当后不自动学技能——技能需通过拜师学功或剧情获得
+    if (G.player._slot != null) saveGame(G.player._slot);
+  }
+  enterCamp();
+}
+
+function _typeText(el, text, speed, cb) {
+  // 安全防护：确保 text 是有效字符串
+  if (el) el.textContent = '';
+  if (text == null) { if (cb) cb(); return; }
+  text = String(text);
+  let i = 0;
+  _storyAutoTimer = setInterval(() => {
+    if (el && i < text.length) {
+      el.textContent += text[i];
+      i++;
+    }
+    if (i >= text.length) { clearInterval(_storyAutoTimer); _storyAutoTimer = null; if (cb) cb(); }
+  }, speed);
+}
+
 function closeDialog() {
+  // 营地内对话关闭后，回到营地
   showScreen('camp');
-  // 刷新营地状态（确保 wudangMissionAccepted 等标志生效后 UI 立即更新）
   renderCampTopbar();
   renderSidebar();
   if (G.campTab === 'map') {
-    renderDepartPanel(document.getElementById('camp-content'));
+    // 刷新选关面板
+    const dc = document.getElementById('camp-content');
+    if (dc) renderDepartPanel();
+  } else if (G.campTab === 'story') {
+    renderStoryPanel(document.getElementById('camp-content'));
   }
 }
 
@@ -1030,7 +1379,7 @@ window.addEventListener('DOMContentLoaded', () => {
     pendingSlot = null;
     closeSaveSelect();
   });
-  document.getElementById('btn-back-learn').addEventListener('click', () => { G.learnElderId = null; enterCamp(); });
+  // btn-back-learn 已移除（screen-learn 已删除）
   document.getElementById('btn-confirm-create').addEventListener('click', confirmCreate);
   document.getElementById('btn-close-dialog').addEventListener('click', closeDialog);
 
@@ -1251,5 +1600,6 @@ function enterCamp() {
     setTimeout(() => showMentorGuide(0), 400);
   }
 
-  switchCampTab('attr');
+  // 默认显示"江湖往事"剧情tab
+  switchCampTab('story');
 }
