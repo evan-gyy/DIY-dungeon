@@ -794,7 +794,7 @@ const STORY_SCENES = {
     npc: {
       name: '墨绐青',
       sub: '隐居村妇 / 前朝国师',
-      img: 'picture/female-main/女国师.png',   // 墨绐青立绘
+      img: 'picture/Female-main/女国师.png',   // 墨绐青立绘
     },
     desc: '小石屋内，窗外雪意未消。一盘残局，一盏油灯，她等你多时了。',
     actionLabel: '聆听教诲',
@@ -808,7 +808,7 @@ const STORY_SCENES = {
     npc: {
       name: '墨绐青',
       sub: '隐居村妇 / 前朝国师',
-      img: 'picture/female-main/女国师.png',
+      img: 'picture/Female-main/女国师.png',
     },
     desc: '天色骤变，雷声隐隐。她忽然起身，目光如电——',
     actionLabel: '追问变故',
@@ -832,7 +832,7 @@ const STORY_SCENES = {
     npc: {
       name: '柳清寒',
       sub: '武当大师姐 / 命中妻子',
-      img: 'picture/female-main/柳清寒.png',   // 柳清寒立绘
+      img: 'picture/Female-main/柳清寒.png',   // 柳清寒立绘
     },
     desc: '风雪漫天，一道白衣身影立于山门之前——',
     actionLabel: '上前相见',
@@ -864,7 +864,7 @@ function renderStoryPanel(content) {
   const npcHtml = scene.npc ? `
     <div class="story-npc-portrait">
       <img src="${scene.npc.img}" alt="${scene.npc.name}"
-           onerror="this.src='picture/female-main/柳清寒.png'"
+           onerror="this.src='picture/Female-main/柳清寒.png'"
            class="story-npc-img">
       <div class="story-npc-name">${scene.npc.name}</div>
       <div class="story-npc-sub">${scene.npc.sub}</div>
@@ -1128,10 +1128,11 @@ function runStoryIntro() {
   // 创建角色后进入序幕
   _storyNodeId = 'start';
   showScreen('story');
-  document.getElementById('story-bg').classList.remove('visible');
-  document.getElementById('story-bg').style.backgroundImage = '';
-  // 绑定点击继续
-  document.getElementById('story-overlay').onclick = _storyHandleClick;
+  const storyBg = document.getElementById('story-bg');
+  if (storyBg) { storyBg.classList.remove('visible'); storyBg.style.backgroundImage = ''; }
+  // 绑定点击继续（安全检查）
+  const storyOverlay = document.getElementById('story-overlay');
+  if (storyOverlay) storyOverlay.onclick = _storyHandleClick;
   document.getElementById('story-continue-hint').classList.add('hidden');
   showStoryNode('start');
 }
@@ -1213,14 +1214,16 @@ function _showStoryDialogue(node) {
   }
   // 说话者名称
   document.getElementById('story-speaker-name').textContent = node.speaker;
-  // 立绘
+  // 立绘（安全检查）
   const portraitEl = document.getElementById('story-char-portrait');
-  if (node.portrait) {
-    portraitEl.src = node.portrait;
-    portraitEl.style.display = 'block';
-    portraitEl.onerror = () => { portraitEl.style.display = 'none'; };
-  } else {
-    portraitEl.style.display = 'none';
+  if (portraitEl) {
+    if (node.portrait) {
+      portraitEl.src = node.portrait;
+      portraitEl.style.display = 'block';
+      portraitEl.onerror = () => { portraitEl.style.display = 'none'; };
+    } else {
+      portraitEl.style.display = 'none';
+    }
   }
   // 背景图
   if (node.bg) {
