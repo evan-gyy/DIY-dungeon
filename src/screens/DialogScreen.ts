@@ -12,7 +12,7 @@ export function openDialog(npcId: NpcId): void {
   if (!npcData) return;
   setDialogNpcId(npcId);
 
-  let startNode = 'start';
+  let startNode = npcData.dialogs['start'] ? 'start' : Object.keys(npcData.dialogs)[0]!;
   const p = getPlayer();
   if (npcId === 'wudang_zhangsan') {
     if (p.wudangElderCleared)    startNode = 'mission_complete';
