@@ -311,4 +311,203 @@ export const NPC_DIALOGS: Record<NpcId, NpcDialogData> = {
       },
     },
   },
+
+  zhang_xuansu: {
+    name: '张玄素',
+    img: 'picture/NPC/武当派-张三丰.png',
+    sect: '武当掌门·化神六层',
+    dialogs: {
+      start: {
+        text: '武当收徒，不问来处，只看去处。你既来了，便是武当的人。',
+        choices: [
+          { text: '多谢掌门收留。', next: 'welcome' },
+          { text: '掌门……认识墨绐青？', next: 'ask_mo' },
+          { text: '告辞。', next: null },
+        ],
+      },
+      welcome: {
+        text: '莫要言谢。路，是你自己走的。武当只是给你一片可以落脚的山。至于能走到哪一步——看你自己的造化。',
+        choices: [{ text: '晚辈定不负掌门期望。', next: null }],
+      },
+      ask_mo: {
+        text: '……（沉默良久）她可好？',
+        choices: [
+          { text: '我不知道。我走时，她让我不要回头。', next: 'mo_sigh' },
+          { text: '告辞。', next: null },
+        ],
+      },
+      mo_sigh: {
+        text: '（轻轻点头，仿佛在确认某件事）她还是老样子。……去吧。先跟陈长老学好根基。',
+        choices: [{ text: '是。', next: null }],
+      },
+    },
+  },
+
+  chen_jingxu: {
+    name: '陈静虚',
+    img: 'picture/NPC/武当派-张三丰.png',
+    sect: '传功长老·元婴五层',
+    dialogs: {
+      start: {
+        text: '根骨平平，心思倒细。练得出来。——这是我三天观察下来的结论。',
+        choices: [
+          { text: '长老，我何时可以学剑法？', next: 'ask_sword' },
+          { text: '请长老赐教根基功法。', next: 'teach_base' },
+          { text: '告辞。', next: null },
+        ],
+      },
+      ask_sword: {
+        text: '剑？先把拳打好。一拳打出，枯叶不飘，方可言剑。',
+        choices: [{ text: '晚辈受教。', next: null }],
+      },
+      teach_base: {
+        text: '武当武学，根基在"松沉"二字。肩松则力沉，腰松则步稳，心松则意达。记住——欲速则不达。',
+        choices: [{ text: '多谢长老教诲。', next: null }],
+      },
+      progress: {
+        text: '……嗯。长进了。继续练。',
+        choices: [{ text: '是。', next: null }],
+      },
+    },
+  },
+
+  zhou_boan: {
+    name: '周伯安',
+    img: 'picture/NPC/武当派-张三丰.png',
+    sect: '外门管事·结丹三层',
+    dialogs: {
+      start: {
+        text: '哈哈，新来的！不急不急，慢慢来。外门弟子嘛，先从日常杂务做起——砍柴、挑水、打扫大殿、抄写道经，都是修行。',
+        choices: [
+          { text: '有什么任务需要我做？', next: 'daily_tasks' },
+          { text: '什么时候能参加小比？', next: 'ask_sparring' },
+          { text: '告辞。', next: null },
+        ],
+      },
+      daily_tasks: {
+        text: '砍柴去林子，挑水去东泉，扫殿在主殿，抄经在藏经阁。每日各选一件，做完来我这儿报到，有经验和铜钱拿。',
+        choices: [{ text: '明白了，我去做。', next: null }],
+      },
+      ask_sparring: {
+        text: '炼气六层以上就可以报名。到时候演武场见！败者……回去多挑几桶水就是了。哈哈哈！',
+        choices: [{ text: '好，我会努力的。', next: null }],
+      },
+    },
+  },
+
+  song_zhiyuan: {
+    name: '宋知远',
+    img: 'picture/NPC/武当派-张三丰.png',
+    sect: '外门师兄·炼气三层',
+    dialogs: {
+      start: {
+        text: '嘿！隔壁的！今天差事做完了吗？我跟你说，陈长老今天又在传功崖画图讲课——我偷偷看了一眼，半个字没听懂。',
+        choices: [
+          { text: '你就这么混日子？', next: 'lazy' },
+          { text: '一起去练练？', next: 'train' },
+          { text: '改天吧。', next: null },
+        ],
+      },
+      lazy: {
+        text: '什么叫混日子！我这是……在蓄势！厚积薄发！古语有云嘛……对了古语具体怎么说我忘了，反正意思就是这样。',
+        choices: [{ text: '……好吧，随你。', next: null }],
+      },
+      train: {
+        text: '行啊！不过说好了，你别太猛——我刚被顾小桑揍了，手腕还有点酸。',
+        choices: [{ text: '……就这样的还想进内门？', next: null }],
+      },
+    },
+  },
+
+  gu_xiaosang: {
+    name: '顾小桑',
+    img: 'picture/NPC/武当派-张三丰.png',
+    sect: '外门师姐·炼气五层',
+    dialogs: {
+      start: {
+        text: '哟，新来的，练得挺勤嘛。陈长老亲自教你，你面子不小。我当年入门，长老只丢给我一本破册子，说"自己看"就走了。',
+        choices: [
+          { text: '师姐功法练得怎样了？', next: 'ask_progress' },
+          { text: '你了解柳师姐吗？', next: 'ask_liu' },
+          { text: '没事，随便问问。', next: null },
+        ],
+      },
+      ask_progress: {
+        text: '我现在炼气五层，争取小比之前到八层！话说你现在几层了？要超过我的话，给我提前打招呼，我好有个心理准备。',
+        choices: [{ text: '好，到时候一定告诉你。', next: null }],
+      },
+      ask_liu: {
+        text: '柳师姐啊……武当第一美人，武当第一剑，武当第一让人摸不透。她对大多数人都是那副样子——冷冷的，但其实心思细得很。你是大师姐带上山的，她自然会不一样。',
+        choices: [{ text: '……是吗。', next: null }],
+      },
+    },
+  },
+
+  lu_chengzhou: {
+    name: '陆沉舟',
+    img: 'picture/NPC/武当派-张三丰.png',
+    sect: '内门师兄·筑基八层',
+    dialogs: {
+      start: {
+        text: '你就是大师姐带上山的那个人。',
+        choices: [
+          { text: '是。有何指教？', next: 'question' },
+          { text: '……对。', next: 'silent' },
+        ],
+      },
+      question: {
+        text: '指教不敢。我只是想看看——大师姐的眼光，究竟落在了什么样的人身上。',
+        choices: [
+          { text: '那就请师兄拭目以待。', next: 'challenge' },
+          { text: '我只是个外门弟子。', next: 'humble' },
+        ],
+      },
+      silent: {
+        text: '……（沉默地上下打量了一眼，然后点头）能在外门小比里打赢赵大石，算有点东西。',
+        choices: [{ text: '承让。', next: null }],
+      },
+      challenge: {
+        text: '好。外门试炼考——我在演武场等你。通过之后，来找我。',
+        choices: [{ text: '一言为定。', next: null }],
+      },
+      humble: {
+        text: '外门弟子，也可以成为值得对视的人。记住这句话。',
+        choices: [{ text: '……谢师兄。', next: null }],
+      },
+    },
+  },
+
+  shen_nishang: {
+    name: '沈霓裳',
+    img: 'picture/Female-main/柳清寒.png',
+    sect: '茅山派·雷法传人',
+    dialogs: {
+      start: {
+        text: '武当的人？一个炼气八层，带着另一个炼气八层，跑来打筑基期的土匪？你们武当的人，都这么不要命吗？',
+        choices: [
+          { text: '多亏你出手相救。', next: 'thanks' },
+          { text: '我们本来能撑住的。', next: 'stubborn' },
+        ],
+      },
+      thanks: {
+        text: '救？我是路过。正好茅山派管这种邪药害人的事。——不过你身上有点意思。那一瞬间的共鸣……不像是炼气期该有的。',
+        choices: [
+          { text: '我也不知道那是什么。', next: 'mystery' },
+          { text: '也许是巧合。', next: 'deny' },
+        ],
+      },
+      stubborn: {
+        text: '（微微一笑）有骨气。但骨气不能挡刀。下次记得量力而行——当然，如果你真的想死，那是你的事。',
+        choices: [{ text: '……谢谢你的雷。', next: 'thanks' }],
+      },
+      mystery: {
+        text: '不知道……也许你自己迟早会知道。有意思。我叫沈霓裳，茅山派。记住了——下次见面，我想看看你的真本事。',
+        choices: [{ text: '后会有期，沈姑娘。', next: null }],
+      },
+      deny: {
+        text: '巧合……（若有所思地盯着你看了三秒）也许。也许不是。总之——后会有期，武当的。别死太早了。',
+        choices: [{ text: '多谢提醒。', next: null }],
+      },
+    },
+  },
 };

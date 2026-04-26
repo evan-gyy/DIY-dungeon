@@ -54,6 +54,8 @@ export const PlayerStateSchema = z.object({
   wudangMidCleared:      z.boolean().default(false),
   wudangElderCleared:    z.boolean().default(false),
 
+  chapter2Route: z.enum(['', 'hotblood', 'wisdom']).default(''),
+
   _slot:    z.number().default(1),
   _savedAt: z.string().optional(),
 });

@@ -48,6 +48,31 @@ export const SKILLS: Record<SkillId, SkillData> = {
     cost: { exp: 200 }, sect: 'wudang',
     battleTip: '被动·内力引擎',
   },
+  wudang_changquan: {
+    id: 'wudang_changquan', name: '武当长拳', icon: '👊', type: 'attack', target: 'enemy',
+    mp: 8, hit: 1, powerMul: 0.9, defPen: 0.75,
+    cooldown: 0, effect: null, healPct: 0,
+    desc: '武当基础拳法，出拳沉稳，造成90%攻击伤害。根基所在，简而不凡。',
+    cost: { exp: 0 }, sect: 'wudang',
+    battleTip: '基础攻击·低内力消耗',
+  },
+  yangqi_jue: {
+    id: 'yangqi_jue', name: '养气诀', icon: '🧘', type: 'passive', target: 'self',
+    mp: 0, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 0, effect: { type: 'regen_mp', value: 4, duration: 99 },
+    healPct: 0,
+    desc: '【被动】调息养气之法，每回合自动恢复4点内力，并使气血恢复效果+10%。',
+    cost: { exp: 0 }, sect: 'wudang',
+    battleTip: '被动·稳定内力回复',
+  },
+  wudang_jianfa_basic: {
+    id: 'wudang_jianfa_basic', name: '武当剑法·基础', icon: '⚔️', type: 'attack', target: 'enemy',
+    mp: 18, hit: 1, powerMul: 1.2, defPen: 0.65,
+    cooldown: 1, effect: null, healPct: 0,
+    desc: '武当剑法入门式：刺、挑、抹、带四式。一剑出，知落处。造成120%攻击伤害。',
+    cost: { exp: 0 }, sect: 'wudang',
+    battleTip: '爆发单击·1回合冷却',
+  },
 
   // ── 峨眉派 ──
   emei_sword: {
