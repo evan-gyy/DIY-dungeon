@@ -12,11 +12,13 @@ let _nodeId  = 'start';
 let _timer: ReturnType<typeof setInterval> | null = null;
 let _waiting = false;
 let _keyHandler: ((e: KeyboardEvent) => void) | null = null;
+let _finishCallback: (() => void) | null = null;
 
-export function runStoryIntro(): void {
+export function runStoryIntro(startNodeId?: string, onFinish?: () => void): void {
   const p = getPlayer();
   const chapter = getChapter(p.chapter);
-  _nodeId = chapter.startNode;
+  _finishCallback = onFinish ?? null;
+  _nodeId = startNodeId ?? chapter.startNode;
   showScreen('story');
 
   const bg = document.getElementById('story-bg');
@@ -54,7 +56,7 @@ export function runStoryIntro(): void {
     else finishStoryIntro();
   });
 
-  showStoryNode(chapter.startNode);
+  showStoryNode(_nodeId);
 }
 
 function _handleClick(e: Event): void {
@@ -237,6 +239,18 @@ export function skipStoryIntro(): void {
 
 function finishStoryIntro(): void {
   if (_keyHandler) { document.removeEventListener('keydown', _keyHandler); _keyHandler = null; }
+  bus.off('story:battle-end', () => {});
+  bus.off('battle:end', () => {});
+
+  const callback = _finishCallback;
+  _finishCallback = null;
+
+  if (callback) {
+    callback();
+    return;
+  }
+
+  // Default ch1 first-run behavior
   const p = getPlayer();
   if (p) {
     const chapter = getChapter(p.chapter);
@@ -248,8 +262,5 @@ function finishStoryIntro(): void {
     setPlayer(updated);
     saveGame(updated);
   }
-  // unsubscribe story battle listeners
-  bus.off('story:battle-end', () => {});
-  bus.off('battle:end', () => {});
   enterCamp();
 }

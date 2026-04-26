@@ -75,6 +75,7 @@ export function confirmCreate(): void {
     wudangGateCleared: false,
     wudangMidCleared: false,
     wudangElderCleared: false,
+    chapter2Route: '' as const,
     _slot: _pendingSlot,
   };
 

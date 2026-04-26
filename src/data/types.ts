@@ -11,6 +11,7 @@ export type CharId = 'male_good' | 'male_evil' | 'female_good' | 'female_evil';
 export type SkillId =
   | 'yi_li_xin_jing'
   | 'mianzhang' | 'taiji' | 'wudang_sword' | 'zixiao'
+  | 'wudang_changquan' | 'yangqi_jue' | 'wudang_jianfa_basic'
   | 'emei_sword' | 'liing_palm' | 'emei_poison' | 'hundred_birds'
   | 'luohan_fist' | 'vajra_palm' | 'yijin_jing' | '72_arts'
   | 'beggar_fist' | 'stick_art' | 'mud_walk' | 'dragon_palm';
@@ -20,14 +21,18 @@ export type EnemyId =
   | 'huashan_swordsman' | 'emei_nun' | 'shaolin_monk'
   | 'demon_vanguard' | 'demon_witch' | 'ancient_master'
   | 'wudang_gate_disciple' | 'wudang_mid_disciple' | 'wudang_elder_battle'
-  | 'training_dummy' | 'shadow_scout' | 'shadow_agent';
+  | 'training_dummy' | 'shadow_scout' | 'shadow_agent'
+  | 'zhao_dashi' | 'yamen_guard' | 'bandit_elite'
+  | 'one_eye_leopard' | 'one_eye_leopard_drugged';
 
 export type ItemId = 'hp_potion' | 'mp_potion' | 'exp_scroll' | 'iron_guard';
 
 export type NpcId =
   | 'wudang_zhangsan' | 'emei_miejue' | 'shaolin_kongwen'
   | 'beggar_hong' | 'huashan_master' | 'demon_master'
-  | 'mo_jiangqing' | 'liu_qinghan';
+  | 'mo_jiangqing' | 'liu_qinghan'
+  | 'zhang_xuansu' | 'chen_jingxu' | 'zhou_boan'
+  | 'song_zhiyuan' | 'gu_xiaosang' | 'lu_chengzhou' | 'shen_nishang';
 
 export type ElderId = 'wudang_elder' | 'emei_elder' | 'shaolin_elder' | 'beggar_elder';
 
@@ -256,6 +261,7 @@ export interface PlayerState {
   wudangGateCleared: boolean;
   wudangMidCleared: boolean;
   wudangElderCleared: boolean;
+  chapter2Route: '' | 'hotblood' | 'wisdom';
   _slot: number;
   _savedAt?: string;
 }

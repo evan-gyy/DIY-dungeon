@@ -192,6 +192,69 @@ export const ENEMIES: Record<EnemyId, EnemyTemplate> = {
     aiDesc: '密探精锐·结丹水平·注定战败敌人',
     scriptedDefeat: true,
   },
+
+  // ── 第二章：武当·清河镇 ──
+  zhao_dashi: {
+    id: 'zhao_dashi', name: '赵大石', icon: '💪', tier: 1,
+    hp: 120, maxHp: 120, atk: 25, def: 12, agi: 5,
+    reward: { exp: 55, gold: 0 },
+    loot: [],
+    actions: [
+      { name: '猛力一击', icon: '💪', powerMul: 1.3, defPen: 0.4, hit: 1, mpCost: 0, weight: 50, effect: null },
+      { name: '蛮力横扫', icon: '🌀', powerMul: 0.8, defPen: 0.5, hit: 2, mpCost: 0, weight: 30, effect: null },
+      { name: '扎马步',   icon: '🧱', powerMul: 0, defPen: 0, hit: 0, mpCost: 0, weight: 20, effect: { type: 'def_boost', value: 8, duration: 1 } },
+    ],
+    aiDesc: '外门弟子·力量型·小比对手',
+  },
+  yamen_guard: {
+    id: 'yamen_guard', name: '县衙衙役', icon: '⚔️', tier: 1,
+    hp: 100, maxHp: 100, atk: 22, def: 10, agi: 7,
+    reward: { exp: 40, gold: 5 },
+    loot: [],
+    actions: [
+      { name: '刀劈', icon: '🗡️', powerMul: 1.0, defPen: 0.7, hit: 1, mpCost: 0, weight: 55, effect: null },
+      { name: '追击', icon: '💨', powerMul: 0.7, defPen: 0.8, hit: 1, mpCost: 0, weight: 30, effect: null },
+      { name: '鸣金', icon: '🔔', powerMul: 0, defPen: 0, hit: 0, mpCost: 0, weight: 15, effect: { type: 'buff_atk', value: 5, duration: 1 } },
+    ],
+    aiDesc: '县衙爪牙·炼气五层水平',
+  },
+  bandit_elite: {
+    id: 'bandit_elite', name: '土匪精锐', icon: '🪓', tier: 2,
+    hp: 140, maxHp: 140, atk: 28, def: 12, agi: 9,
+    reward: { exp: 70, gold: 15 },
+    loot: [{ id: 'hp_potion', chance: 0.3 }],
+    actions: [
+      { name: '斧劈',   icon: '🪓', powerMul: 1.2, defPen: 0.6, hit: 1, mpCost: 0, weight: 45, effect: null },
+      { name: '连环刀', icon: '⚔️', powerMul: 0.65, defPen: 0.8, hit: 2, mpCost: 0, weight: 35, effect: null },
+      { name: '狂暴',   icon: '😡', powerMul: 0, defPen: 0, hit: 0, mpCost: 0, weight: 20, effect: { type: 'buff_atk', value: 10, duration: 2 } },
+    ],
+    aiDesc: '苍岭山精锐土匪·炼气六七层水平',
+  },
+  one_eye_leopard: {
+    id: 'one_eye_leopard', name: '独眼豹', icon: '🐆', tier: 2,
+    hp: 220, maxHp: 220, atk: 35, def: 15, agi: 11,
+    reward: { exp: 120, gold: 30 },
+    loot: [{ id: 'exp_scroll', chance: 0.5 }],
+    actions: [
+      { name: '独眼凶光', icon: '👁️', powerMul: 1.4, defPen: 0.6, hit: 1, mpCost: 0, weight: 40, effect: null },
+      { name: '豹爪连击', icon: '🐾', powerMul: 0.7, defPen: 0.7, hit: 2, mpCost: 0, weight: 35, effect: null },
+      { name: '喝令小弟', icon: '📣', powerMul: 0, defPen: 0, hit: 0, mpCost: 0, weight: 25, effect: { type: 'def_boost', value: 10, duration: 1 } },
+    ],
+    aiDesc: '苍岭山匪首·炼气九层水平',
+  },
+  one_eye_leopard_drugged: {
+    id: 'one_eye_leopard_drugged', name: '邪药独眼豹', icon: '💉', tier: 3,
+    hp: 350, maxHp: 350, atk: 45, def: 18, agi: 13,
+    reward: { exp: 250, gold: 50 },
+    loot: [{ id: 'exp_scroll', chance: 1.0 }, { id: 'hp_potion', chance: 0.6 }],
+    actions: [
+      { name: '燃血掌击', icon: '🩸', powerMul: 1.8, defPen: 0.5, hit: 1, mpCost: 0, weight: 35, effect: { type: 'self_heal', value: 0.08, duration: 1 } },
+      { name: '血怒连斩', icon: '⚡', powerMul: 0.9, defPen: 0.7, hit: 2, mpCost: 0, weight: 35, effect: null },
+      { name: '燃血爆发', icon: '💥', powerMul: 2.2, defPen: 0.3, hit: 1, mpCost: 0, weight: 20, effect: null },
+      { name: '药力反噬', icon: '☠️', powerMul: 0, defPen: 0, hit: 0, mpCost: 0, weight: 10, effect: { type: 'weaken_def', value: 8, duration: 2 } },
+    ],
+    aiDesc: '燃血丹强化·伪筑基·每回合自损5%HP',
+  },
 };
 
 export function getRandomEnemy(tier: number): EnemyTemplate {

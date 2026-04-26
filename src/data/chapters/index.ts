@@ -1,11 +1,12 @@
 import { CH1 } from './ch1';
+import { CH2 } from './ch2';
 import type { ChapterData } from './types';
 
 export type { ChapterData, CampScene } from './types';
 
 export const CHAPTERS: Record<number, ChapterData> = {
   1: CH1,
-  // 2: CH2,  ← 添加第二章：新建 ch2.ts，在此注册一行
+  2: CH2,
 };
 
 export function getChapter(n: number): ChapterData {
