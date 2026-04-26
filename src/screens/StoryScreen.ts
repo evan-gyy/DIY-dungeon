@@ -11,6 +11,7 @@ import type { StoryNode } from '../data/types';
 let _nodeId  = 'start';
 let _timer: ReturnType<typeof setInterval> | null = null;
 let _waiting = false;
+let _keyHandler: ((e: KeyboardEvent) => void) | null = null;
 
 export function runStoryIntro(): void {
   const p = getPlayer();
@@ -23,6 +24,15 @@ export function runStoryIntro(): void {
 
   const overlay = document.getElementById('story-overlay');
   if (overlay) overlay.onclick = _handleClick;
+
+  if (_keyHandler) document.removeEventListener('keydown', _keyHandler);
+  _keyHandler = (e: KeyboardEvent) => {
+    if (e.key === ' ' || e.key === 'Enter') {
+      e.preventDefault();
+      _handleClick(e as unknown as Event);
+    }
+  };
+  document.addEventListener('keydown', _keyHandler);
 
   document.getElementById('story-continue-hint')?.classList.add('hidden');
 
@@ -194,6 +204,13 @@ function _showChoices(node: { choices: Array<{ text: string; next: string }> }):
   const area = document.getElementById('story-choices-area');
   if (!area) return;
   area.innerHTML = '';
+
+  const dialogMode = document.getElementById('story-dialogue-mode');
+  dialogMode?.classList.remove('hidden');
+  const speakerEl = document.getElementById('story-speaker-name');
+  if (speakerEl) speakerEl.textContent = '';
+  const textEl = document.getElementById('story-dialogue-text');
+  if (textEl) textEl.textContent = '';
   for (const choice of node.choices) {
     const btn = document.createElement('button');
     btn.className = 'story-choice-btn';
@@ -213,11 +230,13 @@ function _startBattle(node: { enemyId: string; nextOnWin: string; nextOnLose?: s
 }
 
 export function skipStoryIntro(): void {
+  if (_keyHandler) { document.removeEventListener('keydown', _keyHandler); _keyHandler = null; }
   if (_timer !== null) { clearInterval(_timer); _timer = null; }
   finishStoryIntro();
 }
 
 function finishStoryIntro(): void {
+  if (_keyHandler) { document.removeEventListener('keydown', _keyHandler); _keyHandler = null; }
   const p = getPlayer();
   if (p) {
     const chapter = getChapter(p.chapter);
