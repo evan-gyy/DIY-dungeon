@@ -250,7 +250,8 @@ export interface PlayerState {
   cultivationPoints: number;
   attrBoosts: AttrBoosts;
   tutorialDone: boolean;
-  storyPhase: number;
+  chapter: number;
+  act: number;
   wudangMissionAccepted: boolean;
   wudangGateCleared: boolean;
   wudangMidCleared: boolean;

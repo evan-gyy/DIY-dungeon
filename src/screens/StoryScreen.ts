@@ -1,6 +1,6 @@
 import { getPlayer, setPlayer } from '../state/GameState';
 import { saveGame } from '../state/SaveSystem';
-import { STORY_INTRO } from '../data/story';
+import { getChapter } from '../data/chapters/index';
 import { bus } from '../ui/events';
 import { showScreen } from './ScreenManager';
 import { enterCamp } from './Camp';
@@ -13,7 +13,9 @@ let _timer: ReturnType<typeof setInterval> | null = null;
 let _waiting = false;
 
 export function runStoryIntro(): void {
-  _nodeId = 'start';
+  const p = getPlayer();
+  const chapter = getChapter(p.chapter);
+  _nodeId = chapter.startNode;
   showScreen('story');
 
   const bg = document.getElementById('story-bg');
@@ -26,7 +28,7 @@ export function runStoryIntro(): void {
 
   // listen for story-battle results
   bus.on('story:battle-end', ({ result }) => {
-    const node = STORY_INTRO[_nodeId];
+    const node = chapter.storyNodes[_nodeId];
     if (node?.type !== 'battle') return;
     showScreen('story');
     const next = result === 'win' ? node.nextOnWin : (node.nextOnLose ?? node.nextOnWin);
@@ -34,7 +36,7 @@ export function runStoryIntro(): void {
     else finishStoryIntro();
   });
   bus.on('battle:end', ({ result }) => {
-    const node = STORY_INTRO[_nodeId];
+    const node = chapter.storyNodes[_nodeId];
     if (node?.type !== 'battle') return;
     showScreen('story');
     const next = result === 'win' ? node.nextOnWin : (node.nextOnLose ?? node.nextOnWin);
@@ -42,22 +44,24 @@ export function runStoryIntro(): void {
     else finishStoryIntro();
   });
 
-  showStoryNode('start');
+  showStoryNode(chapter.startNode);
 }
 
 function _handleClick(e: Event): void {
   const target = e.target as HTMLElement;
   if (target.closest('.story-skip-btn') || target.closest('.story-choice-btn')) return;
 
+  const p = getPlayer();
+  const storyNodes = getChapter(p.chapter).storyNodes;
+
   // typing still in progress — complete it immediately
   if (_timer !== null) {
     clearInterval(_timer);
     _timer = null;
-    const node = STORY_INTRO[_nodeId];
+    const node = storyNodes[_nodeId];
     if (node && (node.type === 'narration' || node.type === 'dialogue')) {
-      const p = getPlayer();
       let text = (node as { text: string }).text ?? '';
-      if (node.type === 'dialogue' && node.speaker === '我' && p) {
+      if (node.type === 'dialogue' && node.speaker === '我') {
         text = text.replace('%s%', p.name ?? '少年');
       }
       const textEl = document.getElementById(node.type === 'narration' ? 'story-narration-text' : 'story-dialogue-text');
@@ -68,7 +72,7 @@ function _handleClick(e: Event): void {
   }
 
   if (!_waiting) return;
-  const node = STORY_INTRO[_nodeId];
+  const node = storyNodes[_nodeId];
   if (!node) return;
   if (node.type !== 'choice' && 'next' in node && node.next) {
     showStoryNode(node.next);
@@ -77,7 +81,8 @@ function _handleClick(e: Event): void {
 
 export function showStoryNode(nodeId: string): void {
   if (nodeId === 'END') { finishStoryIntro(); return; }
-  const node = STORY_INTRO[nodeId];
+  const p = getPlayer();
+  const node = getChapter(p.chapter).storyNodes[nodeId];
   if (!node) { finishStoryIntro(); return; }
   _nodeId = nodeId;
 
@@ -215,11 +220,12 @@ export function skipStoryIntro(): void {
 function finishStoryIntro(): void {
   const p = getPlayer();
   if (p) {
+    const chapter = getChapter(p.chapter);
     const wudangStats = {
       hp: 230, maxHp: 230, mp: 130, maxMp: 130,
       atk: 30, def: 15, agi: 15, crit: 5, level: 1,
     };
-    const updated = { ...p, ...wudangStats, storyPhase: 3, tutorialDone: true };
+    const updated = { ...p, ...wudangStats, act: chapter.finalAct, tutorialDone: true };
     setPlayer(updated);
     saveGame(updated);
   }

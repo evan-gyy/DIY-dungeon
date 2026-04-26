@@ -1,55 +1,15 @@
 import { getPlayer, setPlayer } from '../../state/GameState';
 import { saveGame } from '../../state/SaveSystem';
 import { NPC_DIALOGS } from '../../data/npcs';
+import { getChapter } from '../../data/chapters/index';
 import { showToast } from '../../ui/toast';
 import { openDialog } from '../DialogScreen';
-
-// ── story scene config (data not in NPC_DIALOGS — lives here as UI config) ──
-interface StoryScene {
-  id: string;
-  title: string;
-  bg: string;
-  npc: { name: string; sub: string; img: string } | null;
-  desc: string;
-  actionLabel: string;
-  actionEvent: string;
-}
-
-const STORY_SCENES: Record<number, StoryScene> = {
-  0: {
-    id: 'act1_chess', title: '第一章 · 寒斋棋声',
-    bg: 'picture/scene/C1-muwu.png',
-    npc: { name: '墨绐青', sub: '隐居村妇 / 前朝国师', img: 'picture/Female-main/墨绐青.png' },
-    desc: '小石屋内，窗外雪意未消。一盘残局，一盏油灯，她等你多时了。',
-    actionLabel: '聆听教诲', actionEvent: 'act1_chess',
-  },
-  1: {
-    id: 'act2_thunder', title: '第一章 · 惊雷入梦',
-    bg: 'picture/scene/C1-muwu.png',
-    npc: { name: '墨绐青', sub: '隐居村妇 / 前朝国师', img: 'picture/Female-main/墨绐青.png' },
-    desc: '天色骤变，雷声隐隐。她忽然起身，目光如电——',
-    actionLabel: '追问变故', actionEvent: 'act2_thunder',
-  },
-  2: {
-    id: 'act3_escape', title: '第一章 · 暗道夺命',
-    bg: 'picture/scene/C1-didao.png',
-    npc: null,
-    desc: '暗道幽深，身后杀机逼近。你必须闯过这道关卡。',
-    actionLabel: '进入暗道', actionEvent: 'act3_escape',
-  },
-  3: {
-    id: 'act4_snow', title: '第一章 · 雪中惊鸿',
-    bg: 'picture/scene/C1-xueye.png',
-    npc: { name: '柳清寒', sub: '武当大师姐 / 命中妻子', img: 'picture/Female-main/柳清寒.png' },
-    desc: '风雪漫天，一道白衣身影立于山门之前——',
-    actionLabel: '上前相见', actionEvent: 'act4_snow',
-  },
-};
+import type { CampScene } from '../../data/chapters/types';
 
 export function renderStoryPanel(content: HTMLElement): void {
   const p = getPlayer();
-  const phase = p.storyPhase ?? 0;
-  const scene = STORY_SCENES[phase] ?? STORY_SCENES[0]!;
+  const chapter = getChapter(p.chapter);
+  const scene = chapter.campScenes[p.act] ?? chapter.campScenes[0]!;
 
   updateStorySidebar(scene);
 
@@ -89,7 +49,7 @@ function triggerStoryEvent(eventId: string): void {
     else showToast('墨绐青的对话正在酝酿中…');
   } else if (eventId === 'act2_thunder') {
     const p = getPlayer();
-    setPlayer({ ...p, storyPhase: 2 });
+    setPlayer({ ...p, act: 2 });
     saveGame(getPlayer());
     showToast('突变发生——必须立刻离开！');
     renderStoryPanel(document.getElementById('camp-content')!);
@@ -103,7 +63,7 @@ function triggerStoryEvent(eventId: string): void {
   }
 }
 
-export function updateStorySidebar(scene: StoryScene): void {
+export function updateStorySidebar(scene: CampScene): void {
   const imgEl  = document.getElementById('sidebar-npc-img')  as HTMLImageElement | null;
   const nameEl = document.getElementById('sidebar-npc-name');
   const subEl  = document.getElementById('sidebar-npc-sub');

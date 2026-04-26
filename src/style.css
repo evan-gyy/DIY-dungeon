@@ -1,3 +1,15 @@
+@import "tailwindcss";
+
+@theme {
+  --color-gold: #e8c87a;
+  --color-gold-border: #c9a84c;
+  --color-panel-bg: #12121c;
+  --color-card-bg: #1a1a2e;
+  --color-dim: #7a7a9a;
+  --color-light: #d0cce8;
+  --font-cn: 'STKaiti', 'KaiTi', 'SimSun', serif;
+}
+
 /* ===== 全局重置 ===== */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -1211,5 +1223,96 @@ body {
 .slot-load-btn { flex: 1; padding: 5px 8px; font-size: 12px; letter-spacing: 1px; }
 .slot-del-btn { padding: 5px 8px; font-size: 12px; letter-spacing: 1px; }
 
+/* =====================================================
+   响应式布局（移动端 ≤ 768px）
+===================================================== */
+@media (max-width: 768px) {
 
+  /* ── 营地：三列 → 单列，左侧导航变底栏 ── */
+  .camp-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto 1fr auto;
+  }
+  .camp-topbar {
+    grid-column: 1;
+    flex-wrap: wrap;
+    height: auto;
+    padding: 8px 12px;
+    gap: 6px;
+  }
+  .camp-topbar .char-name { font-size: 15px; }
+  .camp-topbar .stat-bar { display: none; }
+  .camp-topbar .gold { margin-left: 0; }
+  .bar-track { width: 70px; }
+  .camp-nav {
+    grid-column: 1;
+    flex-direction: row;
+    overflow-x: auto;
+    border-right: none;
+    border-bottom: 1px solid var(--border-dim);
+    padding: 0;
+    gap: 0;
+    -webkit-overflow-scrolling: touch;
+  }
+  .camp-nav-btn {
+    border-left: none;
+    border-bottom: 3px solid transparent;
+    padding: 10px 14px;
+    white-space: nowrap;
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+  .camp-nav-btn.active { border-left-color: transparent; border-bottom-color: var(--border-gold); }
+  .camp-content { padding: 16px; }
+  .camp-sidebar { display: none; }
 
+  /* ── 创角：两列 → 单列 ── */
+  .create-container {
+    grid-template-columns: 1fr;
+    width: 95vw;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  .char-select-grid { grid-template-columns: repeat(4, 1fr); }
+  .char-card img { height: 100px; }
+
+  /* ── 学功：两列 → 单列 ── */
+  .learn-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+    width: 95vw;
+    max-height: 90vh;
+  }
+  .learn-left { max-height: 220px; overflow-y: auto; }
+  .elder-list { flex-direction: row; flex-wrap: wrap; gap: 8px; }
+  .elder-card { width: calc(50% - 4px); }
+  .learn-skill-grid { grid-template-columns: 1fr; }
+
+  /* ── 存档选择：三列 → 一列 ── */
+  .saveselect-grid { grid-template-columns: 1fr; }
+
+  /* ── 故事对话：缩小立绘区域 ── */
+  .story-dialogue-left { padding-right: 120px; min-height: 100px; }
+  .story-char-portrait { width: 110px; height: 165px; }
+
+  /* ── 战斗结果弹窗 ── */
+  .battle-result-box { min-width: 0; width: 90vw; padding: 24px 20px; }
+
+  /* ── 战斗界面 ── */
+  .battle-arena { padding: 12px 16px 8px; min-height: 180px; }
+  .battle-player-img { width: 80px; height: 120px; }
+  .battle-enemy-avatar { width: 90px; height: 90px; font-size: 54px; }
+  .battle-player-side { width: 180px; }
+  .battle-enemy-side { width: 180px; }
+  .hp-block { width: 160px !important; }
+  .skill-btn { width: 68px; min-height: 60px; }
+  .skill-btn-icon { font-size: 20px; }
+
+  /* ── NPC对话界面 ── */
+  .dialog-content-area { padding: 0 16px 40px; }
+  .story-dialogue-box { padding: 0 12px; }
+
+  /* ── 通用按钮触摸目标 ── */
+  .btn { min-height: 40px; }
+  .btn-sm { min-height: 36px; }
+}

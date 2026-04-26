@@ -1,4 +1,5 @@
 import type { PlayerState } from '../data/types';
+import { PlayerStateSchema } from './schemas';
 
 const SAVE_KEY = 'diy_dungeon_saves';
 const MAX_SLOTS = 3;
@@ -29,52 +30,31 @@ export function saveGame(player: PlayerState, slot?: number): void {
   localStorage.setItem(SAVE_KEY, JSON.stringify(saves));
 }
 
-// 加载一个存档槽位（含向下兼容：缺字段补默认值）
+// 加载一个存档槽位（Zod 自动补全缺失字段，兼容旧 storyPhase 字段）
 export function loadSave(slot: number): PlayerState | null {
   const saves = loadRaw();
   const raw = saves[`slot_${slot}`];
   if (!raw || typeof raw !== 'object') return null;
 
-  const data = raw as Record<string, unknown>;
+  const data = { ...(raw as Record<string, unknown>) };
 
-  // 补全所有可能缺失的字段（向下兼容旧存档）
-  const player: PlayerState = {
-    name:         (data['name'] as string)   ?? '无名',
-    charId:       (data['charId'] as PlayerState['charId']) ?? 'male_good',
-    charImg:      (data['charImg'] as string) ?? 'picture/maincharacter/male_good.png',
-    sect:         (data['sect'] as PlayerState['sect']) ?? 'wudang',
-    hp:           Number(data['hp'])   || 80,
-    maxHp:        Number(data['maxHp']) || 80,
-    mp:           Number(data['mp'])   || 20,
-    maxMp:        Number(data['maxMp']) || 20,
-    atk:          Number(data['atk']) || 8,
-    def:          Number(data['def']) || 4,
-    agi:          Number(data['agi']) || 5,
-    crit:         Number(data['crit']) || 3,
-    exp:          Number(data['exp'])  || 0,
-    gold:         Number(data['gold']) || 10,
-    level:        Number(data['level']) || 1,
-    skills:       Array.isArray(data['skills']) ? (data['skills'] as PlayerState['skills']) : ['yi_li_xin_jing'],
-    equippedSkills: Array.isArray(data['equippedSkills'])
-      ? (data['equippedSkills'] as PlayerState['equippedSkills'])
-      : [null, null, null, null],
-    inventory:    Array.isArray(data['inventory']) ? (data['inventory'] as PlayerState['inventory']) : [],
-    cultivationPoints: Number(data['cultivationPoints']) || 0,
-    attrBoosts:   (data['attrBoosts'] as PlayerState['attrBoosts']) ?? { hp: 0, atk: 0, def: 0, agi: 0, mp: 0 },
-    tutorialDone: Boolean(data['tutorialDone']),
-    storyPhase:   Number(data['storyPhase']) || 0,
-    wudangMissionAccepted: Boolean(data['wudangMissionAccepted']),
-    wudangGateCleared:     Boolean(data['wudangGateCleared']),
-    wudangMidCleared:      Boolean(data['wudangMidCleared']),
-    wudangElderCleared:    Boolean(data['wudangElderCleared']),
-    _slot: slot,
-  };
-
-  if (typeof data['_savedAt'] === 'string') {
-    player._savedAt = data['_savedAt'];
+  // 旧存档兼容：storyPhase → act
+  if (data['act'] === undefined && data['storyPhase'] !== undefined) {
+    data['act'] = data['storyPhase'];
   }
 
-  return player;
+  const result = PlayerStateSchema.safeParse({ ...data, _slot: slot });
+  if (result.success) {
+    return result.data as unknown as PlayerState;
+  }
+
+  // 解析失败时宽松解析（补全所有缺失字段）
+  console.warn('存档字段异常，使用默认值补全', result.error.issues);
+  try {
+    return PlayerStateSchema.parse({ ...data, _slot: slot }) as unknown as PlayerState;
+  } catch {
+    return null;
+  }
 }
 
 // 删除一个存档槽位

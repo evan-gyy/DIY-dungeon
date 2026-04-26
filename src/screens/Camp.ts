@@ -6,6 +6,7 @@ import { renderAttrPanel } from './camp/AttrPanel';
 import { renderBagPanel } from './camp/BagPanel';
 import { renderSkillPanel } from './camp/SkillPanel';
 import { renderStoryPanel, updateStorySidebar } from './camp/StoryPanel';
+import { getChapter } from '../data/chapters/index';
 import { showToast } from '../ui/toast';
 import type { CampTabId } from '../data/types';
 
@@ -25,19 +26,10 @@ export function renderCampTopbar(): void {
 
 export function renderSidebar(): void {
   const p = getPlayer();
-  const phase = p.storyPhase ?? 0;
-  // re-use updateStorySidebar with the current scene
+  const chapter = getChapter(p.chapter);
+  const scene = chapter.campScenes[p.act] ?? chapter.campScenes[0]!;
   import('./camp/StoryPanel').then(m => {
-    // StoryPanel handles the sidebar update when rendering
-    // Just force a sidebar update via the scene data
-    const scenes: Record<number, { npc: { name: string; sub: string; img: string } | null }> = {
-      0: { npc: { name: '墨绐青', sub: '隐居村妇 / 前朝国师', img: 'picture/Female-main/墨绐青.png' } },
-      1: { npc: { name: '墨绐青', sub: '隐居村妇 / 前朝国师', img: 'picture/Female-main/墨绐青.png' } },
-      2: { npc: null },
-      3: { npc: { name: '柳清寒', sub: '武当大师姐 / 命中妻子', img: 'picture/Female-main/柳清寒.png' } },
-    };
-    const scene = scenes[phase] ?? scenes[0]!;
-    m.updateStorySidebar(scene as Parameters<typeof updateStorySidebar>[0]);
+    m.updateStorySidebar(scene);
   });
 }
 
