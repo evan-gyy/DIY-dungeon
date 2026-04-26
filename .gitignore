@@ -1,2 +1,16 @@
-*.png
-*.mp3
+# ── 构建输出 ──
+dist/
+
+# ── 依赖 ──
+node_modules/
+
+# ── 弃用文件（重构前的旧版本） ──
+_deprecated/
+
+# ── Claude 内部配置 ──
+.claude/
+
+# ── OS 垃圾文件 ──
+.DS_Store
+Thumbs.db
+desktop.ini

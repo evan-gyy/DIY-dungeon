@@ -1,0 +1,196 @@
+import type { SkillId, SkillData } from './types';
+
+export const SKILLS: Record<SkillId, SkillData> = {
+
+  yi_li_xin_jing: {
+    id: 'yi_li_xin_jing', name: '弈理心经', icon: '♟️', type: 'passive', target: 'self',
+    mp: 0, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 0, effect: { type: 'regen_mp_pct', value: 10, duration: 99 },
+    healPct: 0,
+    desc: '【被动】棋道入心，每回合自动恢复10%最大内力。战斗中可预判敌人下一招，在技能栏右侧显示。',
+    cost: { exp: 0 }, sect: '',
+    battleTip: '被动·预判敌招+百分比回内',
+  },
+
+  // ── 武当派 ──
+  mianzhang: {
+    id: 'mianzhang', name: '绵掌', icon: '🌊', type: 'attack', target: 'enemy',
+    mp: 12, hit: 2, powerMul: 0.55, defPen: 0.8,
+    cooldown: 0, effect: null, healPct: 0,
+    desc: '双掌连推，借力打力，命中两次各造成55%攻击伤害。',
+    cost: { exp: 80 }, sect: 'wudang',
+    battleTip: '连击流·消耗低',
+  },
+  taiji: {
+    id: 'taiji', name: '太极拳', icon: '☯️', type: 'control', target: 'enemy',
+    mp: 20, hit: 1, powerMul: 0.4, defPen: 0.5,
+    cooldown: 2, effect: { type: 'stun', value: 1, duration: 1 },
+    healPct: 0,
+    desc: '以柔克刚，造成40%攻击伤害，70%概率使敌方眩晕跳过下1回合。',
+    cost: { exp: 100 }, sect: 'wudang',
+    battleTip: '控制核心·高价值',
+  },
+  wudang_sword: {
+    id: 'wudang_sword', name: '武当剑法', icon: '🗡️', type: 'attack', target: 'enemy',
+    mp: 28, hit: 1, powerMul: 1.5, defPen: 0.6,
+    cooldown: 1, effect: { type: 'weaken_def', value: 8, duration: 2 },
+    healPct: 0,
+    desc: '一剑三式凝而为一，造成150%攻击伤害，并降低敌方防御8点持续2回合。',
+    cost: { exp: 150 }, sect: 'wudang',
+    battleTip: '爆发·减防连招',
+  },
+  zixiao: {
+    id: 'zixiao', name: '紫霄神功', icon: '⚡', type: 'passive', target: 'self',
+    mp: 0, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 0, effect: { type: 'regen_mp', value: 6, duration: 99 },
+    healPct: 0,
+    desc: '【被动】每回合自动恢复6点内力，不占行动。',
+    cost: { exp: 200 }, sect: 'wudang',
+    battleTip: '被动·内力引擎',
+  },
+
+  // ── 峨眉派 ──
+  emei_sword: {
+    id: 'emei_sword', name: '峨眉剑法', icon: '🌸', type: 'attack', target: 'enemy',
+    mp: 18, hit: 2, powerMul: 0.65, defPen: 0.9,
+    cooldown: 0, effect: null, healPct: 0,
+    desc: '轻灵双剑各击一次，各造成65%攻击伤害，穿透防御较高。',
+    cost: { exp: 120 }, sect: 'emei',
+    battleTip: '高穿透连击',
+  },
+  liing_palm: {
+    id: 'liing_palm', name: '灵蛇掌', icon: '🐍', type: 'attack', target: 'enemy',
+    mp: 25, hit: 1, powerMul: 0.9, defPen: 0.7,
+    cooldown: 2, effect: { type: 'poison', value: 12, duration: 3 },
+    healPct: 0,
+    desc: '造成90%攻击伤害，并施毒3回合，每回合损失12点HP（不计防御）。',
+    cost: { exp: 130 }, sect: 'emei',
+    battleTip: '中毒·持续消耗',
+  },
+  emei_poison: {
+    id: 'emei_poison', name: '七步断肠散', icon: '☠️', type: 'control', target: 'enemy',
+    mp: 35, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 3, effect: { type: 'strong_poison', value: 20, duration: 4 },
+    healPct: 0,
+    desc: '不造成直接伤害，施加强毒4回合，每回合损失20HP，并降低攻击力10%。',
+    cost: { exp: 200 }, sect: 'emei',
+    battleTip: '纯控·高毒叠加',
+  },
+  hundred_birds: {
+    id: 'hundred_birds', name: '百鸟朝凤', icon: '🦅', type: 'support', target: 'self',
+    mp: 32, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 3, effect: { type: 'buff_atk', value: 15, duration: 2 },
+    healPct: 0,
+    desc: '聚气运功，自身攻击力提升15点持续2回合。',
+    cost: { exp: 180 }, sect: 'emei',
+    battleTip: '攻击增益·爆发前摇',
+  },
+
+  // ── 少林派 ──
+  luohan_fist: {
+    id: 'luohan_fist', name: '罗汉拳', icon: '🥊', type: 'attack', target: 'enemy',
+    mp: 8, hit: 3, powerMul: 0.38, defPen: 0.6,
+    cooldown: 0, effect: null, healPct: 0,
+    desc: '连出三拳，每拳造成38%攻击伤害，内力消耗极省。',
+    cost: { exp: 60 }, sect: 'shaolin',
+    battleTip: '低消耗·三连击',
+  },
+  vajra_palm: {
+    id: 'vajra_palm', name: '金刚掌', icon: '👊', type: 'attack', target: 'enemy',
+    mp: 22, hit: 1, powerMul: 1.6, defPen: 0.3,
+    cooldown: 1, effect: null, healPct: 0,
+    desc: '全力一掌，造成160%攻击伤害，但防御穿透低（对高防敌人效果差）。',
+    cost: { exp: 100 }, sect: 'shaolin',
+    battleTip: '高爆发·打低防敌人',
+  },
+  yijin_jing: {
+    id: 'yijin_jing', name: '易筋经', icon: '📿', type: 'support', target: 'self',
+    mp: 28, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 2, effect: null, healPct: 0.28,
+    desc: '内功运转全身经脉，恢复自身28%最大HP。',
+    cost: { exp: 180 }, sect: 'shaolin',
+    battleTip: '中量回血·维持续航',
+  },
+  '72_arts': {
+    id: '72_arts', name: '金刚护体', icon: '🏯', type: 'support', target: 'self',
+    mp: 20, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 3, effect: { type: 'def_boost', value: 20, duration: 3 },
+    healPct: 0,
+    desc: '运转少林金刚功，防御提升20点持续3回合。',
+    cost: { exp: 300 }, sect: 'shaolin',
+    battleTip: '防御增益·硬扛期',
+  },
+
+  // ── 丐帮 ──
+  beggar_fist: {
+    id: 'beggar_fist', name: '丐帮拳法', icon: '✊', type: 'attack', target: 'enemy',
+    mp: 6, hit: 1, powerMul: 0.85, defPen: 0.7,
+    cooldown: 0, effect: null, healPct: 0,
+    desc: '野路子重拳，造成85%攻击伤害，内力消耗极低，适合持久消耗。',
+    cost: { exp: 50 }, sect: 'beggar',
+    battleTip: '性价比最高的普攻升级',
+  },
+  stick_art: {
+    id: 'stick_art', name: '打狗棒法', icon: '🦯', type: 'attack', target: 'enemy',
+    mp: 22, hit: 1, powerMul: 1.2, defPen: 0.8,
+    cooldown: 1, effect: { type: 'knockback', value: 1, duration: 1 },
+    healPct: 0,
+    desc: '造成120%攻击伤害，60%概率使敌方跳过下1回合行动（击飞）。',
+    cost: { exp: 200 }, sect: 'beggar',
+    battleTip: '强控概率·高性能',
+  },
+  mud_walk: {
+    id: 'mud_walk', name: '泥鳅步法', icon: '🌀', type: 'support', target: 'self',
+    mp: 14, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 2, effect: { type: 'evade', value: 0.5, duration: 1 },
+    healPct: 0,
+    desc: '身法奇诡，本回合后闪避率提升50%，可规避一次伤害。',
+    cost: { exp: 100 }, sect: 'beggar',
+    battleTip: '规避关键一击',
+  },
+  dragon_palm: {
+    id: 'dragon_palm', name: '降龙十八掌', icon: '🐉', type: 'attack', target: 'enemy',
+    mp: 45, hit: 1, powerMul: 2.2, defPen: 0.5,
+    cooldown: 2, effect: null, healPct: 0,
+    desc: '亢龙有悔！倾尽内力，造成220%攻击伤害，威力冠绝群雄。',
+    cost: { exp: 350 }, sect: 'beggar',
+    battleTip: '终极爆发·高冷却',
+  },
+};
+
+export const ELDERS = [
+  {
+    id: 'wudang_elder' as const,
+    sect: 'wudang' as const,
+    name: '武当传功长老',
+    img: 'picture/NPC/武当派-传功长老.png',
+    intro: '老夫修炼武当内功四十载，愿将毕生所学倾囊相授，只求武当之名传遍江湖。',
+    skills: ['taiji', 'mianzhang', 'zixiao', 'wudang_sword'] as SkillId[],
+  },
+  {
+    id: 'emei_elder' as const,
+    sect: 'emei' as const,
+    name: '峨眉传功长老',
+    img: 'picture/NPC/峨眉派-传功长老.png',
+    intro: '峨眉剑法与掌法相辅相成，女弟子习之可发挥百分百威力，男子亦有八成之功。',
+    skills: ['emei_sword', 'liing_palm', 'emei_poison', 'hundred_birds'] as SkillId[],
+  },
+  {
+    id: 'shaolin_elder' as const,
+    sect: 'shaolin' as const,
+    name: '少林传功长老',
+    img: 'picture/NPC/少林派-传功长老.png',
+    intro: '阿弥陀佛，少林七十二绝技非一日之功，习武先修心，心正则功成。',
+    skills: ['vajra_palm', 'luohan_fist', '72_arts', 'yijin_jing'] as SkillId[],
+  },
+  {
+    id: 'beggar_elder' as const,
+    sect: 'beggar' as const,
+    name: '丐帮传功长老',
+    img: 'picture/NPC/丐帮-传功长老.png',
+    intro: '打狗棒法乃帮主秘传，降龙十八掌更是震古烁今，老夫只传有缘人。',
+    skills: ['stick_art', 'dragon_palm', 'beggar_fist', 'mud_walk'] as SkillId[],
+  },
+] as const;
+
+export type Elder = (typeof ELDERS)[number];
