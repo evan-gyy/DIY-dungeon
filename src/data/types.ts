@@ -24,7 +24,9 @@ export type SkillId =
   // 少林派
   | 'luohan_fist' | 'vajra_palm' | 'yijin_jing' | '72_arts'
   // 丐帮
-  | 'beggar_fist' | 'stick_art' | 'mud_walk' | 'dragon_palm';
+  | 'beggar_fist' | 'stick_art' | 'mud_walk' | 'dragon_palm'
+  // 第三章：武当真传剑法
+  | 'wudang_yunkai' | 'wudang_songtao' | 'wudang_guiyuan';
 
 export type EnemyId =
   | 'rogue_thug' | 'poison_woman' | 'beggar_disciple'
@@ -33,7 +35,10 @@ export type EnemyId =
   | 'wudang_gate_disciple' | 'wudang_mid_disciple' | 'wudang_elder_battle'
   | 'training_dummy' | 'shadow_scout' | 'shadow_agent'
   | 'zhao_dashi' | 'yamen_guard' | 'bandit_elite'
-  | 'one_eye_leopard' | 'one_eye_leopard_drugged';
+  | 'one_eye_leopard' | 'one_eye_leopard_drugged'
+  // 第三章：内门风云
+  | 'forest_yao_beast' | 'blackmoon_scout_elite'
+  | 'lu_chenzhou' | 'fang_zhonghe' | 'su_yunxiu' | 'ji_wushuang';
 
 export type ItemId = 'hp_potion' | 'mp_potion' | 'exp_scroll' | 'iron_guard';
 
@@ -42,7 +47,10 @@ export type NpcId =
   | 'beggar_hong' | 'huashan_master' | 'demon_master'
   | 'mo_jiangqing' | 'liu_qinghan'
   | 'zhang_xuansu' | 'chen_jingxu' | 'zhou_boan'
-  | 'song_zhiyuan' | 'gu_xiaosang' | 'lu_chengzhou' | 'shen_nishang';
+  | 'song_zhiyuan' | 'gu_xiaosang' | 'lu_chengzhou' | 'shen_nishang'
+  // 第三章：内门风云
+  | 'ji_wushuang_npc' | 'fang_zhonghe_npc' | 'su_yunxiu_npc'
+  | 'meng_wenyuan' | 'ye_ziyi' | 'han_tiexin';
 
 export type ElderId = 'wudang_elder' | 'emei_elder' | 'shaolin_elder' | 'beggar_elder';
 
