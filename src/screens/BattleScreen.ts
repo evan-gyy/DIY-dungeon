@@ -21,6 +21,7 @@ const STATUS_ICONS: Partial<Record<StatusType, string>> = {
 
 let _selectedTargetId: string | null = null;
 let _selectedSkillId: SkillId | null = null;
+let _basicAttackMode = false; // 是否选中了普通攻击模式
 
 /** 获取单位的状态效果列表 */
 function getUnitStatuses(unitId: string, side: 'ally' | 'enemy'): StatusEffect[] {
@@ -35,6 +36,7 @@ export function initBattleScreen(): void {
     showScreen('battle');
     _selectedTargetId = null;
     _selectedSkillId = null;
+    _basicAttackMode = false;
 
     document.getElementById('battle-result-overlay')?.classList.add('hidden');
     const logEl = document.getElementById('battle-log');
@@ -142,7 +144,13 @@ function renderBattleHUD(): void {
         const unitId = el.dataset['unitId'];
         if (unitId) {
           _selectedTargetId = unitId;
-          if (_selectedSkillId) {
+          if (_basicAttackMode) {
+            // 普通攻击模式：直接攻击已选目标
+            playerBasicAttack(unitId);
+            _basicAttackMode = false;
+            _selectedSkillId = null;
+            _selectedTargetId = null;
+          } else if (_selectedSkillId) {
             playerUseSkill(_selectedSkillId, unitId);
             _selectedSkillId = null;
             _selectedTargetId = null;
@@ -179,9 +187,11 @@ function renderSkillBar(): void {
   const turnInfo = document.createElement('div');
   turnInfo.className = 'skill-bar-turn-info';
   if (isPlayerTurn) {
-    turnInfo.textContent = _selectedSkillId
-      ? `🎯 已选择技能 — 点击敌方目标释放`
-      : '🎯 你的回合 — 选择技能（辅助技能直接释放）';
+    turnInfo.textContent = _basicAttackMode
+      ? `👊 已选择普通攻击 — 点击敌方目标`
+      : _selectedSkillId
+        ? `🎯 已选择技能 — 点击敌方目标释放`
+        : '🎯 你的回合 — 选择技能（辅助技能直接释放）';
   } else {
     turnInfo.textContent = `⏳ ${currentUnit?.name ?? '...'} 行动中...`;
   }
@@ -204,12 +214,14 @@ function renderSkillBar(): void {
 
   // 普通攻击
   const basicBtn = document.createElement('button');
-  basicBtn.className = `skill-btn skill-btn-basic ${_selectedSkillId === null && _selectedTargetId ? 'skill-btn-selected' : ''}`;
+  basicBtn.className = `skill-btn skill-btn-basic ${_basicAttackMode ? 'skill-btn-selected' : ''}`;
   basicBtn.innerHTML = `<span class="skill-btn-icon">👊</span><span class="skill-btn-name">普通攻击</span><span class="skill-btn-mp">0 MP</span>`;
   basicBtn.addEventListener('click', () => {
+    _basicAttackMode = true;
     _selectedSkillId = null;
     if (_selectedTargetId) {
       playerBasicAttack(_selectedTargetId);
+      _basicAttackMode = false;
       _selectedTargetId = null;
     }
     renderSkillBar();
@@ -245,12 +257,14 @@ function renderSkillBar(): void {
             playerUseSkill(skId as SkillId);
             _selectedSkillId = null;
             _selectedTargetId = null;
+            _basicAttackMode = false;
             renderSkillBar();
             renderBattleHUD();
             return;
           }
           // 攻击/控制技能：先选中技能，等待点击目标
           _selectedSkillId = skId as SkillId;
+          _basicAttackMode = false;
           if (_selectedTargetId) {
             playerUseSkill(skId as SkillId, _selectedTargetId);
             _selectedSkillId = null;

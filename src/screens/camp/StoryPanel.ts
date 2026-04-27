@@ -4,9 +4,128 @@ import { NPC_DIALOGS } from '../../data/npcs';
 import { getChapter } from '../../data/chapters/index';
 import { showToast } from '../../ui/toast';
 import { openDialog } from '../DialogScreen';
-import { enterCamp } from '../Camp';
+import { enterCamp, switchCampTab } from '../Camp';
+import { checkLevelUp, getRealmName } from '../../state/LevelSystem';
 import type { CampScene } from '../../data/chapters/types';
 import type { SkillId } from '../../data/types';
+
+// ── 可重复日常任务定义 ──
+interface DailyTask {
+  id: string;
+  icon: string;
+  name: string;
+  desc: string;
+  exp: number;
+  gold: number;
+  unlockChapter: number;  // 需要达到的章节
+  unlockLevel: number;     // 需要达到的等级
+}
+
+const DAILY_TASKS: DailyTask[] = [
+  { id: 'chop_wood', icon: '🪓', name: '砍柴',   desc: '山门外劈柴，练臂力也练心性', exp: 15, gold: 5,  unlockChapter: 2, unlockLevel: 0 },
+  { id: 'carry_water', icon: '💧', name: '挑水',  desc: '去最远的山泉挑水，腿能废三天', exp: 10, gold: 3,  unlockChapter: 2, unlockLevel: 0 },
+  { id: 'clean_hall', icon: '🧹', name: '打扫大殿', desc: '真武大殿除尘，心静则尘净',     exp: 12, gold: 4,  unlockChapter: 2, unlockLevel: 0 },
+  { id: 'copy_scripture', icon: '📜', name: '抄写道经', desc: '静心抄写道藏，字字入心',     exp: 25, gold: 8,  unlockChapter: 2, unlockLevel: 0 },
+  { id: 'pine_train', icon: '🌙', name: '后山修炼', desc: '老松树下打坐，月华入体',       exp: 30, gold: 0,  unlockChapter: 2, unlockLevel: 2 },
+  { id: 'arena_spar', icon: '⚔️', name: '演武切磋', desc: '演武场与同门过招，实战精进',    exp: 35, gold: 0,  unlockChapter: 2, unlockLevel: 6 },
+];
+
+function doDailyTask(task: DailyTask): void {
+  const p = getPlayer();
+  const updated = {
+    ...p,
+    exp: p.exp + task.exp,
+    gold: p.gold + task.gold,
+  };
+  const lvResult = checkLevelUp(updated);
+  const finalPlayer = lvResult.leveled ? lvResult.updatedPlayer : updated;
+  setPlayer(finalPlayer);
+  saveGame(finalPlayer);
+
+  let msg = `${task.icon} ${task.name}完成！经验 +${task.exp}`;
+  if (task.gold > 0) msg += `，铜钱 +${task.gold}`;
+  if (lvResult.leveled) {
+    const realm = getRealmName(lvResult.newLevel);
+    msg += `\n🎉 修为突破至 ${realm}！获得 ${lvResult.gainedPoints} 修为点！`;
+  }
+  showToast(msg);
+
+  // 小概率随机事件
+  const rand = Math.random();
+  if (task.id === 'chop_wood' && rand < 0.15) {
+    setTimeout(() => showToast('👤 宋知远偷懒被抓，讪笑着帮你劈了两捆柴。好感 +1'), 1500);
+  } else if (task.id === 'carry_water' && rand < 0.15) {
+    setTimeout(() => showToast('💬 顾小桑路过，悄悄告诉你陆沉舟最近在打听你的事。'), 1500);
+  } else if (task.id === 'clean_hall' && rand < 0.15) {
+    setTimeout(() => showToast('☯️ 张玄素掌门路过，微微颔首："心静则尘净。"'), 1500);
+  } else if (task.id === 'copy_scripture' && rand < 0.15) {
+    setTimeout(() => showToast('📖 陈静虚长老看到你的抄本，指点了几句。经验 +10'), 1500);
+    const bonus = { ...finalPlayer, exp: finalPlayer.exp + 10 };
+    setPlayer(bonus);
+    saveGame(bonus);
+  }
+
+  // 刷新面板
+  const content = document.getElementById('camp-content');
+  if (content) renderStoryPanel(content);
+}
+
+function renderDailyTasks(): string {
+  const p = getPlayer();
+  const availableTasks = DAILY_TASKS.filter(t => p.chapter >= t.unlockChapter && p.level >= t.unlockLevel);
+  const lockedTasks = DAILY_TASKS.filter(t => !(p.chapter >= t.unlockChapter && p.level >= t.unlockLevel));
+
+  if (availableTasks.length === 0 && p.chapter < 2) {
+    return `<div class="daily-tasks-section">
+      <div class="daily-tasks-header">📋 日常修行</div>
+      <p style="font-size:12px;color:var(--text-dim);text-align:center;padding:16px;">完成第一章序幕后解锁日常任务。</p>
+    </div>`;
+  }
+
+  const availableHtml = availableTasks.map(t => {
+    const goldHtml = t.gold > 0 ? '<span>+' + t.gold + ' 💰</span>' : '';
+    return '<button class="daily-task-btn" data-task-id="' + t.id + '">' +
+      '<span class="daily-task-icon">' + t.icon + '</span>' +
+      '<div class="daily-task-info">' +
+      '<div class="daily-task-name">' + t.name + '</div>' +
+      '<div class="daily-task-desc">' + t.desc + '</div>' +
+      '</div>' +
+      '<div class="daily-task-reward">' +
+      '<span>+' + t.exp + ' EXP</span>' +
+      goldHtml +
+      '</div>' +
+      '</button>';
+  }).join('');
+
+  let lockedHtml = '';
+  if (lockedTasks.length > 0) {
+    const label = '<div class="daily-tasks-locked-label">🔒 待解锁</div>';
+    const cards = lockedTasks.map(t => {
+      let unlockText: string;
+      if (t.unlockChapter > p.chapter) {
+        unlockText = '第' + t.unlockChapter + '章解锁';
+      } else if (t.unlockLevel > 0) {
+        unlockText = '需 炼气' + t.unlockLevel + '层';
+      } else {
+        unlockText = '需 外门弟子';
+      }
+      return '<div class="daily-task-btn locked">' +
+        '<span class="daily-task-icon" style="opacity:0.3;">' + t.icon + '</span>' +
+        '<div class="daily-task-info">' +
+        '<div class="daily-task-name" style="color:var(--text-dim);">' + t.name + '</div>' +
+        '<div class="daily-task-desc">' + t.desc + '</div>' +
+        '</div>' +
+        '<div class="daily-task-reward" style="color:var(--text-dim);">' + unlockText + '</div>' +
+        '</div>';
+    }).join('');
+    lockedHtml = label + cards;
+  }
+
+  return `<div class="daily-tasks-section">
+    <div class="daily-tasks-header">📋 日常修行</div>
+    <div class="daily-tasks-grid">${availableHtml}${lockedHtml}</div>
+  </div>`;
+}
 
 export function renderStoryPanel(content: HTMLElement): void {
   const p = getPlayer();
@@ -23,6 +142,10 @@ export function renderStoryPanel(content: HTMLElement): void {
     </div>` : '';
 
   content.innerHTML = `
+    ${renderDailyTasks()}
+    <div class="story-section-divider">
+      <span class="story-section-label">━━━ 📖 主线剧情 ━━━</span>
+    </div>
     <div class="story-scene-wrap">
       <div class="story-scene-bg">
         <img src="${scene.bg}" alt="场景" onerror="this.style.display='none'"
@@ -43,6 +166,15 @@ export function renderStoryPanel(content: HTMLElement): void {
   `;
 
   content.querySelector('#story-action-btn')?.addEventListener('click', () => triggerStoryEvent(scene.actionEvent));
+
+  // 绑定日常任务按钮
+  content.querySelectorAll<HTMLElement>('.daily-task-btn:not(.locked)').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const taskId = btn.dataset['taskId'];
+      const task = DAILY_TASKS.find(t => t.id === taskId);
+      if (task) doDailyTask(task);
+    });
+  });
 }
 
 function triggerStoryEvent(eventId: string): void {
@@ -59,7 +191,6 @@ function triggerStoryEvent(eventId: string): void {
   } else if (eventId === 'act3_escape') {
     import('../../systems/BattleEngine').then(m => m.initBattle('shadow_scout'));
   } else if (eventId === 'act4_snow') {
-    // 与柳清寒相遇：对话后 act 推进到 4
     const p = getPlayer();
     if (NPC_DIALOGS['liu_qinghan']) {
       openDialog('liu_qinghan');
@@ -145,7 +276,6 @@ function triggerStoryEvent(eventId: string): void {
     import('../StoryScreen').then(m => {
       m.runStoryIntro('ch2_xiasha_0', () => {
         const fresh = getPlayer();
-        // 晋升内门：补充属性奖励
         const promotion = {
           maxHp: fresh.maxHp + 30, hp: Math.min(fresh.hp + 30, fresh.maxHp + 30),
           maxMp: fresh.maxMp + 15, mp: Math.min(fresh.mp + 15, fresh.maxMp + 15),

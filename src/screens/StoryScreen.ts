@@ -12,7 +12,9 @@ let _nodeId  = 'start';
 let _timer: ReturnType<typeof setInterval> | null = null;
 let _waiting = false;
 let _keyHandler: ((e: KeyboardEvent) => void) | null = null;
+let _mouseHandler: ((e: MouseEvent) => void) | null = null;
 let _finishCallback: (() => void) | null = null;
+let _mouseDownTarget: EventTarget | null = null; // 记录 mousedown 的目标
 
 export function runStoryIntro(startNodeId?: string, onFinish?: () => void): void {
   const p = getPlayer();
@@ -24,14 +26,25 @@ export function runStoryIntro(startNodeId?: string, onFinish?: () => void): void
   const bg = document.getElementById('story-bg');
   if (bg) { bg.classList.remove('visible'); (bg as HTMLElement).style.backgroundImage = ''; }
 
+  // 使用 mousedown + mouseup 配对来避免拖拽选中文字时误触发
+  // 只有 mousedown 和 mouseup 在同一个元素上（没有拖拽）才算有效点击
+  if (_mouseHandler) document.removeEventListener('mousedown', _mouseHandler);
+  _mouseHandler = (e: MouseEvent) => {
+    _mouseDownTarget = e.target;
+  };
+  document.addEventListener('mousedown', _mouseHandler);
+
   const overlay = document.getElementById('story-overlay');
-  if (overlay) overlay.onclick = _handleClick;
+  if (overlay) {
+    overlay.onclick = null;
+    overlay.addEventListener('mouseup', _handleMouseUp);
+  }
 
   if (_keyHandler) document.removeEventListener('keydown', _keyHandler);
   _keyHandler = (e: KeyboardEvent) => {
     if (e.key === ' ' || e.key === 'Enter') {
       e.preventDefault();
-      _handleClick(e as unknown as Event);
+      _advanceStory();
     }
   };
   document.addEventListener('keydown', _keyHandler);
@@ -59,21 +72,30 @@ export function runStoryIntro(startNodeId?: string, onFinish?: () => void): void
   showStoryNode(_nodeId);
 }
 
-function _handleClick(e: Event): void {
+/** mouseup 处理：只有 mousedown 和 mouseup 在同一目标上（没有拖拽）才推进 */
+function _handleMouseUp(e: MouseEvent): void {
   const target = e.target as HTMLElement;
+  // 忽略跳过按钮和选项按钮
   if (target.closest('.story-skip-btn') || target.closest('.story-choice-btn')) return;
+  // 如果 mousedown 和 mouseup 的目标不同，说明发生了拖拽，忽略
+  if (_mouseDownTarget !== e.target) return;
+  _advanceStory();
+}
 
+/** 统一的推进逻辑：左键/空格/回车都走这里 */
+function _advanceStory(): void {
   const p = getPlayer();
   const storyNodes = getChapter(p.chapter).storyNodes;
+  const node = storyNodes[_nodeId];
+  if (!node) return;
 
-  // typing still in progress — complete it immediately
+  // 正在打字中 → 立即完成打字，显示完整文字
   if (_timer !== null) {
     clearInterval(_timer);
     _timer = null;
-    const node = storyNodes[_nodeId];
-    if (node && (node.type === 'narration' || node.type === 'dialogue')) {
+    if (node.type === 'narration' || node.type === 'dialogue') {
       let text = (node as { text: string }).text ?? '';
-      if (node.type === 'dialogue' && node.speaker === '我') {
+      if (node.type === 'dialogue' && (node as { speaker: string }).speaker === '我') {
         text = text.replace('%s%', p.name ?? '少年');
       }
       const textEl = document.getElementById(node.type === 'narration' ? 'story-narration-text' : 'story-dialogue-text');
@@ -83,11 +105,20 @@ function _handleClick(e: Event): void {
     return;
   }
 
-  if (!_waiting) return;
-  const node = storyNodes[_nodeId];
-  if (!node) return;
-  if (node.type !== 'choice' && 'next' in node && node.next) {
-    showStoryNode(node.next);
+  // 打字已完成，等待推进 → 进入下一句
+  if (_waiting) {
+    if (node.type !== 'choice' && 'next' in node && node.next) {
+      showStoryNode(node.next);
+    }
+    return;
+  }
+
+  // CG 模式下点击跳过
+  if (node.type === 'cg' && _timer !== null) {
+    clearInterval(_timer);
+    _timer = null;
+    if ('next' in node && node.next) showStoryNode(node.next);
+    return;
   }
 }
 
@@ -165,17 +196,20 @@ function _showDialogue(node: { speaker: string; text: string; portrait?: string;
     if (bg) { bg.style.backgroundImage = `url('${node.bg}')`; bg.classList.add('visible'); }
   }
 
+  // 清空选项区（安全写法，避免非空断言抛错）
+  const choicesArea = document.getElementById('story-choices-area');
+  if (choicesArea) choicesArea.innerHTML = '';
+
   const textEl = document.getElementById('story-dialogue-text');
   if (textEl) _typeText(textEl, text, 25, () => {
     document.getElementById('story-continue-hint')?.classList.remove('hidden');
   });
 
-  document.getElementById('story-choices-area')!.innerHTML = '';
   _waiting = true;
 }
 
 function _showCG(node: { bg: string; delay: number; next: string }): void {
-  _waiting = true; // allow click-to-skip during CG display
+  _waiting = true;
   const bg = document.getElementById('story-bg') as HTMLElement | null;
   if (bg) {
     bg.style.backgroundImage = `url('${node.bg}')`;
@@ -188,7 +222,7 @@ function _showCG(node: { bg: string; delay: number; next: string }): void {
 }
 
 function _doFlash(next: string): void {
-  _waiting = false; // prevent double-advance during flash animation
+  _waiting = false;
   const bg = document.getElementById('story-bg') as HTMLElement | null;
   if (bg) {
     bg.style.backgroundImage = '';
@@ -233,12 +267,14 @@ function _startBattle(node: { enemyId: string; nextOnWin: string; nextOnLose?: s
 
 export function skipStoryIntro(): void {
   if (_keyHandler) { document.removeEventListener('keydown', _keyHandler); _keyHandler = null; }
+  if (_mouseHandler) { document.removeEventListener('mousedown', _mouseHandler); _mouseHandler = null; }
   if (_timer !== null) { clearInterval(_timer); _timer = null; }
   finishStoryIntro();
 }
 
 function finishStoryIntro(): void {
   if (_keyHandler) { document.removeEventListener('keydown', _keyHandler); _keyHandler = null; }
+  if (_mouseHandler) { document.removeEventListener('mousedown', _mouseHandler); _mouseHandler = null; }
   bus.off('story:battle-end', () => {});
   bus.off('battle:end', () => {});
 

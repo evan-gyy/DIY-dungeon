@@ -17,8 +17,12 @@ export type SkillId =
   | 'mianzhang' | 'wudang_sword' | 'zixiao' | 'wudang_huti' | 'wudang_lianjian'
   // 武当·真传（结丹期）
   | 'taiji' | 'taiji_jian' | 'liangyi_sword' | 'chunyang_gong' | 'wudang_zhenfa'
-  // 武当·长老/掌门（元婴+）
+  // 武当·长老（元婴期）
   | 'taiji_shengong' | 'wudang_jianzhen' | 'chunyang_wuji' | 'sanfeng_yijian'
+  // 武当·掌门级（化神期）
+  | 'wudang_tianren' | 'wudang_hunypic' | 'wudang_taiqing' | 'wudang_zhenwu_jianyi'
+  // 武当·入圣（渡劫期）
+  | 'wudang_dao_jing' | 'wudang_xuankong' | 'wudang_taiyi' | 'wudang_wuji_dao_jian'
   // 峨眉派
   | 'emei_sword' | 'liing_palm' | 'emei_poison' | 'hundred_birds'
   // 少林派
@@ -41,6 +45,98 @@ export type EnemyId =
   | 'lu_chenzhou' | 'fang_zhonghe' | 'su_yunxiu' | 'ji_wushuang';
 
 export type ItemId = 'hp_potion' | 'mp_potion' | 'exp_scroll' | 'iron_guard';
+
+// ──── 法宝系统 ────
+
+/** 法宝境界等级（对应六大境界） */
+export type FabaoRealm = 'lianqi' | 'zhuji' | 'jiedan' | 'yuanying' | 'huashen' | 'dujie';
+
+/** 法宝类型：武器(攻击) / 衣服(防御) / 饰品(增益) */
+export type FabaoType = 'weapon' | 'armor' | 'accessory';
+
+/** 法宝颜色映射 */
+export const REALM_COLORS: Record<FabaoRealm, { name: string; color: string; css: string; levelRange: [number, number] }> = {
+  lianqi:   { name: '炼气', color: '白色', css: '#e8e8e8', levelRange: [1, 10] },
+  zhuji:    { name: '筑基', color: '绿色', css: '#4caf50', levelRange: [11, 20] },
+  jiedan:   { name: '结丹', color: '蓝色', css: '#42a5f5', levelRange: [21, 30] },
+  yuanying: { name: '元婴', color: '紫色', css: '#ab47bc', levelRange: [31, 40] },
+  huashen:  { name: '化神', color: '金色', css: '#ffd700', levelRange: [41, 50] },
+  dujie:    { name: '渡劫', color: '红色', css: '#ef5350', levelRange: [51, 60] },
+};
+
+/** 根据 level 获取对应境界 */
+export function getRealmByLevel(level: number): FabaoRealm | null {
+  if (level >= 1 && level <= 10) return 'lianqi';
+  if (level >= 11 && level <= 20) return 'zhuji';
+  if (level >= 21 && level <= 30) return 'jiedan';
+  if (level >= 31 && level <= 40) return 'yuanying';
+  if (level >= 41 && level <= 50) return 'huashen';
+  if (level >= 51 && level <= 60) return 'dujie';
+  return null;
+}
+
+export type FabaoId =
+  // 炼气·白色武器
+  | 'iron_sword' | 'bamboo_staff' | 'hunting_bow'
+  // 炼气·白色衣服
+  | 'cloth_robe' | 'leather_vest' | 'hemp_armor'
+  // 炼气·白色饰品
+  | 'wooden_ring' | 'copper_pendant' | 'talisman_paper'
+  // 筑基·绿色武器
+  | 'refined_sword' | 'jade_staff' | 'spirit_bow'
+  // 筑基·绿色衣服
+  | 'silk_robe' | 'iron_mail' | 'spirit_vest'
+  // 筑基·绿色饰品
+  | 'jade_ring' | 'silver_pendant' | 'spirit_talisman'
+  // 结丹·蓝色武器
+  | 'azure_sword' | 'crystal_staff' | 'storm_bow'
+  // 结丹·蓝色衣服
+  | 'azure_robe' | 'golden_mail' | 'frost_vest'
+  // 结丹·蓝色饰品
+  | 'sapphire_ring' | 'golden_pendant' | 'thunder_talisman'
+  // 元婴·紫色武器
+  | 'void_blade' | 'soul_staff' | 'starfall_bow'
+  // 元婴·紫色衣服
+  | 'void_robe' | 'dragon_mail' | 'star_vest'
+  // 元婴·紫色饰品
+  | 'amethyst_ring' | 'dragon_pendant' | 'void_talisman'
+  // 化神·金色武器
+  | 'celestial_sword' | 'dao_staff' | 'sun_bow'
+  // 化神·金色衣服
+  | 'celestial_robe' | 'divine_mail' | 'sun_vest'
+  // 化神·金色饰品
+  | 'divine_ring' | 'phoenix_pendant' | 'celestial_talisman'
+  // 渡劫·红色武器
+  | 'tribulation_blade' | 'immortal_staff' | 'heaven_bow'
+  // 渡劫·红色衣服
+  | 'tribulation_robe' | 'immortal_mail' | 'heaven_vest'
+  // 渡劫·红色饰品
+  | 'blood_ring' | 'immortal_pendant' | 'tribulation_talisman';
+
+export interface FabaoData {
+  id: FabaoId;
+  name: string;
+  icon: string;
+  type: FabaoType;         // weapon / armor / accessory
+  realm: FabaoRealm;       // 境界等级
+  color: string;           // 颜色名称
+  colorCss: string;        // CSS 颜色值
+  desc: string;
+  // 主属性加成
+  atkBonus?: number;       // 武器主加攻击
+  defBonus?: number;       // 衣服主加防御
+  hpBonus?: number;        // 衣服加气血
+  // 饰品特殊效果
+  specialEffect?: {
+    type: string;          // 效果类型描述
+    value: number;         // 效果数值
+    desc: string;          // 效果描述
+  };
+  // 获取方式
+  obtain: string;
+  // 修为要求
+  requireLevel: number;
+}
 
 export type NpcId =
   | 'wudang_zhangsan' | 'emei_miejue' | 'shaolin_kongwen'
@@ -272,6 +368,9 @@ export interface PlayerState {
   inventory: InventoryItem[];
   cultivationPoints: number;
   attrBoosts: AttrBoosts;
+  // 法宝装备槽：武器 / 衣服 / 饰品
+  equippedFabao: { weapon: FabaoId | null; armor: FabaoId | null; accessory: FabaoId | null };
+  ownedFabao: FabaoId[];  // 已拥有的法宝
   tutorialDone: boolean;
   chapter: number;
   act: number;

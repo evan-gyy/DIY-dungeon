@@ -49,6 +49,14 @@ export const PlayerStateSchema = z.object({
     mp:  z.number().default(0),
   }).default({}),
 
+  equippedFabao: z.object({
+    weapon:    z.string().nullable().default(null),
+    armor:     z.string().nullable().default(null),
+    accessory: z.string().nullable().default(null),
+  }).default({ weapon: null, armor: null, accessory: null }),
+
+  ownedFabao: z.array(z.string()).default([]),
+
   wudangMissionAccepted: z.boolean().default(false),
   wudangGateCleared:     z.boolean().default(false),
   wudangMidCleared:      z.boolean().default(false),

@@ -213,6 +213,96 @@ export const SKILLS: Record<SkillId, SkillData> = {
   },
 
   // ═══════════════════════════════════════════════════════════
+  //  武当派 · 掌门级（化神期）🟡金色
+  //  定位：天人合一 · 道法自然
+  // ═══════════════════════════════════════════════════════════
+
+  wudang_tianren: {
+    id: 'wudang_tianren', name: '天人合一', icon: '🌌', type: 'passive', target: 'self',
+    mp: 0, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 0, effect: { type: 'regen_mp_pct', value: 20, duration: 99 },
+    healPct: 0,
+    desc: '【被动】天人交感，道法自然。每回合恢复20%最大内力，且所有技能冷却时间-1（最低为1）。',
+    cost: { exp: 3000 }, sect: 'wudang',
+    battleTip: '被动·终极内力循环+冷却缩减',
+  },
+
+  wudang_hunypic: {
+    id: 'wudang_hunypic', name: '混元一气', icon: '🌀', type: 'support', target: 'self',
+    mp: 55, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 4, effect: { type: 'buff_atk', value: 40, duration: 3 },
+    healPct: 0.4,
+    desc: '混元一气，贯通天地。攻击力提升40点持续3回合，恢复40%最大气血，并获得20%闪避1回合。',
+    cost: { exp: 3500 }, sect: 'wudang',
+    battleTip: '终极增益·大量回血+闪避',
+  },
+
+  wudang_taiqing: {
+    id: 'wudang_taiqing', name: '太清剑气', icon: '🌠', type: 'attack', target: 'enemy',
+    mp: 70, hit: 5, powerMul: 0.5, defPen: 0.8,
+    cooldown: 3, effect: { type: 'weaken_def', value: 20, duration: 3 },
+    healPct: 0,
+    desc: '太清剑气纵横天地，五连击各造成50%攻击伤害，削弱敌方防御20点持续3回合。',
+    cost: { exp: 4000 }, sect: 'wudang',
+    battleTip: '化神连击·大幅破甲',
+  },
+
+  wudang_zhenwu_jianyi: {
+    id: 'wudang_zhenwu_jianyi', name: '真武剑意', icon: '⚔️', type: 'attack', target: 'enemy',
+    mp: 80, hit: 1, powerMul: 4.5, defPen: 0.6,
+    cooldown: 5, effect: { type: 'stun', value: 1, duration: 2 },
+    healPct: 0,
+    desc: '真武大帝剑意降世。倾尽毕生修为的一剑，造成450%攻击伤害，必定眩晕敌方2回合。',
+    cost: { exp: 5000 }, sect: 'wudang',
+    battleTip: '化神终极·必晕2回合',
+  },
+
+  // ═══════════════════════════════════════════════════════════
+  //  武当派 · 入圣（渡劫期）🔴红色
+  //  定位：超凡入圣 · 天道法则
+  // ═══════════════════════════════════════════════════════════
+
+  wudang_dao_jing: {
+    id: 'wudang_dao_jing', name: '道经·天地根', icon: '📜', type: 'passive', target: 'self',
+    mp: 0, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 0, effect: { type: 'regen_mp_pct', value: 25, duration: 99 },
+    healPct: 0,
+    desc: '【被动】道经入心，天地为根。每回合恢复25%最大内力，气血恢复效果+30%，免疫眩晕。',
+    cost: { exp: 6000 }, sect: 'wudang',
+    battleTip: '被动·渡劫内力+免疫眩晕',
+  },
+
+  wudang_xuankong: {
+    id: 'wudang_xuankong', name: '玄空大法', icon: '🌑', type: 'support', target: 'self',
+    mp: 60, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 4, effect: { type: 'def_boost', value: 40, duration: 3 },
+    healPct: 0.3,
+    desc: '玄空妙法，万法不侵。防御提升40点持续3回合，恢复30%最大气血，并获得50%闪避1回合。',
+    cost: { exp: 4500 }, sect: 'wudang',
+    battleTip: '终极防御·高闪避',
+  },
+
+  wudang_taiyi: {
+    id: 'wudang_taiyi', name: '太乙真罡', icon: '☀️', type: 'support', target: 'self',
+    mp: 75, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 5, effect: { type: 'buff_atk', value: 50, duration: 3 },
+    healPct: 0.5,
+    desc: '太乙真罡护体，金光万丈。攻击力提升50点、防御提升25点持续3回合，恢复50%最大气血。',
+    cost: { exp: 5500 }, sect: 'wudang',
+    battleTip: '渡劫全能·攻防双升+大回血',
+  },
+
+  wudang_wuji_dao_jian: {
+    id: 'wudang_wuji_dao_jian', name: '无极道剑', icon: '⚡', type: 'attack', target: 'enemy',
+    mp: 100, hit: 1, powerMul: 6.0, defPen: 0.7,
+    cooldown: 6, effect: { type: 'stun', value: 1, duration: 2 },
+    healPct: 0,
+    desc: '无极生太极，道剑破万法。倾尽天劫之力的一剑，造成600%攻击伤害，必定眩晕敌方2回合，无视50%防御。',
+    cost: { exp: 8000 }, sect: 'wudang',
+    battleTip: '渡劫终极·毁天灭地',
+  },
+
+  // ═══════════════════════════════════════════════════════════
   //  峨眉派
   // ═══════════════════════════════════════════════════════════
 
