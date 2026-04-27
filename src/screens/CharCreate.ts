@@ -1,4 +1,4 @@
-import type { CharId } from '../data/types';
+import type { CharId, PlayerState } from '../data/types';
 import { setPlayer } from '../state/GameState';
 import { saveGame } from '../state/SaveSystem';
 import { DEFAULT_INVENTORY } from '../data/items';
@@ -55,7 +55,7 @@ export function confirmCreate(): void {
 
   const sect = 'wudang' as const;
   // Mortal stats — upgraded to sect stats in finishStoryIntro()
-  const player = {
+  const player: PlayerState = {
     name,
     charId: _charId,
     charImg: `picture/maincharacter/${_charId}.png`,
@@ -68,6 +68,8 @@ export function confirmCreate(): void {
     inventory: DEFAULT_INVENTORY.map(i => ({ ...i })),
     cultivationPoints: 0,
     attrBoosts: { hp: 0, atk: 0, def: 0, agi: 0, mp: 0 },
+    equippedFabao: { weapon: null, armor: null, accessory: null },
+    ownedFabao: [],
     tutorialDone: false,
     chapter: 1,
     act: 0,

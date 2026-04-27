@@ -610,6 +610,7 @@ export function playerUseSkill(skillId: SkillId, targetId?: string): void {
       _log(`✨ ${sk.name}：获得增益「${buffDesc[sk.effect.type] ?? sk.effect.type}」持续 ${sk.effect.duration} 回合`);
     }
   } else if (sk.type === 'control' || sk.type === 'attack') {
+    if (!target) { _advanceTurn(); return; }
     const atkBuff  = getStatusValue(_getUnitStatuses(currentUnit), 'buff_atk');
     const realAtk  = currentUnit.atk + atkBuff;
     const targetStatuses = _getUnitStatuses(target);

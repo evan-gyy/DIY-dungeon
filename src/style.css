@@ -777,6 +777,226 @@ body {
   letter-spacing: 1px;
 }
 
+/* ===== 法宝装备面板 ===== */
+.fabao-section {
+  margin-top: 24px;
+  border: 1px solid rgba(142, 68, 173, 0.3);
+  border-radius: 10px;
+  padding: 16px;
+  background: rgba(142, 68, 173, 0.04);
+  position: relative;
+}
+.fabao-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.fabao-section-title {
+  font-size: 14px;
+  color: #c084fc;
+  letter-spacing: 3px;
+  font-weight: bold;
+}
+.fabao-section-hint {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+.fabao-slots {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.fabao-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 8px;
+  border: 1px dashed var(--border-dim);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.25s;
+  position: relative;
+  min-height: 110px;
+  justify-content: center;
+}
+.fabao-slot:hover {
+  border-color: var(--border-gold);
+  background: rgba(201, 168, 76, 0.06);
+}
+.fabao-slot.equipped {
+  border-style: solid;
+  border-color: var(--fabao-color, #c084fc);
+  background: rgba(142, 68, 173, 0.08);
+  box-shadow: 0 0 12px rgba(142, 68, 173, 0.15);
+}
+.fabao-slot-type {
+  font-size: 11px;
+  color: var(--text-dim);
+  letter-spacing: 2px;
+}
+.fabao-slot-icon {
+  font-size: 28px;
+}
+.fabao-slot-name {
+  font-size: 12px;
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+.fabao-slot-bonus {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-content: center;
+}
+.fabao-slot-bonus span {
+  font-size: 10px;
+  color: var(--text-dim);
+  background: rgba(255,255,255,0.05);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+.fabao-slot-placeholder {
+  font-size: 12px;
+  color: var(--text-dim);
+  opacity: 0.6;
+}
+.fabao-slot-unequip {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  font-size: 14px;
+  color: #e74c3c;
+  opacity: 0;
+  transition: opacity 0.2s;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.fabao-slot:hover .fabao-slot-unequip {
+  opacity: 0.8;
+}
+.fabao-slot-unequip:hover {
+  opacity: 1 !important;
+  background: rgba(231, 76, 60, 0.2);
+}
+
+/* 法宝选择器 */
+.fabao-selector {
+  margin-top: 14px;
+  border: 1px solid rgba(142, 68, 173, 0.4);
+  border-radius: 8px;
+  background: rgba(20, 20, 40, 0.95);
+  overflow: hidden;
+}
+.fabao-selector-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: rgba(142, 68, 173, 0.15);
+  border-bottom: 1px solid rgba(142, 68, 173, 0.2);
+  font-size: 13px;
+  color: #c084fc;
+  letter-spacing: 2px;
+}
+.fabao-selector-close {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.fabao-selector-close:hover {
+  color: #e74c3c;
+  background: rgba(231, 76, 60, 0.15);
+}
+.fabao-selector-list {
+  max-height: 240px;
+  overflow-y: auto;
+}
+.fabao-selector-empty {
+  text-align: center;
+  padding: 24px;
+  color: var(--text-dim);
+  font-size: 13px;
+  letter-spacing: 1px;
+}
+.fabao-selector-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.fabao-selector-item:hover:not(.disabled) {
+  background: rgba(142, 68, 173, 0.1);
+}
+.fabao-selector-item.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.fabao-selector-item-icon {
+  font-size: 24px;
+  flex-shrink: 0;
+}
+.fabao-selector-item-info {
+  flex: 1;
+  min-width: 0;
+}
+.fabao-selector-item-name {
+  font-size: 13px;
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+.fabao-selector-item-desc {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.fabao-selector-item-bonus {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+.fabao-selector-item-bonus span {
+  font-size: 10px;
+  color: #c084fc;
+  background: rgba(142, 68, 173, 0.1);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+.fabao-selector-item-btn {
+  font-size: 11px;
+  padding: 4px 12px;
+  border: 1px solid var(--border-gold);
+  border-radius: 4px;
+  background: rgba(201, 168, 76, 0.1);
+  color: var(--text-gold);
+  cursor: pointer;
+  letter-spacing: 1px;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+.fabao-selector-item-btn:hover:not(.disabled) {
+  background: rgba(201, 168, 76, 0.25);
+}
+.fabao-selector-item-btn.disabled {
+  border-color: var(--border-dim);
+  color: var(--text-dim);
+  background: transparent;
+  cursor: not-allowed;
+}
+
 /* ===== 踏入江湖（选关）大屏布局 ===== */
 .depart-layout {
   width: 100vw;

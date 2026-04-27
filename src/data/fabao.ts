@@ -406,7 +406,7 @@ const DUJIE_ACCESSORIES: Record<string, FabaoData> = {
 //  汇总导出
 // ═══════════════════════════════════════════════════════════════
 
-export const FABAO: Record<FabaoId, FabaoData> = {
+export const FABAO = {
   ...LIANQI_WEAPONS,
   ...LIANQI_ARMORS,
   ...LIANQI_ACCESSORIES,
@@ -425,7 +425,7 @@ export const FABAO: Record<FabaoId, FabaoData> = {
   ...DUJIE_WEAPONS,
   ...DUJIE_ARMORS,
   ...DUJIE_ACCESSORIES,
-};
+} as Record<FabaoId, FabaoData>;
 
 /** 按境界获取所有法宝 */
 export function getFabaoByRealm(realm: FabaoRealm): FabaoData[] {
