@@ -434,6 +434,7 @@ export interface BattleContext {
   teamBattle: boolean;              // 是否团队战（4v4）
   allyStatuses: Record<string, StatusEffect[]>;    // 友方单位状态效果 { unitId: StatusEffect[] }
   enemyStatuses: Record<string, StatusEffect[]>;   // 敌方单位状态效果 { unitId: StatusEffect[] }
+}
 
 // ──── 遭遇配置 ────
 
