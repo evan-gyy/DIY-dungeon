@@ -1,5 +1,5 @@
 import type {
-  PlayerState, CampTabId, ScreenId, NpcId, ElderId,
+  PlayerState, CampTabId, ScreenId, NpcId,
 } from '../data/types';
 
 // ── 全局游戏上下文（私有，仅通过函数访问）──
@@ -9,7 +9,6 @@ interface GameContext {
   campTab: CampTabId;
   dialogNpcId: NpcId | null;
   dialogNode: string | null;
-  learnElderId: ElderId | null;
 }
 
 const _ctx: GameContext = {
@@ -18,7 +17,6 @@ const _ctx: GameContext = {
   campTab: 'story',
   dialogNpcId: null,
   dialogNode: null,
-  learnElderId: null,
 };
 
 // ── Player ──
@@ -78,12 +76,4 @@ export function setDialogNode(node: string | null): void {
   _ctx.dialogNode = node;
 }
 
-// ── Learn ──
 
-export function getLearnElderId(): ElderId | null {
-  return _ctx.learnElderId;
-}
-
-export function setLearnElderId(id: ElderId | null): void {
-  _ctx.learnElderId = id;
-}

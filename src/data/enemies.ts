@@ -158,26 +158,26 @@ export const ENEMIES: Record<EnemyId, EnemyTemplate> = {
   // ── 第一章教学战 ──
   training_dummy: {
     id: 'training_dummy', name: '木制机关人', icon: '🤖', tier: 0,
-    hp: 60, maxHp: 60, atk: 8, def: 4, agi: 3,
+    hp: 20, maxHp: 20, atk: 4, def: 2, agi: 2,
     reward: { exp: 10, gold: 0 },
     loot: [],
     actions: [
-      { name: '木拳', icon: '👊', powerMul: 0.8, defPen: 0.7, hit: 1, mpCost: 0, weight: 70, effect: null },
+      { name: '木拳', icon: '👊', powerMul: 0.5, defPen: 0.6, hit: 1, mpCost: 0, weight: 70, effect: null },
       { name: '卡顿', icon: '⚙️', powerMul: 0, defPen: 0, hit: 0, mpCost: 0, weight: 30, effect: { type: 'def_boost', value: 2, duration: 1 } },
     ],
-    aiDesc: '教学机关·极弱',
+    aiDesc: '教学机关·极弱·约3回合击败',
   },
   shadow_scout: {
     id: 'shadow_scout', name: '暗道蛛', icon: '🕷️', tier: 0,
-    hp: 55, maxHp: 55, atk: 10, def: 3, agi: 6,
+    hp: 30, maxHp: 30, atk: 6, def: 2, agi: 5,
     reward: { exp: 15, gold: 3 },
     loot: [],
     actions: [
-      { name: '蛛丝缠绕', icon: '🕸️', powerMul: 0.9, defPen: 0.7, hit: 1, mpCost: 0, weight: 50, effect: null },
-      { name: '毒牙刺',   icon: '🦷', powerMul: 1.1, defPen: 0.8, hit: 1, mpCost: 0, weight: 30, effect: { type: 'poison', value: 2, duration: 2 } },
+      { name: '蛛丝缠绕', icon: '🕸️', powerMul: 0.7, defPen: 0.6, hit: 1, mpCost: 0, weight: 50, effect: null },
+      { name: '毒牙刺',   icon: '🦷', powerMul: 0.8, defPen: 0.7, hit: 1, mpCost: 0, weight: 30, effect: { type: 'poison', value: 2, duration: 2 } },
       { name: '退缩',     icon: '💨', powerMul: 0, defPen: 0, hit: 0, mpCost: 0, weight: 20, effect: { type: 'evade', value: 0.3, duration: 1 } },
     ],
-    aiDesc: '暗道蜘蛛·凡人水平·弱敌',
+    aiDesc: '暗道蜘蛛·凡人水平·约5回合击败',
   },
   shadow_agent: {
     id: 'shadow_agent', name: '密探高手', icon: '🥷', tier: 2,

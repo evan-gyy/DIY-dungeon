@@ -1,5 +1,4 @@
 import type { BattleEnemyUnit, EnemyAction } from '../data/types';
-import { hasStatus } from './StatusEffects';
 
 // 加权随机选择敌人行动
 export function selectEnemyAction(enemy: BattleEnemyUnit): EnemyAction {
@@ -12,7 +11,6 @@ export function selectEnemyAction(enemy: BattleEnemyUnit): EnemyAction {
     if (rand <= 0) return action;
   }
 
-  // 保底返回最后一个（浮点精度保护）
   return actions[actions.length - 1] ?? actions[0]!;
 }
 
@@ -27,14 +25,4 @@ export function predictNextAction(enemy: BattleEnemyUnit): EnemyAction {
     }
   }
   return best;
-}
-
-// 判断敌人本回合是否跳过（眩晕/击飞）
-export function isEnemyStunned(
-  enemyStatusList: Array<{ type: string; value: number; duration: number }>,
-): boolean {
-  return (
-    hasStatus(enemyStatusList as Parameters<typeof hasStatus>[0], 'stun') ||
-    hasStatus(enemyStatusList as Parameters<typeof hasStatus>[0], 'knockback')
-  );
 }

@@ -516,14 +516,14 @@ const updated = { ...fresh, chapter2Route: 'hotblood' as const, act: 4 };
 
 ## 七、关卡（等级门控）系统
 
-营地剧情事件通过 `p.level` 检查等级门控：
+营地剧情事件通过 `p.level` 检查等级门控。level 从 0 开始：0=凡人，1=炼气一层，2=炼气二层……
 
 | 境界描述 | 等级要求 | 检查代码 |
 |---------|---------|---------|
-| 炼气一层 | lv ≥ 2 | `p.level < 2` |
-| 炼气二层 | lv ≥ 3 | `p.level < 3` |
-| 炼气六层 | lv ≥ 7 | `p.level < 7` |
-| 炼气八层 | lv ≥ 9 | `p.level < 9` |
+| 炼气一层 | lv ≥ 1 | `p.level < 1` |
+| 炼气二层 | lv ≥ 2 | `p.level < 2` |
+| 炼气六层 | lv ≥ 6 | `p.level < 6` |
+| 炼气八层 | lv ≥ 8 | `p.level < 8` |
 
 境界名称在 `src/state/LevelSystem.ts` 的 `REALM_NAMES` 数组中定义，渲染时通过 `REALM_NAMES[p.level]` 获取。
 

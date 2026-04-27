@@ -6,6 +6,7 @@ import { renderAttrPanel } from './camp/AttrPanel';
 import { renderBagPanel } from './camp/BagPanel';
 import { renderSkillPanel } from './camp/SkillPanel';
 import { renderStoryPanel, updateStorySidebar } from './camp/StoryPanel';
+import { renderRelationPanel } from './camp/RelationPanel';
 import { getChapter } from '../data/chapters/index';
 import { showToast } from '../ui/toast';
 import type { CampTabId } from '../data/types';
@@ -40,10 +41,11 @@ export function switchCampTab(tab: CampTabId): void {
   });
   const content = document.getElementById('camp-content');
   if (!content) return;
-  if (tab === 'attr')  renderAttrPanel(content);
-  if (tab === 'bag')   renderBagPanel(content);
-  if (tab === 'skill') renderSkillPanel(content);
-  if (tab === 'story') renderStoryPanel(content);
+  if (tab === 'attr')     renderAttrPanel(content);
+  if (tab === 'bag')      renderBagPanel(content);
+  if (tab === 'skill')    renderSkillPanel(content);
+  if (tab === 'story')    renderStoryPanel(content);
+  if (tab === 'relation') renderRelationPanel(content);
 }
 
 export function doRest(): void {
@@ -109,15 +111,14 @@ function showSkillReminder(type: 'learn_first' | 'equip_first'): void {
   if (!textEl || !actionsEl) return;
 
   if (type === 'learn_first') {
-    textEl.innerHTML = `<strong>且慢！</strong><br><br>你尚未学习任何武功，贸然踏入江湖恐怕凶多吉少。<br><br>请先前往<strong>「拜师学功」</strong>处学习一门武功。`;
+    textEl.innerHTML = `<strong>且慢！</strong><br><br>你尚未学习任何武功，贸然踏入江湖恐怕凶多吉少。<br><br>请先推进<strong>「人物活动」</strong>中的主线剧情来获得武功。`;
     actionsEl.innerHTML = '';
     const goBtn = document.createElement('button');
     goBtn.className = 'mentor-action-btn primary';
-    goBtn.textContent = '前往学功';
+    goBtn.textContent = '前往人物活动';
     goBtn.addEventListener('click', () => {
       closeSkillReminder();
-      showScreen('learn');
-      import('./LearnScreen').then(m => m.renderLearnScreen());
+      switchCampTab('story');
     });
     const forceBtn = document.createElement('button');
     forceBtn.className = 'mentor-action-btn';

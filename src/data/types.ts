@@ -9,11 +9,21 @@ export type SectId = 'wudang' | 'emei' | 'shaolin' | 'beggar' | 'huashan' | 'dem
 export type CharId = 'male_good' | 'male_evil' | 'female_good' | 'female_evil';
 
 export type SkillId =
+  // 主角专属
   | 'yi_li_xin_jing'
-  | 'mianzhang' | 'taiji' | 'wudang_sword' | 'zixiao'
-  | 'wudang_changquan' | 'yangqi_jue' | 'wudang_jianfa_basic'
+  // 武当·外门（炼气期）
+  | 'wudang_changquan' | 'yangqi_jue' | 'wudang_jianfa_basic' | 'wudang_qinggong'
+  // 武当·内门（筑基期）
+  | 'mianzhang' | 'wudang_sword' | 'zixiao' | 'wudang_huti' | 'wudang_lianjian'
+  // 武当·真传（结丹期）
+  | 'taiji' | 'taiji_jian' | 'liangyi_sword' | 'chunyang_gong' | 'wudang_zhenfa'
+  // 武当·长老/掌门（元婴+）
+  | 'taiji_shengong' | 'wudang_jianzhen' | 'chunyang_wuji' | 'sanfeng_yijian'
+  // 峨眉派
   | 'emei_sword' | 'liing_palm' | 'emei_poison' | 'hundred_birds'
+  // 少林派
   | 'luohan_fist' | 'vajra_palm' | 'yijin_jing' | '72_arts'
+  // 丐帮
   | 'beggar_fist' | 'stick_art' | 'mud_walk' | 'dragon_palm';
 
 export type EnemyId =
@@ -48,11 +58,11 @@ export type StatusType =
 export type SkillType = 'attack' | 'support' | 'control' | 'passive';
 export type TargetType = 'enemy' | 'self';
 
-export type CampTabId = 'story' | 'attr' | 'bag' | 'skill';
+export type CampTabId = 'story' | 'attr' | 'bag' | 'skill' | 'relation';
 
 export type ScreenId =
   | 'main' | 'saveselect' | 'create' | 'story'
-  | 'camp' | 'depart' | 'dialog' | 'learn' | 'battle';
+  | 'camp' | 'depart' | 'dialog' | 'battle';
 
 export type BattleResult = 'win' | 'lose';
 
@@ -270,8 +280,12 @@ export interface PlayerState {
 
 export type BattleStateEnum = 'idle' | 'player_turn' | 'enemy_turn' | 'animating' | 'win' | 'lose';
 
+export type TeamSide = 'ally' | 'enemy';
+
 export interface BattleUnit {
+  id: string;           // 唯一标识（如 'player_main', 'ally_1', 'enemy_0'）
   name: string;
+  side: TeamSide;
   hp: number;
   maxHp: number;
   mp: number;
@@ -282,10 +296,14 @@ export interface BattleUnit {
   crit: number;
   icon?: string;
   charImg?: string;
+  skills: SkillId[];    // 该单位可用的技能
+  isPlayer: boolean;    // 是否由玩家直接控制
+  alive: boolean;
 }
 
 export interface BattleEnemyUnit extends BattleUnit {
-  id: EnemyId;
+  side: 'enemy';
+  enemyId: EnemyId;
   tier: number;
   actions: EnemyAction[];
   reward: { exp: number; gold: number };
@@ -295,16 +313,20 @@ export interface BattleEnemyUnit extends BattleUnit {
 
 export interface BattleContext {
   state: BattleStateEnum;
-  player: BattleUnit;
-  enemy: BattleEnemyUnit;
+  units: BattleUnit[];              // 所有战斗单位（我方+敌方）
+  allies: BattleUnit[];             // 我方存活单位引用
+  enemies: BattleEnemyUnit[];       // 敌方存活单位引用
+  currentUnitIndex: number;         // 当前行动单位在 turnOrder 中的索引
+  turnOrder: BattleUnit[];          // 本回合行动顺序
   round: number;
   log: string[];
   skillCooldowns: Partial<Record<SkillId, number>>;
-  playerStatus: StatusEffect[];
-  enemyStatus: StatusEffect[];
   hasPrevision: boolean;
   pendingEvade: boolean;
-}
+  selectedTarget: BattleUnit | null; // 当前选中的目标
+  teamBattle: boolean;              // 是否团队战（4v4）
+  allyStatuses: Record<string, StatusEffect[]>;    // 友方单位状态效果 { unitId: StatusEffect[] }
+  enemyStatuses: Record<string, StatusEffect[]>;   // 敌方单位状态效果 { unitId: StatusEffect[] }
 
 // ──── 遭遇配置 ────
 

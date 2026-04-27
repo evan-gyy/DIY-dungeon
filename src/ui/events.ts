@@ -1,16 +1,14 @@
 import mitt from 'mitt';
-import type { BattleResult, ItemId } from '../data/types';
+import type { BattleResult, ItemId, BattleUnit } from '../data/types';
 
 export type GameEvents = {
   'battle:started': {
-    playerName: string;
-    playerImg: string;
-    enemyName: string;
-    enemyIcon: string;
-    enemyTier: number;
+    allies: BattleUnit[];
+    enemies: BattleUnit[];
+    teamBattle: boolean;
   };
   'battle:log-add': { html: string };
-  'battle:updated': { round: number };
+  'battle:updated': { round: number; currentUnit: BattleUnit | null };
   'battle:end': {
     result: BattleResult;
     expGain: number;

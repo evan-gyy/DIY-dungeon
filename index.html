@@ -109,16 +109,16 @@
       </div>
       <span class="gold" id="gold-val">💰 50 两</span>
       <button id="btn-depart" class="camp-adventure-btn" title="踏入江湖，历练武学">🗡️ 踏 入 江 湖</button>
-      <button id="btn-goto-learn" class="btn btn-sm" title="拜师学功，习得武学">📖 拜 师 学 功</button>
       <button id="btn-save" class="btn btn-sm" title="保存当前进度">💾 存 档</button>
       <button id="btn-rest" class="btn btn-sm" title="休息恢复气血与内力">🌙 休 息</button>
       <button id="btn-camp-back" class="btn btn-sm" style="margin-left:8px;">返 回 主 界</button>
     </div>
     <nav class="camp-nav">
-      <button class="camp-nav-btn" data-tab="story"><span class="nav-icon">💬</span>江湖往事</button>
+      <button class="camp-nav-btn" data-tab="story"><span class="nav-icon">💬</span>人物活动</button>
       <button class="camp-nav-btn" data-tab="attr"><span class="nav-icon">📊</span>角色属性</button>
       <button class="camp-nav-btn" data-tab="bag"><span class="nav-icon">📦</span>随身包裹</button>
       <button class="camp-nav-btn" data-tab="skill"><span class="nav-icon">⚔️</span>技能配置</button>
+      <button class="camp-nav-btn" data-tab="relation"><span class="nav-icon">👥</span>人物关系</button>
     </nav>
     <div class="camp-content" id="camp-content"></div>
     <aside class="camp-sidebar" id="camp-sidebar">
@@ -185,34 +185,15 @@
 <div id="screen-battle" class="screen">
   <div class="battle-layout">
     <div class="battle-arena">
-      <div class="battle-player-side">
-        <div class="battle-player-img-wrap">
-          <img id="battle-player-img" class="battle-player-img" src="" alt="玩家">
-        </div>
-        <div class="battle-char-name" id="battle-player-name">—</div>
-        <div class="hp-block" style="width:220px;">
-          <div class="hp-label"><span class="hl">气血</span><span class="hv" id="battle-player-hp-val">—</span></div>
-          <div class="hp-track"><div class="hp-fill-p" id="battle-player-hp-bar" style="width:100%"></div></div>
-          <div class="mp-track"><div class="mp-fill-p" id="battle-player-mp-bar" style="width:100%"></div></div>
-          <div style="display:flex;justify-content:flex-end;margin-top:2px;">
-            <span style="font-size:11px;color:#5dade2;" id="battle-player-mp-val">—</span>
-          </div>
-        </div>
-        <div class="status-badges" id="battle-player-status"></div>
+      <div class="battle-side" id="battle-allies">
+        <!-- 动态渲染我方单位 -->
       </div>
       <div class="battle-vs">
         <div class="battle-vs-txt">VS</div>
         <div class="battle-round" id="battle-round-info">等待出手…</div>
       </div>
-      <div class="battle-enemy-side">
-        <div class="battle-enemy-avatar" id="battle-enemy-icon">👊</div>
-        <div class="battle-enemy-name" id="battle-enemy-name">—</div>
-        <div class="battle-enemy-tier" id="battle-enemy-tier">—</div>
-        <div class="hp-block" style="width:220px;">
-          <div class="hp-label"><span class="hl">气血</span><span class="hv" id="battle-enemy-hp-val">—</span></div>
-          <div class="hp-track"><div class="hp-fill-e" id="battle-enemy-hp-bar" style="width:100%"></div></div>
-        </div>
-        <div class="status-badges" id="battle-enemy-status"></div>
+      <div class="battle-side" id="battle-enemies">
+        <!-- 动态渲染敌方单位 -->
       </div>
     </div>
     <div class="battle-log-area" id="battle-log"></div>
@@ -227,21 +208,6 @@
       <div id="battle-result-detail">—</div>
       <button id="battle-result-btn" class="btn">返回营地</button>
     </div>
-  </div>
-</div>
-
-<!-- =========================================================
-     屏幕7：拜师学功
-========================================================= -->
-<div id="screen-learn" class="screen">
-  <div class="learn-layout">
-    <div class="learn-left panel">
-      <div class="title-deco"><h2>传 功 长 老</h2></div>
-      <p style="font-size:12px;color:var(--text-dim);letter-spacing:1px;margin-bottom:16px;">向各大门派传功长老学习独门武学，提升战力。</p>
-      <div id="elder-list" class="elder-list"></div>
-      <button id="btn-back-learn" class="btn btn-sm" style="margin-top:16px;">← 返回营地</button>
-    </div>
-    <div class="learn-right" id="learn-detail"></div>
   </div>
 </div>
 

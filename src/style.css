@@ -925,17 +925,94 @@ body {
 
 /* ── 战场区 ── */
 .battle-arena {
-  display: flex; align-items: flex-end; justify-content: space-between;
-  padding: 24px 40px 12px;
+  display: flex; align-items: flex-start; justify-content: space-between;
+  padding: 16px 24px 8px;
   border-bottom: 1px solid var(--border-dim);
   background: radial-gradient(ellipse at 50% 100%, #1a0808 0%, transparent 70%);
-  min-height: 260px;
+  min-height: 200px;
+  gap: 16px;
 }
 
-/* ── 玩家区 ── */
-.battle-player-side {
-  display: flex; flex-direction: column; align-items: flex-start; gap: 8px; width: 260px;
+/* ── 双方单位容器 ── */
+.battle-side {
+  display: flex; flex-direction: column; gap: 8px;
+  flex: 1; max-width: 45%;
 }
+
+/* ── 单位卡片 ── */
+.battle-unit-card {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background: rgba(0,0,0,0.4);
+  transition: all 0.25s;
+}
+.battle-unit-card.ally-card { border-color: rgba(90,160,220,0.3); }
+.battle-unit-card.enemy-card { border-color: rgba(220,90,90,0.3); }
+.battle-unit-current {
+  border-color: var(--border-gold) !important;
+  box-shadow: 0 0 12px rgba(201,168,76,0.4);
+  animation: pulse-gold 1.5s infinite;
+}
+.battle-unit-targeted {
+  border-color: #e74c3c !important;
+  box-shadow: 0 0 10px rgba(231,76,60,0.5);
+}
+.battle-unit-clickable { cursor: pointer; }
+.battle-unit-clickable:hover {
+  border-color: #e74c3c !important;
+  background: rgba(231,76,60,0.15);
+  transform: scale(1.02);
+}
+
+@keyframes pulse-gold {
+  0%, 100% { box-shadow: 0 0 8px rgba(201,168,76,0.3); }
+  50% { box-shadow: 0 0 18px rgba(201,168,76,0.6); }
+}
+
+.battle-unit-avatar {
+  width: 48px; height: 48px; border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(255,255,255,0.05);
+  overflow: hidden; flex-shrink: 0;
+}
+.battle-unit-avatar img {
+  width: 100%; height: 100%; object-fit: cover;
+}
+.battle-unit-icon { font-size: 28px; }
+
+.battle-unit-info { flex: 1; min-width: 0; }
+.battle-unit-name {
+  font-size: 12px; color: var(--text-light); letter-spacing: 1px;
+  margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.battle-unit-hp-bar, .battle-unit-mp-bar {
+  height: 4px; border-radius: 2px; background: rgba(255,255,255,0.1);
+  margin-bottom: 2px;
+}
+.battle-unit-hp-fill { height: 100%; border-radius: 2px; transition: width 0.3s; }
+.battle-unit-hp-fill.ally-hp { background: linear-gradient(90deg, #27ae60, #2ecc71); }
+.battle-unit-hp-fill.enemy-hp { background: linear-gradient(90deg, #c0392b, #e74c3c); }
+.battle-unit-mp-fill {
+  height: 100%; border-radius: 2px;
+  background: linear-gradient(90deg, #2471a3, #5dade2);
+  transition: width 0.3s;
+}
+.battle-unit-hp-text, .battle-unit-mp-text {
+  font-size: 10px; color: var(--text-dim);
+}
+
+/* ── 状态徽章 ── */
+.battle-unit-statuses {
+  display: flex; flex-wrap: wrap; gap: 3px; margin-top: 3px;
+}
+.battle-unit-status-badge {
+  font-size: 9px; padding: 1px 5px; border-radius: 8px;
+  background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
+  color: var(--text-light); white-space: nowrap; line-height: 1.4;
+}
+
 .battle-player-img-wrap {
   position: relative;
 }

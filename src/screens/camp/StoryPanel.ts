@@ -87,8 +87,8 @@ function triggerStoryEvent(eventId: string): void {
   // ── 第二章事件 ──
   } else if (eventId === 'ch2_wendao') {
     const p = getPlayer();
-    if (p.level < 2) {
-      showToast('需要达到炼气一层（2级）方可问道。');
+    if (p.level < 1) {
+      showToast('需要达到炼气一层方可问道。请先通过日常任务积累经验。');
       return;
     }
     import('../StoryScreen').then(m => {
@@ -105,8 +105,8 @@ function triggerStoryEvent(eventId: string): void {
     });
   } else if (eventId === 'ch2_yeshou') {
     const p = getPlayer();
-    if (p.level < 3) {
-      showToast('需要达到炼气二层（3级）方可夜遇柳清寒。');
+    if (p.level < 2) {
+      showToast('需要达到炼气二层方可夜遇柳清寒。');
       return;
     }
     import('../StoryScreen').then(m => {
@@ -123,8 +123,8 @@ function triggerStoryEvent(eventId: string): void {
     });
   } else if (eventId === 'ch2_shijian') {
     const p = getPlayer();
-    if (p.level < 7) {
-      showToast('需要达到炼气六层（7级）方可参加外门小比。');
+    if (p.level < 6) {
+      showToast('需要达到炼气六层方可参加外门小比。');
       return;
     }
     import('../StoryScreen').then(m => {
@@ -138,8 +138,8 @@ function triggerStoryEvent(eventId: string): void {
     });
   } else if (eventId === 'ch2_xiasha') {
     const p = getPlayer();
-    if (p.level < 9) {
-      showToast('需要达到炼气八层（9级）方可参加外门试炼考。');
+    if (p.level < 8) {
+      showToast('需要达到炼气八层方可参加外门试炼考。');
       return;
     }
     import('../StoryScreen').then(m => {

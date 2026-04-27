@@ -1,7 +1,5 @@
 import { getPlayer, setPlayer } from '../state/GameState';
 import { saveGame } from '../state/SaveSystem';
-import { showScreen } from './ScreenManager';
-import { renderLearnScreen } from './LearnScreen';
 import { switchCampTab } from './Camp';
 import { showToast } from '../ui/toast';
 
@@ -15,7 +13,7 @@ const MENTOR_STEPS = [
     step: '第二步',
     text: `先打开你的<strong>随身包裹</strong>看看。<br><br>
       你背包里有一面<span class="hi">玄铁盾牌</span>，可在战斗前装备，提升防御；<br>
-      还有一份<span class="hi">武学残卷</span>，可在「拜师学功」处学习武功。`,
+      剧情中获得的技能会自动加入你的技能列表。`,
     actions: [
       { label: '查看随身包裹', action: 'goto_bag', primary: true },
       { label: '跳过引导',    action: 'skip',     primary: false },
@@ -23,24 +21,16 @@ const MENTOR_STEPS = [
   },
   {
     step: '第三步',
-    text: `很好！接下来，前往<strong>拜师学功</strong>处学习你的第一门武功吧。`,
+    text: `很好！你通过剧情获得的武功需要<strong>装备到技能栏</strong>才能在战斗中使用。<br><br>
+      点击<strong>「技能配置」</strong>，将武功拖入上阵栏（共4格）。<br>
+      <span class="hi">习得而不装备，等于不会。</span>`,
     actions: [
-      { label: '前往拜师学功', action: 'goto_learn', primary: true },
-      { label: '稍后再说',     action: 'skip',       primary: false },
+      { label: '去配置技能', action: 'goto_skills', primary: true },
+      { label: '跳过引导',   action: 'skip',        primary: false },
     ],
   },
   {
     step: '第四步',
-    text: `很好！学到的武功需要<strong>装备到技能栏</strong>才能在战斗中使用。<br><br>
-      返回营地后，点击<strong>「技能配置」</strong>，将武功拖入上阵栏（共4格）。<br>
-      <span class="hi">习得而不装备，等于不会。</span>`,
-    actions: [
-      { label: '返回营地配置技能', action: 'goto_skills', primary: true },
-      { label: '跳过引导',         action: 'skip',        primary: false },
-    ],
-  },
-  {
-    step: '第五步',
     text: `很好！你已掌握了入门之道。<br><br>
       踏入江湖前，务必确保技能已装备。江湖险恶，<span class="hi">有备无患</span>。<br><br>
       老夫去也，愿你名扬四海！`,
@@ -90,11 +80,6 @@ function handleMentorAction(action: string): void {
     case 'goto_bag':
       closeMentorGuide();
       switchCampTab('bag');
-      break;
-    case 'goto_learn':
-      closeMentorGuide();
-      showScreen('learn');
-      renderLearnScreen();
       break;
     case 'goto_skills':
       closeMentorGuide();

@@ -1,6 +1,6 @@
 import type { StatusEffect, StatusType, BattleUnit } from '../data/types';
 
-// 添加或刷新状态效果（刷新持续时间和值取最大）
+// 添加或刷新状态效果
 export function applyStatus(statusList: StatusEffect[], effect: StatusEffect): void {
   const exist = statusList.find(x => x.type === effect.type);
   if (exist) {
@@ -24,8 +24,7 @@ export function getStatusValue(statusList: StatusEffect[], type: StatusType): nu
   return statusList.find(x => x.type === type)?.value ?? 0;
 }
 
-// 回合开始时处理所有持续效果（毒伤、MP回复、buff倒计时）
-// 返回日志和是否死亡标志
+// 回合开始时处理所有持续效果
 export interface TickResult {
   logs: string[];
   killed: boolean;
@@ -46,26 +45,26 @@ export function tickStatus(
     if (s.type === 'poison' || s.type === 'strong_poison') {
       const dmg = s.value;
       unit.hp = Math.max(0, unit.hp - dmg);
-      logs.push(`☠️ ${isPlayer ? '你' : unit.name} 中毒受到 <span class="log-dmg">${dmg}</span> 点毒伤`);
+      logs.push(`☠️ ${unit.name} 中毒受到 <span class="log-dmg">${dmg}</span> 点毒伤`);
       if (unit.hp <= 0) killed = true;
     }
 
     if (s.type === 'regen_mp') {
       const val = s.value;
       unit.mp = Math.min(unit.maxMp, unit.mp + val);
-      logs.push(`💧 紫霄神功恢复 <span class="log-heal">${val}</span> 点内力`);
+      logs.push(`💧 ${unit.name} 恢复 <span class="log-heal">${val}</span> 点内力`);
     }
 
     if (s.type === 'regen_mp_pct') {
       const val = Math.max(1, Math.floor(unit.maxMp * s.value / 100));
       unit.mp = Math.min(unit.maxMp, unit.mp + val);
-      logs.push(`♟️ 弈理心经恢复 <span class="log-heal">${val}</span> 点内力`);
+      logs.push(`♟️ ${unit.name} 弈理心经恢复 <span class="log-heal">${val}</span> 点内力`);
     }
 
     if (s.type === 'self_heal') {
       const healAmt = Math.max(1, Math.floor(unit.maxHp * s.value));
       unit.hp = Math.min(unit.maxHp, unit.hp + healAmt);
-      logs.push(`💚 ${isPlayer ? '你' : unit.name} 运功疗伤，恢复 <span class="log-heal">${healAmt}</span> 点气血`);
+      logs.push(`💚 ${unit.name} 运功疗伤，恢复 <span class="log-heal">${healAmt}</span> 点气血`);
     }
 
     s.duration--;
@@ -77,7 +76,7 @@ export function tickStatus(
   return { logs, killed };
 }
 
-// 获取状态效果触发概率（对应特定 type 的命中概率）
+// 获取状态效果触发概率
 export function effectProcRate(type: StatusType): number {
   const rates: Partial<Record<StatusType, number>> = {
     stun: 0.7,

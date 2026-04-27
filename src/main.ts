@@ -7,7 +7,6 @@ import { enterCamp, doRest, doSaveGame, switchCampTab } from './screens/Camp';
 import { closeDialog } from './screens/DialogScreen';
 import { showScreen } from './screens/ScreenManager';
 import { initBattleScreen } from './screens/BattleScreen';
-import { renderLearnScreen } from './screens/LearnScreen';
 import { skipStoryIntro } from './screens/StoryScreen';
 import { bus } from './ui/events';
 
@@ -74,15 +73,6 @@ window.addEventListener('DOMContentLoaded', () => {
 
   // ── Depart: back to camp ──
   document.getElementById('btn-back-depart')?.addEventListener('click', () => enterCamp());
-
-  // ── Camp: go to learn ──
-  document.getElementById('btn-goto-learn')?.addEventListener('click', () => {
-    showScreen('learn');
-    renderLearnScreen();
-  });
-
-  // ── Learn screen: back to camp ──
-  document.getElementById('btn-back-learn')?.addEventListener('click', () => enterCamp());
 
   // ── Audio toggle ──
   document.getElementById('audio-control')?.addEventListener('click', () => {
