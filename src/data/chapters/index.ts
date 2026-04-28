@@ -1,5 +1,6 @@
 import { CH1 } from './ch1';
 import { CH2 } from './ch2';
+import { CH3 } from './ch3';
 import type { ChapterData } from './types';
 
 export type { ChapterData, CampScene } from './types';
@@ -7,6 +8,7 @@ export type { ChapterData, CampScene } from './types';
 export const CHAPTERS: Record<number, ChapterData> = {
   1: CH1,
   2: CH2,
+  3: CH3,
 };
 
 export function getChapter(n: number): ChapterData {

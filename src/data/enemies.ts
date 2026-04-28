@@ -255,6 +255,91 @@ export const ENEMIES: Record<EnemyId, EnemyTemplate> = {
     ],
     aiDesc: '燃血丹强化·伪筑基·每回合自损5%HP',
   },
+
+  // ═══════════════════════════════════════════════════════════
+  //  第三章 · 内门风云 新增敌人
+  // ═══════════════════════════════════════════════════════════
+
+  forest_yao_beast: {
+    id: 'forest_yao_beast', name: '妖兽', icon: '🐺', tier: 2,
+    hp: 130, maxHp: 130, atk: 26, def: 10, agi: 14,
+    reward: { exp: 60, gold: 15 },
+    loot: [{ id: 'hp_potion', chance: 0.3 }],
+    actions: [
+      { name: '利爪', icon: '🐾', powerMul: 1.2, defPen: 0.6, hit: 1, mpCost: 0, weight: 50, effect: null },
+      { name: '撕咬', icon: '🦷', powerMul: 1.0, defPen: 0.8, hit: 2, mpCost: 0, weight: 30, effect: null },
+      { name: '咆哮', icon: '💢', powerMul: 0, defPen: 0, hit: 0, mpCost: 0, weight: 20, effect: { type: 'buff_atk', value: 8, duration: 2 } },
+    ],
+    aiDesc: '普攻为主·偶尔咆哮加攻',
+  },
+
+  blackmoon_scout_elite: {
+    id: 'blackmoon_scout_elite', name: '黑月教精锐探子', icon: '🌑', tier: 3,
+    hp: 280, maxHp: 280, atk: 42, def: 20, agi: 16,
+    reward: { exp: 180, gold: 40 },
+    loot: [{ id: 'exp_scroll', chance: 0.5 }, { id: 'mp_potion', chance: 0.4 }],
+    actions: [
+      { name: '黑月斩', icon: '🌙', powerMul: 1.4, defPen: 0.5, hit: 1, mpCost: 0, weight: 40, effect: null },
+      { name: '毒雾', icon: '☠️', powerMul: 0.5, defPen: 0.9, hit: 1, mpCost: 0, weight: 30, effect: { type: 'poison', value: 10, duration: 3 } },
+      { name: '暗影步', icon: '🌫️', powerMul: 0, defPen: 0, hit: 0, mpCost: 0, weight: 20, effect: { type: 'evade', value: 0.35, duration: 1 } },
+      { name: '邪药强化', icon: '💊', powerMul: 0, defPen: 0, hit: 0, mpCost: 0, weight: 10, effect: { type: 'buff_atk', value: 12, duration: 2 } },
+    ],
+    aiDesc: '毒dot+闪避·偶尔邪药强化',
+  },
+
+  lu_chenzhou: {
+    id: 'lu_chenzhou', name: '陆沉舟', icon: '⚔️', tier: 4,
+    hp: 520, maxHp: 520, atk: 62, def: 28, agi: 20,
+    reward: { exp: 350, gold: 80 },
+    loot: [],
+    actions: [
+      { name: '云开', icon: '☁️', powerMul: 1.5, defPen: 0.4, hit: 1, mpCost: 15, weight: 30, effect: null },
+      { name: '松涛', icon: '🌲', powerMul: 0.6, defPen: 0.3, hit: 3, mpCost: 20, weight: 30, effect: null },
+      { name: '归元', icon: '✨', powerMul: 2.0, defPen: 0.5, hit: 1, mpCost: 35, weight: 25, effect: null },
+      { name: '凝神', icon: '🧘', powerMul: 0, defPen: 0, hit: 0, mpCost: 0, weight: 15, effect: { type: 'def_boost', value: 15, duration: 2 } },
+    ],
+    aiDesc: '三式真传剑法·筑基八层精英',
+  },
+
+  fang_zhonghe: {
+    id: 'fang_zhonghe', name: '方仲和', icon: '🗡️', tier: 3,
+    hp: 380, maxHp: 380, atk: 48, def: 30, agi: 12,
+    reward: { exp: 150, gold: 30 },
+    loot: [],
+    actions: [
+      { name: '重剑劈斩', icon: '⬇️', powerMul: 1.6, defPen: 0.4, hit: 1, mpCost: 10, weight: 45, effect: null },
+      { name: '铁壁防御', icon: '🛡️', powerMul: 0, defPen: 0, hit: 0, mpCost: 8, weight: 35, effect: { type: 'def_boost', value: 20, duration: 2 } },
+      { name: '横扫', icon: '↔️', powerMul: 1.0, defPen: 0.6, hit: 1, mpCost: 5, weight: 20, effect: null },
+    ],
+    aiDesc: '重剑高防·铁壁防御',
+  },
+
+  su_yunxiu: {
+    id: 'su_yunxiu', name: '苏云绣', icon: '💃', tier: 3,
+    hp: 420, maxHp: 420, atk: 52, def: 22, agi: 24,
+    reward: { exp: 200, gold: 40 },
+    loot: [],
+    actions: [
+      { name: '双剑连舞', icon: '⚔️', powerMul: 0.45, defPen: 0.5, hit: 4, mpCost: 15, weight: 40, effect: null },
+      { name: '游身步', icon: '🌀', powerMul: 0, defPen: 0, hit: 0, mpCost: 10, weight: 35, effect: { type: 'evade', value: 0.3, duration: 2 } },
+      { name: '突刺', icon: '🗡️', powerMul: 1.3, defPen: 0.7, hit: 1, mpCost: 8, weight: 25, effect: null },
+    ],
+    aiDesc: '高速连击·善用闪避',
+  },
+
+  ji_wushuang: {
+    id: 'ji_wushuang', name: '纪无双', icon: '💧', tier: 4,
+    hp: 480, maxHp: 480, atk: 58, def: 26, agi: 22,
+    reward: { exp: 400, gold: 100 },
+    loot: [],
+    actions: [
+      { name: '秋水', icon: '🌊', powerMul: 1.3, defPen: 0.5, hit: 1, mpCost: 12, weight: 30, effect: null },
+      { name: '镜心', icon: '🪞', powerMul: 0, defPen: 0, hit: 0, mpCost: 15, weight: 25, effect: { type: 'def_boost', value: 30, duration: 1 } },
+      { name: '无争', icon: '☯️', powerMul: 2.2, defPen: 0.4, hit: 1, mpCost: 30, weight: 25, effect: null },
+      { name: '流水', icon: '💧', powerMul: 0.8, defPen: 0.6, hit: 2, mpCost: 8, weight: 20, effect: null },
+    ],
+    aiDesc: '均衡剑法·镜心格挡反击·无争蓄力',
+  },
 };
 
 export function getRandomEnemy(tier: number): EnemyTemplate {

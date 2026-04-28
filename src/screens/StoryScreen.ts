@@ -98,6 +98,8 @@ function _advanceStory(): void {
       if (node.type === 'dialogue' && (node as { speaker: string }).speaker === '我') {
         text = text.replace('%s%', p.name ?? '少年');
       }
+      // 替换 [主角名] 占位符
+      text = text.replace(/\[主角名\]/g, p.name ?? '少年');
       const textEl = document.getElementById(node.type === 'narration' ? 'story-narration-text' : 'story-dialogue-text');
       if (textEl) textEl.textContent = text;
     }
@@ -132,6 +134,8 @@ export function showStoryNode(nodeId: string): void {
   document.getElementById('story-continue-hint')?.classList.add('hidden');
   document.getElementById('story-narration-mode')?.classList.add('hidden');
   document.getElementById('story-dialogue-mode')?.classList.add('hidden');
+  // 清除 dialogue-bg class（CG/narration 节点不需要全屏 bg）
+  document.getElementById('story-bg')?.classList.remove('dialogue-bg');
   if (_timer !== null) { clearInterval(_timer); _timer = null; }
 
   switch (node.type) {
@@ -163,7 +167,9 @@ function _showNarration(node: { text: string; next: string }): void {
   const el    = document.getElementById('story-narration-mode');
   const textEl = document.getElementById('story-narration-text');
   el?.classList.remove('hidden');
-  if (textEl) _typeText(textEl, node.text, 28, () => {
+  const p = getPlayer();
+  const text = node.text.replace(/\[主角名\]/g, p.name ?? '少年');
+  if (textEl) _typeText(textEl, text, 28, () => {
     document.getElementById('story-continue-hint')?.classList.remove('hidden');
   });
   _waiting = true;
@@ -176,6 +182,8 @@ function _showDialogue(node: { speaker: string; text: string; portrait?: string;
   const p = getPlayer();
   let text = node.text;
   if (node.speaker === '我' && p) text = text.replace('%s%', p.name ?? '少年');
+  // 替换所有对话中的 [主角名] 占位符
+  if (p) text = text.replace(/\[主角名\]/g, p.name ?? '少年');
 
   const speakerEl = document.getElementById('story-speaker-name');
   if (speakerEl) speakerEl.textContent = node.speaker;
@@ -193,7 +201,7 @@ function _showDialogue(node: { speaker: string; text: string; portrait?: string;
 
   if (node.bg) {
     const bg = document.getElementById('story-bg') as HTMLElement | null;
-    if (bg) { bg.style.backgroundImage = `url('${node.bg}')`; bg.classList.add('visible'); }
+    if (bg) { bg.style.backgroundImage = `url('${node.bg}')`; bg.classList.add('visible', 'dialogue-bg'); }
   }
 
   // 清空选项区（安全写法，避免非空断言抛错）
@@ -261,8 +269,34 @@ function _showChoices(node: { choices: Array<{ text: string; next: string }> }):
   document.getElementById('story-continue-hint')?.classList.add('hidden');
 }
 
-function _startBattle(node: { enemyId: string; nextOnWin: string; nextOnLose?: string }): void {
-  initBattle(node.enemyId as import('../data/types').EnemyId);
+function _startBattle(node: import('../data/types').BattleStoryNode): void {
+  if (node.teamEnemies && node.teamEnemies.length > 0) {
+    // 团队战模式
+    const player = getPlayer();
+    const allyDefs: Array<{
+      name: string; hp: number; maxHp: number; mp: number; maxMp: number;
+      atk: number; def: number; agi: number; crit: number;
+      charImg?: string; icon?: string; skills: import('../data/types').SkillId[]; isPlayer: boolean;
+    }> = [
+      {
+        name: player.name, hp: player.hp, maxHp: player.maxHp,
+        mp: player.mp, maxMp: player.maxMp,
+        atk: player.atk, def: player.def, agi: player.agi, crit: player.crit,
+        charImg: player.charImg, skills: player.skills, isPlayer: true,
+      },
+    ];
+    // 添加队友（如果未指定属性，则基于玩家等级动态生成）
+    if (node.teamAllies) {
+      for (const a of node.teamAllies) {
+        allyDefs.push({ ...a, isPlayer: false });
+      }
+    }
+    import('../systems/BattleEngine').then(m => {
+      m.initTeamBattle(allyDefs, node.teamEnemies!);
+    });
+  } else {
+    initBattle(node.enemyId as import('../data/types').EnemyId);
+  }
 }
 
 export function skipStoryIntro(): void {

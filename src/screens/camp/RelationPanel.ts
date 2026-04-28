@@ -28,6 +28,11 @@ function getRelationData(): { heroines: RelationChar[]; wudang: RelationChar[]; 
     { id: 'song_zhiyuan', name: '宋知远', img: 'picture/NPC/宋知远.png', affection: 35, unlocked: p.chapter >= 2 },
     { id: 'gu_xiaosang', name: '顾小桑', img: 'picture/NPC/顾小桑.png', affection: 40, unlocked: p.chapter >= 2 },
     { id: 'lu_chengzhou', name: '陆沉舟', img: 'picture/NPC/陆沉舟.png', affection: 10, unlocked: p.chapter >= 2 && p.act >= 3 },
+    { id: 'ji_wushuang', name: '纪无双', img: 'picture/NPC/武当派-张三丰.png', affection: 5, unlocked: p.chapter >= 3 && p.act >= 8 },
+    { id: 'su_yunxiu', name: '苏云绣', img: 'picture/NPC/武当派-张三丰.png', affection: 5, unlocked: p.chapter >= 3 && p.act >= 8 },
+    { id: 'fang_zhonghe', name: '方仲和', img: 'picture/NPC/武当派-张三丰.png', affection: 5, unlocked: p.chapter >= 3 && p.act >= 8 },
+    { id: 'meng_wenyuan', name: '孟文渊', img: 'picture/NPC/武当派-张三丰.png', affection: 3, unlocked: p.chapter >= 3 && p.act >= 9 },
+    { id: 'ye_ziyi', name: '叶紫衣', img: 'picture/NPC/武当派-张三丰.png', affection: 5, unlocked: p.chapter >= 3 && p.act >= 9 },
   ];
 
   const other: RelationChar[] = [

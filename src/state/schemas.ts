@@ -64,6 +64,17 @@ export const PlayerStateSchema = z.object({
 
   chapter2Route: z.enum(['', 'hotblood', 'wisdom']).default(''),
 
+  // 第三章剧情标记
+  chapter3Breakthrough: z.boolean().default(false),
+  master: z.string().default(''),
+  blackmoonToken: z.boolean().default(false),
+  luChenzhouRespect: z.number().default(0),
+  songZhiyuanGrowth: z.boolean().default(false),
+  liuQinghanEngaged: z.boolean().default(false),
+  trialChampion: z.boolean().default(false),
+  trueDisciple: z.boolean().default(false),
+  blackmoonMissionStarted: z.boolean().default(false),
+
   _slot:    z.number().default(1),
   _savedAt: z.string().optional(),
 });

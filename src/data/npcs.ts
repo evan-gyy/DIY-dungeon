@@ -314,7 +314,7 @@ export const NPC_DIALOGS: Record<NpcId, NpcDialogData> = {
 
   zhang_xuansu: {
     name: '张玄素',
-    img: 'picture/NPC/武当派-张三丰.png',
+    img: 'picture/NPC/张玄素.png',
     sect: '武当掌门·化神六层',
     dialogs: {
       start: {
@@ -345,7 +345,7 @@ export const NPC_DIALOGS: Record<NpcId, NpcDialogData> = {
 
   chen_jingxu: {
     name: '陈静虚',
-    img: 'picture/NPC/武当派-张三丰.png',
+    img: 'picture/NPC/陈静虚.png',
     sect: '传功长老·元婴五层',
     dialogs: {
       start: {
@@ -373,7 +373,7 @@ export const NPC_DIALOGS: Record<NpcId, NpcDialogData> = {
 
   zhou_boan: {
     name: '周伯安',
-    img: 'picture/NPC/武当派-张三丰.png',
+    img: 'picture/NPC/周伯安.png',
     sect: '外门管事·结丹三层',
     dialogs: {
       start: {
@@ -397,7 +397,7 @@ export const NPC_DIALOGS: Record<NpcId, NpcDialogData> = {
 
   song_zhiyuan: {
     name: '宋知远',
-    img: 'picture/NPC/武当派-张三丰.png',
+    img: 'picture/NPC/宋知远.png',
     sect: '外门师兄·炼气三层',
     dialogs: {
       start: {
@@ -421,7 +421,7 @@ export const NPC_DIALOGS: Record<NpcId, NpcDialogData> = {
 
   gu_xiaosang: {
     name: '顾小桑',
-    img: 'picture/NPC/武当派-张三丰.png',
+    img: 'picture/NPC/顾小桑.png',
     sect: '外门师姐·炼气五层',
     dialogs: {
       start: {
@@ -445,7 +445,7 @@ export const NPC_DIALOGS: Record<NpcId, NpcDialogData> = {
 
   lu_chengzhou: {
     name: '陆沉舟',
-    img: 'picture/NPC/武当派-张三丰.png',
+    img: 'picture/NPC/陆沉舟.png',
     sect: '内门师兄·筑基八层',
     dialogs: {
       start: {
@@ -479,7 +479,7 @@ export const NPC_DIALOGS: Record<NpcId, NpcDialogData> = {
 
   shen_nishang: {
     name: '沈霓裳',
-    img: 'picture/Female-main/柳清寒.png',
+    img: 'picture/Female-main/沈霓裳.png',
     sect: '茅山派·雷法传人',
     dialogs: {
       start: {
@@ -507,6 +507,141 @@ export const NPC_DIALOGS: Record<NpcId, NpcDialogData> = {
       deny: {
         text: '巧合……（若有所思地盯着你看了三秒）也许。也许不是。总之——后会有期，武当的。别死太早了。',
         choices: [{ text: '多谢提醒。', next: null }],
+      },
+    },
+  },
+
+  // ═══════════════════════════════════════════════════════════
+  //  第三章 · 内门风云 新增 NPC
+  // ═══════════════════════════════════════════════════════════
+
+  ji_wushuang_npc: {
+    name: '纪无双',
+    img: 'picture/NPC/武当派-张三丰.png',
+    sect: '内门弟子·筑基七层·武当双璧',
+    dialogs: {
+      start: {
+        text: '你的剑——很快。但我的剑，也不慢。',
+        choices: [
+          { text: '纪师姐，请多指教。', next: 'respect' },
+          { text: '师姐的剑法，晚辈佩服。', next: 'praise' },
+          { text: '告辞。', next: null },
+        ],
+      },
+      respect: {
+        text: '指教不敢。剑道之路，各有机缘。你的归元——已经有了自己的东西。不是师父教的，是你自己的。武当有你，是幸事。',
+        choices: [{ text: '多谢师姐。', next: null }],
+      },
+      praise: {
+        text: '（微微摇头）剑法没有高低，只有适不适合。你的剑意——是打出来的。这种剑，比练出来的更难得。',
+        choices: [{ text: '师姐过奖了。', next: null }],
+      },
+    },
+  },
+
+  su_yunxiu_npc: {
+    name: '苏云绣',
+    img: 'picture/NPC/武当派-张三丰.png',
+    sect: '内门弟子·筑基六层',
+    dialogs: {
+      start: {
+        text: '哟——这不是我们的试剑会魁首吗？小师兄，今天怎么有空来找姐姐？',
+        choices: [
+          { text: '苏师姐说笑了。', next: 'tease' },
+          { text: '师姐，你的双剑很厉害。', next: 'sword_talk' },
+          { text: '告辞。', next: null },
+        ],
+      },
+      tease: {
+        text: '说笑？姐姐可是认真的。（眨了眨眼）对了——你和大师姐，最近怎么样了？上次试剑会，你逃跑的样子——啧啧，大师姐可是笑了。',
+        choices: [{ text: '……苏师姐！', next: null }],
+      },
+      sword_talk: {
+        text: '双剑讲究的是左右互搏——一手攻，一手守。不过你这家伙进步太快，下次再打，我可能连你的衣角都碰不到了。',
+        choices: [{ text: '师姐谦虚了。', next: null }],
+      },
+    },
+  },
+
+  fang_zhonghe_npc: {
+    name: '方仲和',
+    img: 'picture/NPC/武当派-张三丰.png',
+    sect: '内门弟子·筑基五层',
+    dialogs: {
+      start: {
+        text: '师弟！好久不见！上次试剑会输给你之后，我回去苦练了三个月——现在我的重剑，比那时候沉了十斤！',
+        choices: [
+          { text: '方师兄还是一如既往地认真。', next: 'praise' },
+          { text: '要不要再切磋一场？', next: 'challenge' },
+          { text: '告辞。', next: null },
+        ],
+      },
+      praise: {
+        text: '嘿嘿，笨鸟先飞嘛。我资质不如你和陆师兄，只能多练。师父说了——重剑无锋，大巧不工。总有一天，我也能进前三。',
+        choices: [{ text: '我相信你。', next: null }],
+      },
+      challenge: {
+        text: '现在？不行不行——我刚练完剑，手腕还在抖。改天！改天我一定奉陪！',
+        choices: [{ text: '好，一言为定。', next: null }],
+      },
+    },
+  },
+
+  meng_wenyuan: {
+    name: '孟文渊',
+    img: 'picture/NPC/武当派-张三丰.png',
+    sect: '陈静虚门下·筑基九层',
+    dialogs: {
+      start: {
+        text: '……',
+        choices: [
+          { text: '孟师兄，你在看什么？', next: 'answer' },
+          { text: '……（安静地站在一旁）', next: 'silent' },
+          { text: '告辞。', next: null },
+        ],
+      },
+      answer: {
+        text: '……云。云的形状，和剑招很像。你看那一朵——像不像松涛的第三式？',
+        choices: [
+          { text: '师兄果然时时刻刻都在想剑。', next: 'nod' },
+          { text: '……我没看出来。', next: 'shrug' },
+        ],
+      },
+      silent: {
+        text: '（过了很久，他忽然开口）……你不错。能安静站着的人，不多。',
+        choices: [{ text: '（点头）', next: null }],
+      },
+      nod: {
+        text: '……嗯。剑道无止境。你也加油。',
+        choices: [{ text: '多谢师兄。', next: null }],
+      },
+      shrug: {
+        text: '……多看。多看就懂了。',
+        choices: [{ text: '……好。', next: null }],
+      },
+    },
+  },
+
+  ye_ziyi: {
+    name: '叶紫衣',
+    img: 'picture/NPC/武当派-张三丰.png',
+    sect: '陈静虚门下·筑基八层',
+    dialogs: {
+      start: {
+        text: '师弟！正好你来了——我最近在研究归元那一剑的发力角度。你觉得是手腕外翻15度好，还是20度好？还有，内力走手少阳三焦经还是手阳明大肠经更顺畅？',
+        choices: [
+          { text: '师姐，我……我没想过这么多。', next: 'explain' },
+          { text: '我觉得15度就够了。', next: 'agree' },
+          { text: '告辞！（快跑）', next: null },
+        ],
+      },
+      explain: {
+        text: '没想过？那怎么行！剑法这个东西，差一度就是生死之别！来来来，我给你详细讲讲——从发力原理到经脉运转，我研究了三个月——',
+        choices: [{ text: '（完了，逃不掉了）', next: null }],
+      },
+      agree: {
+        text: '15度？有意思——我一直用的20度。下次我试试15度。师弟你果然有悟性！对了，那经脉呢？你走哪条？',
+        choices: [{ text: '……师姐，师父在叫我了。', next: null }],
       },
     },
   },

@@ -23,7 +23,17 @@ export const REALM_NAMES: readonly string[] = [
 ];
 
 export function getExpForLevel(lv: number): number {
-  return Math.floor(50 * Math.pow(lv, 1.5));
+  // 分段经验公式：前期保持原曲线，后期放缓
+  // lv 1~10（炼气）：50 × lv^1.5（原公式）
+  // lv 11~30（筑基~结丹）：50 × lv^1.3
+  // lv 31+（元婴+）：50 × lv^1.15
+  if (lv <= 10) {
+    return Math.floor(50 * Math.pow(lv, 1.5));
+  } else if (lv <= 30) {
+    return Math.floor(50 * Math.pow(lv, 1.3));
+  } else {
+    return Math.floor(50 * Math.pow(lv, 1.15));
+  }
 }
 
 export function getRealmName(lv: number): string {

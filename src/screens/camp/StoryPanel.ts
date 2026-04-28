@@ -289,6 +289,173 @@ function triggerStoryEvent(eventId: string): void {
     });
   } else if (eventId === 'ch2_chapter_end') {
     showToast('第三章即将到来……');
+
+  // ── 章节过渡：第二章 → 第三章 ──
+  } else if (eventId === 'enter_chapter3') {
+    const p = getPlayer();
+    const updated = { ...p, chapter: 3, act: 0 };
+    setPlayer(updated);
+    saveGame(updated);
+    import('../StoryScreen').then(m => {
+      m.runStoryIntro('ch3_break_0', () => {
+        const fresh = getPlayer();
+        // 突破筑基：属性大幅提升
+        const promotion = {
+          level: 11, // 筑基一层
+          maxHp: fresh.maxHp + 50, hp: Math.min(fresh.hp + 50, fresh.maxHp + 50),
+          maxMp: fresh.maxMp + 25, mp: Math.min(fresh.mp + 25, fresh.maxMp + 25),
+          atk: fresh.atk + 8, def: fresh.def + 5,
+          chapter3Breakthrough: true,
+        };
+        const updated2 = { ...fresh, ...promotion, act: 1 };
+        setPlayer(updated2);
+        saveGame(updated2);
+        enterCamp();
+      });
+    });
+
+  // ── 第三章事件 ──
+  } else if (eventId === 'ch3_breakthrough') {
+    const p = getPlayer();
+    import('../StoryScreen').then(m => {
+      m.runStoryIntro('ch3_break_0', () => {
+        const fresh = getPlayer();
+        const promotion = {
+          level: 11,
+          maxHp: fresh.maxHp + 50, hp: Math.min(fresh.hp + 50, fresh.maxHp + 50),
+          maxMp: fresh.maxMp + 25, mp: Math.min(fresh.mp + 25, fresh.maxMp + 25),
+          atk: fresh.atk + 8, def: fresh.def + 5,
+          chapter3Breakthrough: true,
+        };
+        const updated = { ...fresh, ...promotion, act: 1 };
+        setPlayer(updated);
+        saveGame(updated);
+        enterCamp();
+      });
+    });
+
+  } else if (eventId === 'ch3_giftshu') {
+    const p = getPlayer();
+    import('../StoryScreen').then(m => {
+      m.runStoryIntro('ch3_gift_0', () => {
+        const fresh = getPlayer();
+        const updated = { ...fresh, act: 2, songZhiyuanGrowth: true };
+        setPlayer(updated);
+        saveGame(updated);
+        enterCamp();
+      });
+    });
+
+  } else if (eventId === 'ch3_baishi') {
+    const p = getPlayer();
+    import('../StoryScreen').then(m => {
+      m.runStoryIntro('ch3_baishi_0', () => {
+        const fresh = getPlayer();
+        const updated = { ...fresh, act: 3, master: 'chen_jingxu' };
+        setPlayer(updated);
+        saveGame(updated);
+        enterCamp();
+      });
+    });
+
+  } else if (eventId === 'ch3_shoujian') {
+    const p = getPlayer();
+    if (p.level < 13) {
+      showToast('需要达到筑基三层方可学习真传剑法。');
+      return;
+    }
+    import('../StoryScreen').then(m => {
+      m.runStoryIntro('ch3_jian_0', () => {
+        const fresh = getPlayer();
+        const skills = fresh.skills.includes('wudang_yunkai' as SkillId)
+          ? fresh.skills
+          : [...fresh.skills, 'wudang_yunkai' as SkillId];
+        const updated = { ...fresh, act: 4, skills };
+        setPlayer(updated);
+        saveGame(updated);
+        enterCamp();
+      });
+    });
+
+  } else if (eventId === 'ch3_xiashan') {
+    const p = getPlayer();
+    if (p.level < 15) {
+      showToast('需要达到筑基五层方可带队下山行侠。');
+      return;
+    }
+    import('../StoryScreen').then(m => {
+      m.runStoryIntro('ch3_xiashan_0', () => {
+        const fresh = getPlayer();
+        const updated = { ...fresh, act: 5, blackmoonToken: true };
+        setPlayer(updated);
+        saveGame(updated);
+        enterCamp();
+      });
+    });
+
+  } else if (eventId === 'ch3_fengmang') {
+    const p = getPlayer();
+    if (p.level < 17) {
+      showToast('需要达到筑基七层方可参加内门试剑会。');
+      return;
+    }
+    import('../StoryScreen').then(m => {
+      m.runStoryIntro('ch3_feng_0', () => {
+        const fresh = getPlayer();
+        const updated = { ...fresh, act: 6, luChenzhouRespect: 40 };
+        setPlayer(updated);
+        saveGame(updated);
+        enterCamp();
+      });
+    });
+
+  } else if (eventId === 'ch3_hunyue') {
+    const p = getPlayer();
+    import('../StoryScreen').then(m => {
+      m.runStoryIntro('ch3_hun_0', () => {
+        const fresh = getPlayer();
+        const updated = { ...fresh, act: 7, liuQinghanEngaged: true };
+        setPlayer(updated);
+        saveGame(updated);
+        enterCamp();
+      });
+    });
+
+  } else if (eventId === 'ch3_duokui') {
+    const p = getPlayer();
+    import('../StoryScreen').then(m => {
+      m.runStoryIntro('ch3_duo_0', () => {
+        const fresh = getPlayer();
+        const updated = { ...fresh, act: 8, trialChampion: true };
+        setPlayer(updated);
+        saveGame(updated);
+        enterCamp();
+      });
+    });
+
+  } else if (eventId === 'ch3_zhenchuan') {
+    const p = getPlayer();
+    import('../StoryScreen').then(m => {
+      m.runStoryIntro('ch3_zhen_0', () => {
+        const fresh = getPlayer();
+        const updated = { ...fresh, act: 9, trueDisciple: true };
+        setPlayer(updated);
+        saveGame(updated);
+        enterCamp();
+      });
+    });
+
+  } else if (eventId === 'ch3_chuzheng') {
+    const p = getPlayer();
+    import('../StoryScreen').then(m => {
+      m.runStoryIntro('ch3_chu_0', () => {
+        const fresh = getPlayer();
+        const updated = { ...fresh, blackmoonMissionStarted: true };
+        saveGame(updated);
+        enterCamp();
+      });
+    });
+
   } else {
     showToast('剧情即将到来…');
   }

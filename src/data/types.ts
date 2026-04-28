@@ -29,6 +29,8 @@ export type SkillId =
   | 'luohan_fist' | 'vajra_palm' | 'yijin_jing' | '72_arts'
   // 丐帮
   | 'beggar_fist' | 'stick_art' | 'mud_walk' | 'dragon_palm'
+  // 第三章：武当真传剑法
+  | 'wudang_yunkai' | 'wudang_songtao' | 'wudang_guiyuan'
   ;
 
 export type EnemyId =
@@ -39,6 +41,9 @@ export type EnemyId =
   | 'training_dummy' | 'shadow_scout' | 'shadow_agent'
   | 'zhao_dashi' | 'yamen_guard' | 'bandit_elite'
   | 'one_eye_leopard' | 'one_eye_leopard_drugged'
+  // 第三章新增
+  | 'forest_yao_beast' | 'blackmoon_scout_elite'
+  | 'lu_chenzhou' | 'fang_zhonghe' | 'su_yunxiu' | 'ji_wushuang'
   ;
 
 export type ItemId = 'hp_potion' | 'mp_potion' | 'exp_scroll' | 'iron_guard';
@@ -141,6 +146,8 @@ export type NpcId =
   | 'mo_jiangqing' | 'liu_qinghan'
   | 'zhang_xuansu' | 'chen_jingxu' | 'zhou_boan'
   | 'song_zhiyuan' | 'gu_xiaosang' | 'lu_chengzhou' | 'shen_nishang'
+  // 第三章新增 NPC
+  | 'meng_wenyuan' | 'ye_ziyi' | 'ji_wushuang_npc' | 'su_yunxiu_npc' | 'fang_zhonghe_npc'
   ;
 
 export type ElderId = 'wudang_elder' | 'emei_elder' | 'shaolin_elder' | 'beggar_elder';
@@ -322,6 +329,14 @@ export interface BattleStoryNode extends BaseStoryNode {
   enemyId: EnemyId;
   nextOnWin: string;
   nextOnLose?: string;
+  /** 团队战：我方队友定义（不含主角，主角自动加入） */
+  teamAllies?: Array<{
+    name: string; hp: number; maxHp: number; mp: number; maxMp: number;
+    atk: number; def: number; agi: number; crit: number;
+    charImg?: string; icon?: string; skills: SkillId[];
+  }>;
+  /** 团队战：敌方 ID 列表（覆盖 enemyId，支持多个敌人） */
+  teamEnemies?: EnemyId[];
 }
 
 export type StoryNode =
@@ -374,6 +389,16 @@ export interface PlayerState {
   wudangMidCleared: boolean;
   wudangElderCleared: boolean;
   chapter2Route: '' | 'hotblood' | 'wisdom';
+  // 第三章剧情标记
+  chapter3Breakthrough: boolean;       // 是否完成突破剧情
+  master: string;                      // 师父 ID
+  blackmoonToken: boolean;             // 是否获得黑月教令牌碎片
+  luChenzhouRespect: number;           // 陆沉舟认可度
+  songZhiyuanGrowth: boolean;          // 宋知远是否获得手册
+  liuQinghanEngaged: boolean;          // 是否触发婚约剧情
+  trialChampion: boolean;              // 是否夺得试剑会魁首
+  trueDisciple: boolean;               // 是否晋升真传弟子
+  blackmoonMissionStarted: boolean;    // 黑月教讨伐是否开始
   _slot: number;
   _savedAt?: string;
 }

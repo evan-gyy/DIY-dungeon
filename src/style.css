@@ -1150,10 +1150,15 @@ body {
   background-position: center top;
   background-repeat: no-repeat;
   opacity: 0;
+  z-index: 1;
   transition: opacity 1.2s ease;
   /* CG只显示在上半部分（屏幕的20%-65%高度），文字区域不受影响 */
   height: 65%;
   top: 0;
+}
+/* dialogue 背景图（scene）需要全屏显示 */
+.story-bg.dialogue-bg {
+  height: 100%;
 }
 .story-bg.visible { opacity: 1; }
 .story-overlay {

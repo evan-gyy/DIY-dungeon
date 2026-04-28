@@ -1,7 +1,7 @@
 # DIY-Dungeon 项目架构文档
 
 > 本文档面向开发者和 AI Agent，描述当前项目的完整架构、各模块职责，以及如何进行修改和新章节开发。
-> 最后更新：2026-04-28（境界-技能-法宝体系 + 化神/渡劫技能 + 法宝数据文件新建）
+> 最后更新：2026-04-28（第三章代码接入完成 + 新 NPC 对话 + RelationPanel 扩展 + StoryPanel 事件注册）
 
 ---
 
@@ -44,7 +44,8 @@ DIY-dungeon/
 │   │       ├── types.ts           ChapterData / CampScene 接口
 │   │       ├── ch1.ts             第一章剧情节点 + 营地场景
 │   │       ├── ch2.ts             第二章剧情节点 + 营地场景
-│   │       └── index.ts           CHAPTERS 注册表 + getChapter(n)
+│   │       ├── ch3.ts             第三章剧情节点 + 营地场景（✅ 已接入）
+│   │       └── index.ts           CHAPTERS 注册表 + getChapter(n)（已注册 CH3）
 │   │
 │   ├── state/                     状态层（依赖 data，不依赖 DOM）
 │   │   ├── GameState.ts           PlayerState singleton：getPlayer / setPlayer
@@ -263,11 +264,13 @@ interface ChapterData {
 #### `chapters/index.ts` — 章节注册表
 
 ```typescript
-export const CHAPTERS: Record<number, ChapterData> = { 1: CH1, 2: CH2 };
+export const CHAPTERS: Record<number, ChapterData> = { 1: CH1, 2: CH2, 3: CH3 };
 export function getChapter(n: number): ChapterData { ... }
 ```
 
 `getChapter(n)` 如果章节未注册会抛出清晰错误信息。添加新章节只需：新建 `ch{N}.ts` + 在此处注册。
+
+**当前已注册章节**：第一章（CH1）、第二章（CH2）、第三章（CH3·内门风云）。
 
 ---
 
@@ -439,16 +442,26 @@ interface DailyTask {
 | `ch2_yeshou` | 等级门(lv≥2) → VN → 授技能 + act=2 |
 | `ch2_shijian` | 等级门(lv≥6) → VN → act=3 |
 | `ch2_xiasha` | 等级门(lv≥8) → VN → 晋升属性 + act=4 |
-| `ch2_chapter_end` | showToast("第三章即将到来") |
+| `enter_chapter3` | 设 chapter=3/act=0 → runStoryIntro('ch3_break_0', callback) → 突破筑基属性 + act=1 |
+| `ch3_breakthrough` | VN → 突破筑基属性 + act=1 |
+| `ch3_giftshu` | VN → 赠宋知远手册 + act=2 |
+| `ch3_baishi` | VN → 拜陈静虚为师 + act=3 |
+| `ch3_shoujian` | 等级门(lv≥13) → VN → 授【云开】+ act=4 |
+| `ch3_xiashan` | 等级门(lv≥15) → VN → 下山行侠 + 黑月教令牌 + act=5 |
+| `ch3_fengmang` | 等级门(lv≥17) → VN → 试剑会 vs 陆沉舟 + act=6 |
+| `ch3_hunyue` | VN → 婚约剧情 + act=7 |
+| `ch3_duokui` | VN → 试剑会次日连战 + 夺魁 + act=8 |
+| `ch3_zhenchuan` | VN → 晋升真传弟子 + act=9 |
+| `ch3_chuzheng` | VN → 出征黑月教讨伐 |
 
 #### `camp/RelationPanel.ts` — 人物关系面板（新增）
 
 可折叠分类的人物关系面板：
 - **🌸 女主角**：柳清寒、沈霓裳、趙沁微、墨绐青
-- **☯️ 武当派**：张玄素、陈静虚、陆沉舟、顾小桑、宋知远
+- **☯️ 武当派**：张玄素、陈静虚、陆沉舟、顾小桑、宋知远、纪无双、苏云绣、方仲和、孟文渊、叶紫衣
 - **👤 其他**：周伯安
 
-每人显示小立绘（56×84px）+ 好感度数值，一行四列布局。分类标题带有光效动画（左侧光条、图标浮动、箭头弹跳），引导玩家点击展开。未解锁角色显示灰色立绘 + "未解锁"标注（如趙沁微在第三章前未解锁，沈霓裳在第二章 act≥4 后解锁）。
+每人显示小立绘（56×84px）+ 好感度数值，一行四列布局。分类标题带有光效动画（左侧光条、图标浮动、箭头弹跳），引导玩家点击展开。未解锁角色显示灰色立绘 + "未解锁"标注（如趙沁微在第三章前未解锁，沈霓裳在第二章 act≥4 后解锁，纪无双/苏云绣/方仲和在第三章 act≥8 后解锁，孟文渊/叶紫衣在第三章 act≥9 后解锁）。
 
 #### `DialogScreen.ts` — NPC 对话树
 
@@ -835,6 +848,13 @@ second_meet: {
 5. **动态 import 模式**：`StoryPanel.ts` 中触发剧情时使用 `import('../StoryScreen').then(m => ...)` 懒加载，避免循环依赖（`StoryScreen` 依赖 `Camp`，`Camp` 又依赖 `StoryPanel`）。
 
 6. **NPC 对话起始节点**：`openDialog()` 首选 `'start'` 键；若不存在则取 `Object.keys(dialogs)[0]`。建议统一使用 `'first_meet'` 或 `'start'` 作为入口节点名。
+
+7. **第三章新增 NPC 对话**（`src/data/npcs.ts`）：
+   - `ji_wushuang_npc`（纪无双）：沉静如水，用剑对话
+   - `su_yunxiu_npc`（苏云绣）：促狭爱开玩笑，使双剑
+   - `fang_zhonghe_npc`（方仲和）：敦厚老实，使重剑
+   - `meng_wenyuan`（孟文渊）：武痴，几乎不说话
+   - `ye_ziyi`（叶紫衣）：武痴+话痨，爱讨论剑法细节
 
 7. **`scriptedDefeat` 标志**：若敌人模板设置 `scriptedDefeat: true`，战斗引擎会在该敌人 HP 降到阈值时触发"脚本性失败"（敌人假装被打败），用于剧情需要的必胜或必败战斗。在团队战架构下，检查所有敌方单位中是否有 `scriptedDefeat`。
 
