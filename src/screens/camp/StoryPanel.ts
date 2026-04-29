@@ -22,12 +22,12 @@ interface DailyTask {
 }
 
 const DAILY_TASKS: DailyTask[] = [
-  { id: 'chop_wood', icon: '🪓', name: '砍柴',   desc: '山门外劈柴，练臂力也练心性', exp: 15, gold: 5,  unlockChapter: 2, unlockLevel: 0 },
-  { id: 'carry_water', icon: '💧', name: '挑水',  desc: '去最远的山泉挑水，腿能废三天', exp: 10, gold: 3,  unlockChapter: 2, unlockLevel: 0 },
-  { id: 'clean_hall', icon: '🧹', name: '打扫大殿', desc: '真武大殿除尘，心静则尘净',     exp: 12, gold: 4,  unlockChapter: 2, unlockLevel: 0 },
-  { id: 'copy_scripture', icon: '📜', name: '抄写道经', desc: '静心抄写道藏，字字入心',     exp: 25, gold: 8,  unlockChapter: 2, unlockLevel: 0 },
-  { id: 'pine_train', icon: '🌙', name: '后山修炼', desc: '老松树下打坐，月华入体',       exp: 30, gold: 0,  unlockChapter: 2, unlockLevel: 2 },
-  { id: 'arena_spar', icon: '⚔️', name: '演武切磋', desc: '演武场与同门过招，实战精进',    exp: 35, gold: 0,  unlockChapter: 2, unlockLevel: 6 },
+  { id: 'chop_wood', icon: '🪓', name: '砍柴',   desc: '山门外劈柴，练臂力也练心性', exp: 20, gold: 5,  unlockChapter: 2, unlockLevel: 0 },
+  { id: 'carry_water', icon: '💧', name: '挑水',  desc: '去最远的山泉挑水，腿能废三天', exp: 15, gold: 3,  unlockChapter: 2, unlockLevel: 0 },
+  { id: 'clean_hall', icon: '🧹', name: '打扫大殿', desc: '真武大殿除尘，心静则尘净',     exp: 18, gold: 4,  unlockChapter: 2, unlockLevel: 0 },
+  { id: 'copy_scripture', icon: '📜', name: '抄写道经', desc: '静心抄写道藏，字字入心',     exp: 35, gold: 8,  unlockChapter: 2, unlockLevel: 0 },
+  { id: 'pine_train', icon: '🌙', name: '后山修炼', desc: '老松树下打坐，月华入体',       exp: 45, gold: 0,  unlockChapter: 2, unlockLevel: 2 },
+  { id: 'arena_spar', icon: '⚔️', name: '演武切磋', desc: '演武场与同门过招，实战精进',    exp: 55, gold: 0,  unlockChapter: 2, unlockLevel: 6 },
 ];
 
 function doDailyTask(task: DailyTask): void {
