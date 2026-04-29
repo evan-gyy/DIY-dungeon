@@ -130,6 +130,7 @@ export function showStoryNode(nodeId: string): void {
   const node = getChapter(p.chapter).storyNodes[nodeId];
   if (!node) { finishStoryIntro(); return; }
   _nodeId = nodeId;
+  _waiting = false;
 
   document.getElementById('story-continue-hint')?.classList.add('hidden');
   document.getElementById('story-narration-mode')?.classList.add('hidden');
@@ -222,10 +223,11 @@ function _showCG(node: { bg: string; delay: number; next: string }): void {
   if (bg) {
     bg.style.backgroundImage = `url('${node.bg}')`;
     bg.classList.remove('visible');
-    setTimeout(() => {
+    // 将外层淡入 timeout 也赋给 _timer，使其可被点击取消，防止幽灵 timer 二次触发
+    _timer = setTimeout(() => {
       bg.classList.add('visible');
       _timer = setTimeout(() => { if (node.next) showStoryNode(node.next); }, node.delay ?? 3000) as unknown as ReturnType<typeof setInterval>;
-    }, 200);
+    }, 200) as unknown as ReturnType<typeof setInterval>;
   }
 }
 

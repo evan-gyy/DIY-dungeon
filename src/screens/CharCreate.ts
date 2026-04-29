@@ -78,6 +78,15 @@ export function confirmCreate(): void {
     wudangMidCleared: false,
     wudangElderCleared: false,
     chapter2Route: '' as const,
+    chapter3Breakthrough: false,
+    master: '',
+    blackmoonToken: false,
+    luChenzhouRespect: 0,
+    songZhiyuanGrowth: false,
+    liuQinghanEngaged: false,
+    trialChampion: false,
+    trueDisciple: false,
+    blackmoonMissionStarted: false,
     _slot: _pendingSlot,
   };
 
