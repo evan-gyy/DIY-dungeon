@@ -357,6 +357,8 @@ export interface AttrBoosts {
   mp: number;
 }
 
+import type { NpcStats } from './npcStats';
+
 export interface PlayerState {
   name: string;
   charId: CharId;
@@ -399,6 +401,7 @@ export interface PlayerState {
   trialChampion: boolean;              // 是否夺得试剑会魁首
   trueDisciple: boolean;               // 是否晋升真传弟子
   blackmoonMissionStarted: boolean;    // 黑月教讨伐是否开始
+  npcDatabase?: Record<string, NpcStats>; // NPC 数值卡数据库（可选，首次加载时初始化）
   _slot: number;
   _savedAt?: string;
 }

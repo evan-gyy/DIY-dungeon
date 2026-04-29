@@ -75,6 +75,26 @@ export const PlayerStateSchema = z.object({
   trueDisciple: z.boolean().default(false),
   blackmoonMissionStarted: z.boolean().default(false),
 
+  // NPC 数值卡数据库（旧存档兼容：默认为空对象，首次进入游戏时初始化）
+  npcDatabase: z.record(z.string(), z.object({
+    id:     z.string(),
+    name:   z.string(),
+    talent: z.string().default('normal'),
+    sect:   z.string().default('wudang'),
+    level:  z.number().default(1),
+    exp:    z.number().default(0),
+    hp: z.number(), maxHp: z.number(),
+    mp: z.number(), maxMp: z.number(),
+    atk: z.number(), def: z.number(), agi: z.number(), crit: z.number(),
+    skills:      z.array(z.string()).default([]),
+    equippedFabao: z.object({
+      weapon:    z.string().nullable().default(null),
+      armor:     z.string().nullable().default(null),
+      accessory: z.string().nullable().default(null),
+    }).default({ weapon: null, armor: null, accessory: null }),
+    ownedFabao: z.array(z.string()).default([]),
+  })).default({}),
+
   _slot:    z.number().default(1),
   _savedAt: z.string().optional(),
 });

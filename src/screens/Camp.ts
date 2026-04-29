@@ -9,6 +9,7 @@ import { renderStoryPanel, updateStorySidebar } from './camp/StoryPanel';
 import { renderRelationPanel } from './camp/RelationPanel';
 import { getChapter } from '../data/chapters/index';
 import { showToast } from '../ui/toast';
+import { initNpcDatabase } from '../systems/NpcBehavior';
 import type { CampTabId } from '../data/types';
 
 export function renderCampTopbar(): void {
@@ -65,8 +66,15 @@ export function doSaveGame(): void {
 }
 
 export function enterCamp(): void {
-  const p = getPlayer();
+  let p = getPlayer();
   if (!p) { showScreen('main'); return; }
+
+  // 首次进入或旧存档：初始化 NPC 数值卡数据库
+  if (!p.npcDatabase || Object.keys(p.npcDatabase).length === 0) {
+    p = { ...p, npcDatabase: initNpcDatabase() };
+    setPlayer(p);
+    saveGame(p);
+  }
 
   showScreen('camp');
   switchMusic(MUSIC.main);
