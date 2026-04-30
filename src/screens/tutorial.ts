@@ -32,7 +32,8 @@ const MENTOR_STEPS = [
   {
     step: '第四步',
     text: `很好！你已掌握了入门之道。<br><br>
-      踏入江湖前，务必确保技能已装备。江湖险恶，<span class="hi">有备无患</span>。<br><br>
+      点击顶部<span class="hi">「地图」</span>可查看江湖世界，前往各处历练。<br>
+      江湖险恶，<span class="hi">有备无患</span>。<br><br>
       老夫去也，愿你名扬四海！`,
     actions: [{ label: '谢前辈指点！', action: 'close', primary: true }],
   },

@@ -6,6 +6,7 @@ import { showToast } from '../../ui/toast';
 import { openDialog } from '../DialogScreen';
 import { enterCamp, switchCampTab } from '../Camp';
 import { checkLevelUp, getRealmName } from '../../state/LevelSystem';
+import { calculateFinalStats } from '../../data/realmConfig';
 import type { CampScene } from '../../data/chapters/types';
 import type { SkillId } from '../../data/types';
 
@@ -32,6 +33,17 @@ const DAILY_TASKS: DailyTask[] = [
 
 function doDailyTask(task: DailyTask): void {
   const p = getPlayer();
+  
+  // 武当山专属任务检查：砍柴、挑水、打扫大殿、抄写道经、后山修炼、演武切磋 只能在武当山进行
+  const wudangOnlyTasks = ['chop_wood', 'carry_water', 'clean_hall', 'copy_scripture', 'pine_train', 'arena_spar'];
+  if (wudangOnlyTasks.includes(task.id)) {
+    const locId = p.currentLocationId ?? 'wudang_mountain';
+    if (locId !== 'wudang_mountain') {
+      showToast('此任务只能在武当山进行，请先返回武当山。');
+      return;
+    }
+  }
+  
   const updated = {
     ...p,
     exp: p.exp + task.exp,
@@ -299,12 +311,14 @@ function triggerStoryEvent(eventId: string): void {
     import('../StoryScreen').then(m => {
       m.runStoryIntro('ch3_break_0', () => {
         const fresh = getPlayer();
-        // 突破筑基：属性大幅提升
+        // 突破筑基：使用 realmConfig 计算筑基一层属性（天赋*普通人属性）
+        const newStats = calculateFinalStats(11, [fresh.playerTalent]);
         const promotion = {
           level: 11, // 筑基一层
-          maxHp: fresh.maxHp + 50, hp: Math.min(fresh.hp + 50, fresh.maxHp + 50),
-          maxMp: fresh.maxMp + 25, mp: Math.min(fresh.mp + 25, fresh.maxMp + 25),
-          atk: fresh.atk + 8, def: fresh.def + 5,
+          exp: 0,
+          maxHp: newStats.hp, hp: newStats.hp,
+          maxMp: newStats.mp, mp: newStats.mp,
+          atk: newStats.atk, def: newStats.def, agi: newStats.agi, crit: newStats.crit,
           chapter3Breakthrough: true,
         };
         const updated2 = { ...fresh, ...promotion, act: 1 };
@@ -320,11 +334,14 @@ function triggerStoryEvent(eventId: string): void {
     import('../StoryScreen').then(m => {
       m.runStoryIntro('ch3_break_0', () => {
         const fresh = getPlayer();
+        // 突破筑基：使用 realmConfig 计算筑基一层属性
+        const newStats = calculateFinalStats(11, [fresh.playerTalent]);
         const promotion = {
           level: 11,
-          maxHp: fresh.maxHp + 50, hp: Math.min(fresh.hp + 50, fresh.maxHp + 50),
-          maxMp: fresh.maxMp + 25, mp: Math.min(fresh.mp + 25, fresh.maxMp + 25),
-          atk: fresh.atk + 8, def: fresh.def + 5,
+          exp: 0,
+          maxHp: newStats.hp, hp: newStats.hp,
+          maxMp: newStats.mp, mp: newStats.mp,
+          atk: newStats.atk, def: newStats.def, agi: newStats.agi, crit: newStats.crit,
           chapter3Breakthrough: true,
         };
         const updated = { ...fresh, ...promotion, act: 1 };

@@ -21,7 +21,7 @@ const BREAKTHROUGH_NODES: Record<string, StoryNode> = {
   ch3_break_14: { type: 'dialogue', speaker: '柳清寒', text: '……恭喜你。', portrait: 'picture/Female-main/柳清寒.png', bg: 'picture/scene/C3-neimen_xiaowu.png', next: 'ch3_break_15' },
   ch3_break_15: { type: 'dialogue', speaker: '我', text: '师姐。以后——不用偷偷在后山等我了。想教我剑法，直接来就好。', bg: 'picture/scene/C3-neimen_xiaowu.png', next: 'ch3_break_16' },
   ch3_break_16: { type: 'dialogue', speaker: '柳清寒', text: '……我没有偷偷。', portrait: 'picture/Female-main/柳清寒.png', bg: 'picture/scene/C3-neimen_xiaowu.png', next: 'ch3_break_end' },
-  ch3_break_end: { type: 'narration', text: '（她推开门，快步走入夜色之中。步伐依旧利落——但主角分明看见，她在跨出门槛的那一刻，耳根红得像要烧起来。）\n\n没有偷偷……吗。那上次在后山站到肩头积霜的人——是谁。\n\n🎉 突破大境界：炼气十层 → 筑基一层！\n📈 属性大幅提升（HP+50, MP+25, ATK+8, DEF+5）\n📖 柳清寒好感度 +15', next: 'END' },
+  ch3_break_end: { type: 'narration', text: '（她推开门，快步走入夜色之中。步伐依旧利落——但主角分明看见，她在跨出门槛的那一刻，耳根红得像要烧起来。）\n\n没有偷偷……吗。那上次在后山站到肩头积霜的人——是谁。\n\n🎉 突破大境界：炼气十层 → 筑基一层！\n📖 柳清寒好感度 +15', next: 'END' },
 };
 
 // ── 节点二：赠书（筑基一层·自动触发）───────────────────────────
@@ -81,11 +81,11 @@ const XIASHAN_NODES: Record<string, StoryNode> = {
   ch3_xiashan_battle: { type: 'battle', enemyId: 'forest_yao_beast', nextOnWin: 'ch3_xiashan_6', nextOnLose: 'ch3_xiashan_6', teamAllies: [{ name: '林小石', hp: 60, maxHp: 60, mp: 10, maxMp: 10, atk: 12, def: 6, agi: 6, crit: 2, icon: '🗡️', skills: ['wudang_changquan' as SkillId] }, { name: '外门弟子·苏小妹', hp: 55, maxHp: 55, mp: 12, maxMp: 12, atk: 10, def: 5, agi: 8, crit: 3, icon: '🌸', skills: ['wudang_changquan' as SkillId] }] },
   ch3_xiashan_6: { type: 'dialogue', speaker: '外门弟子·林小石', text: '我、我活下来了！师兄你看见了吗？我刚才那一剑——', bg: 'picture/scene/C3-qingshicun.png', next: 'ch3_xiashan_7' },
   ch3_xiashan_7: { type: 'narration', text: '（回武当的路上，经过一片废弃的山神庙——你忽然停下了脚步。）', next: 'ch3_xiashan_8' },
-  ch3_xiashan_8: { type: 'dialogue', speaker: '我', text: '……有人。', bg: 'picture/scene/C3-qingshicun.png', next: 'ch3_xiashan_9' },
-  ch3_xiashan_9: { type: 'dialogue', speaker: '黑月教探子', text: '武当的人？哼——这青石村的妖兽，是我们放养的试验品。你们杀了我们的妖兽——总得留下点什么。', bg: 'picture/scene/C3-qingshicun.png', next: 'ch3_xiashan_10' },
-  ch3_xiashan_10: { type: 'dialogue', speaker: '我', text: '武当，陈静虚门下。——[主角名]。', bg: 'picture/scene/C3-qingshicun.png', next: 'ch3_xiashan_boss' },
+  ch3_xiashan_8: { type: 'dialogue', speaker: '我', text: '……有人。', bg: 'picture/scene/C3-shanmiao.png', next: 'ch3_xiashan_9' },
+  ch3_xiashan_9: { type: 'dialogue', speaker: '黑月教探子', text: '武当的人？哼——这青石村的妖兽，是我们放养的试验品。你们杀了我们的妖兽——总得留下点什么。', bg: 'picture/scene/C3-shanmiao.png', next: 'ch3_xiashan_10' },
+  ch3_xiashan_10: { type: 'dialogue', speaker: '我', text: '武当，陈静虚门下。——[主角名]。', bg: 'picture/scene/C3-shanmiao.png', next: 'ch3_xiashan_boss' },
   ch3_xiashan_boss: { type: 'battle', enemyId: 'blackmoon_scout_elite', nextOnWin: 'ch3_xiashan_11', nextOnLose: 'ch3_xiashan_11' },
-  ch3_xiashan_11: { type: 'dialogue', speaker: '黑月教探子', text: '……武当陈静虚门下……我记住了。下次见面——就是你的死期。', bg: 'picture/scene/C3-qingshicun.png', next: 'ch3_xiashan_end' },
+  ch3_xiashan_11: { type: 'dialogue', speaker: '黑月教探子', text: '……武当陈静虚门下……我记住了。下次见面——就是你的死期。', bg: 'picture/scene/C3-shanmiao.png', next: 'ch3_xiashan_end' },
   ch3_xiashan_end: { type: 'narration', text: '（两人捏碎一道符咒，化作黑烟消失。）\n\n……黑月教在青石村放养妖兽。这不是偶然。回去禀报掌门。\n\n✅ 下山行侠·完成\n🎁 获得物品：黑月教令牌碎片（剧情道具·后续主线触发）\n📈 外门弟子好感度大幅提升', next: 'END' },
 };
 
@@ -133,20 +133,20 @@ const DUOKUI_NODES: Record<string, StoryNode> = {
   ch3_duo_1: { type: 'dialogue', speaker: '宋知远', text: '隔壁的！今天继续！把他们全打趴下！', portrait: 'picture/NPC/宋知远.png', bg: 'picture/scene/C2-arena.png', next: 'ch3_duo_2' },
   ch3_duo_2: { type: 'dialogue', speaker: '周伯安', text: '第二轮——[主角名]，对——方仲和。', portrait: 'picture/NPC/周伯安.png', bg: 'picture/scene/C2-arena.png', next: 'ch3_duo_battle1' },
   ch3_duo_battle1: { type: 'battle', enemyId: 'fang_zhonghe', nextOnWin: 'ch3_duo_3', nextOnLose: 'ch3_duo_3' },
-  ch3_duo_3: { type: 'dialogue', speaker: '方仲和', text: '服了服了！师弟你这剑——比昨天打陆师兄的时候还快！看来昨天那一战，你又突破了。', portrait: 'picture/NPC/武当派-张三丰.png', bg: 'picture/scene/C2-arena.png', next: 'ch3_duo_4' },
+  ch3_duo_3: { type: 'dialogue', speaker: '方仲和', text: '服了服了！师弟你这剑——比昨天打陆师兄的时候还快！看来昨天那一战，你又突破了。', portrait: 'picture/NPC/方仲和.png', bg: 'picture/scene/C2-arena.png', next: 'ch3_duo_4' },
   ch3_duo_4: { type: 'dialogue', speaker: '周伯安', text: '第三轮——[主角名]，对——苏云绣。', portrait: 'picture/NPC/周伯安.png', bg: 'picture/scene/C2-arena.png', next: 'ch3_duo_battle2' },
   ch3_duo_battle2: { type: 'battle', enemyId: 'su_yunxiu', nextOnWin: 'ch3_duo_5', nextOnLose: 'ch3_duo_5' },
-  ch3_duo_5: { type: 'dialogue', speaker: '苏云绣', text: '厉害厉害。小师兄天赋异禀，入宗门短短时日就到了筑基七层——师姐我甘拜下风。', portrait: 'picture/NPC/武当派-张三丰.png', bg: 'picture/scene/C2-arena.png', next: 'ch3_duo_6' },
-  ch3_duo_6: { type: 'dialogue', speaker: '苏云绣', text: '对了——小师兄，你可有心仪的姑娘？要不——考虑考虑姐姐？', portrait: 'picture/NPC/武当派-张三丰.png', bg: 'picture/scene/C2-arena.png', next: 'ch3_duo_7' },
+  ch3_duo_5: { type: 'dialogue', speaker: '苏云绣', text: '厉害厉害。小师兄天赋异禀，入宗门短短时日就到了筑基七层——师姐我甘拜下风。', portrait: 'picture/NPC/苏云绣.png', bg: 'picture/scene/C2-arena.png', next: 'ch3_duo_6' },
+  ch3_duo_6: { type: 'dialogue', speaker: '苏云绣', text: '对了——小师兄，你可有心仪的姑娘？要不——考虑考虑姐姐？', portrait: 'picture/NPC/苏云绣.png', bg: 'picture/scene/C2-arena.png', next: 'ch3_duo_7' },
   ch3_duo_7: { type: 'narration', text: '（你下意识地——目光不由自主地飘向了演武场边。柳清寒正站在那里。四目相对。柳清寒的脸上，浮起了一层极淡的红晕。）', next: 'ch3_duo_8' },
   ch3_duo_8: { type: 'dialogue', speaker: '我', text: '苏师姐说笑了！在下——在下还需努力修炼，告辞！', bg: 'picture/scene/C2-arena.png', next: 'ch3_duo_9' },
   ch3_duo_9: { type: 'narration', text: '（你几乎是逃下了擂台。身后传来苏云绣银铃般的笑声。而在主角看不到的地方——柳清寒看着那个仓皇逃窜的背影，嘴角弯起了一个极淡的、好看的弧度。）', next: 'ch3_duo_10' },
   ch3_duo_10: { type: 'dialogue', speaker: '周伯安', text: '决赛——[主角名]，对——纪无双。', portrait: 'picture/NPC/周伯安.png', bg: 'picture/scene/C2-arena.png', next: 'ch3_duo_11' },
   ch3_duo_11: { type: 'narration', text: '（全场安静了下来。纪无双——内门另一位筑基七层的领袖人物。与陆沉舟齐名，人称"武当双璧"。）', next: 'ch3_duo_12' },
-  ch3_duo_12: { type: 'dialogue', speaker: '纪无双', text: '[主角名]。昨天你和陆沉舟那一战，我看了。你的剑——很快。但我的剑，也不慢。请。', portrait: 'picture/NPC/武当派-张三丰.png', bg: 'picture/scene/C2-arena.png', next: 'ch3_duo_battle3' },
+  ch3_duo_12: { type: 'dialogue', speaker: '纪无双', text: '[主角名]。昨天你和陆沉舟那一战，我看了。你的剑——很快。但我的剑，也不慢。请。', portrait: 'picture/NPC/纪无双.png', bg: 'picture/scene/C2-arena.png', next: 'ch3_duo_battle3' },
   ch3_duo_battle3: { type: 'battle', enemyId: 'ji_wushuang', nextOnWin: 'ch3_duo_13', nextOnLose: 'ch3_duo_13' },
-  ch3_duo_13: { type: 'dialogue', speaker: '纪无双', text: '……好剑。你的归元——最后那一剑，我看见了。不是师父教的。是你自己的。武当有你——是幸事。', portrait: 'picture/NPC/武当派-张三丰.png', bg: 'picture/scene/C2-arena.png', next: 'ch3_duo_14' },
-  ch3_duo_14: { type: 'dialogue', speaker: '纪无双', text: '恭喜。内门试剑会——魁首。', portrait: 'picture/NPC/武当派-张三丰.png', bg: 'picture/scene/C2-arena.png', next: 'ch3_duo_end' },
+  ch3_duo_13: { type: 'dialogue', speaker: '纪无双', text: '……好剑。你的归元——最后那一剑，我看见了。不是师父教的。是你自己的。武当有你——是幸事。', portrait: 'picture/NPC/纪无双.png', bg: 'picture/scene/C2-arena.png', next: 'ch3_duo_14' },
+  ch3_duo_14: { type: 'dialogue', speaker: '纪无双', text: '恭喜。内门试剑会——魁首。', portrait: 'picture/NPC/纪无双.png', bg: 'picture/scene/C2-arena.png', next: 'ch3_duo_end' },
   ch3_duo_end: { type: 'narration', text: '（演武场爆发出雷鸣般的欢呼。宋知远嗓子已经喊哑了，还在拼命挥舞那面破布条。顾小桑眼眶有点红，用力鼓掌。）\n\n🏆 内门试剑会·魁首\n📈 获得大量经验\n🎁 获得奖励：藏经阁自选武学（一次）', next: 'END' },
 };
 
@@ -165,15 +165,15 @@ const ZHENCHUAN_NODES: Record<string, StoryNode> = {
 // ── 节点十：出征（一个月后·自动触发）─────────────────────
 const CHUZHENG_NODES: Record<string, StoryNode> = {
   ch3_chu_0: { type: 'narration', text: '（一个月转瞬即逝。这一个月里，你日夜苦修，将试剑会上与陆沉舟、纪无双交手的感悟一一消化。筑基七层的根基，愈发扎实。今日——便是出征之日。）', next: 'ch3_chu_cg' },
-  ch3_chu_cg: { type: 'cg', bg: 'picture/scene/C1-wudang_hall.png', delay: 2500, next: 'ch3_chu_1' },
+  ch3_chu_cg: { type: 'cg', bg: 'picture/scene/C3-guangchang.png', delay: 2500, next: 'ch3_chu_1' },
   ch3_chu_1: { type: 'narration', text: '（武当大殿前广场。晨光初透，山风猎猎。七组人马列队而立——七位长老，各自带领门下真传弟子。这是武当近百年来规模最大的一次下山行动。）', next: 'ch3_chu_2' },
-  ch3_chu_2: { type: 'dialogue', speaker: '陈静虚', text: '……都到了。', portrait: 'picture/NPC/陈静虚.png', bg: 'picture/scene/C1-wudang_hall.png', next: 'ch3_chu_3' },
+  ch3_chu_2: { type: 'dialogue', speaker: '陈静虚', text: '……都到了。', portrait: 'picture/NPC/陈静虚.png', bg: 'picture/scene/C3-guangchang.png', next: 'ch3_chu_3' },
   ch3_chu_3: { type: 'narration', text: '（陈静虚门下——算上你，一共四人。柳清寒立于陈静虚身侧，素白道袍，长剑悬腰。她今天系了一根新的剑穗。淡青色的。）', next: 'ch3_chu_4' },
-  ch3_chu_4: { type: 'dialogue', speaker: '张玄素', text: '诸位——今日下山，不为比武，不为扬名。是为——除魔卫道。黑月教在苍岭山、青石村一带的活动只是冰山一角。七位长老，各领一组，分头前往。查明情况，肃清邪教。', portrait: 'picture/NPC/张玄素.png', bg: 'picture/scene/C1-wudang_hall.png', next: 'ch3_chu_5' },
-  ch3_chu_5: { type: 'dialogue', speaker: '张玄素', text: '另有一事——与官府交际时，要观察再三。黑月教的邪药，对有权势之人诱惑极大。不可轻信，也不可轻疑。分寸——你们自己把握。', portrait: 'picture/NPC/张玄素.png', bg: 'picture/scene/C1-wudang_hall.png', next: 'ch3_chu_6' },
+  ch3_chu_4: { type: 'dialogue', speaker: '张玄素', text: '诸位——今日下山，不为比武，不为扬名。是为——除魔卫道。黑月教在苍岭山、青石村一带的活动只是冰山一角。七位长老，各领一组，分头前往。查明情况，肃清邪教。', portrait: 'picture/NPC/张玄素.png', bg: 'picture/scene/C3-guangchang.png', next: 'ch3_chu_5' },
+  ch3_chu_5: { type: 'dialogue', speaker: '张玄素', text: '另有一事——与官府交际时，要观察再三。黑月教的邪药，对有权势之人诱惑极大。不可轻信，也不可轻疑。分寸——你们自己把握。', portrait: 'picture/NPC/张玄素.png', bg: 'picture/scene/C3-guangchang.png', next: 'ch3_chu_6' },
   ch3_chu_6: { type: 'narration', text: '（七组人马依次下山。你与柳清寒并肩走在山道上。晨光从松枝间洒落，在他们脚下投下斑驳的光影。）', next: 'ch3_chu_7' },
-  ch3_chu_7: { type: 'dialogue', speaker: '我', text: '师姐。新剑穗——很好看。', bg: 'picture/scene/C2-road.png', next: 'ch3_chu_8' },
-  ch3_chu_8: { type: 'dialogue', speaker: '柳清寒', text: '……旧的断了。随手换的。', portrait: 'picture/Female-main/柳清寒.png', bg: 'picture/scene/C2-road.png', next: 'ch3_chu_end' },
+  ch3_chu_7: { type: 'dialogue', speaker: '我', text: '师姐。新剑穗——很好看。', bg: 'picture/scene/C3-shanmen.png', next: 'ch3_chu_8' },
+  ch3_chu_8: { type: 'dialogue', speaker: '柳清寒', text: '……旧的断了。随手换的。', portrait: 'picture/Female-main/柳清寒.png', bg: 'picture/scene/C3-shanmen.png', next: 'ch3_chu_end' },
   ch3_chu_end: { type: 'narration', text: '（你没有戳穿。但你记得——旧的剑穗是白色的。和这根淡青色的一模一样，从来没有断过。）\n\n随手换的……吗。师姐，你什么时候才能学会说谎。\n\n── 第三章·内门风云·完 ──', next: 'END' },
 };
 
@@ -263,7 +263,7 @@ export const CH3: ChapterData = {
       id: 'ch3_camp_7',
       title: '演武场·试剑会次日',
       bg: 'picture/scene/C2-arena.png',
-      npc: { name: '纪无双', sub: '内门领袖·筑基七层', img: 'picture/NPC/武当派-张三丰.png' },
+      npc: { name: '纪无双', sub: '内门领袖·筑基七层', img: 'picture/NPC/纪无双.png' },
       desc: '昨日击败陆沉舟的消息传遍武当。今日连战三场——方仲和、苏云绣、纪无双。',
       actionLabel: '继续试剑会',
       actionEvent: 'ch3_duokui',
@@ -280,7 +280,7 @@ export const CH3: ChapterData = {
     9: {
       id: 'ch3_camp_9',
       title: '武当广场·出征',
-      bg: 'picture/scene/C1-wudang_hall.png',
+      bg: 'picture/scene/C3-guangchang.png',
       npc: { name: '柳清寒', sub: '武当大师姐', img: 'picture/Female-main/柳清寒.png' },
       desc: '一个月后。七组人马集结，下山讨伐黑月教。柳清寒系了一根新的淡青色剑穗。\n\n第四章即将开启……',
       actionLabel: '随师下山出征',

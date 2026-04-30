@@ -326,13 +326,21 @@ function finishStoryIntro(): void {
   const p = getPlayer();
   if (p) {
     const chapter = getChapter(p.chapter);
-    const wudangStats = {
-      hp: 230, maxHp: 230, mp: 130, maxMp: 130,
-      atk: 30, def: 15, agi: 15, crit: 5, level: 1,
-    };
-    const updated = { ...p, ...wudangStats, act: chapter.finalAct, tutorialDone: true };
-    setPlayer(updated);
-    saveGame(updated);
+    // 使用 realmConfig 计算炼气一层属性（含主角天赋 dragon_vein 加成）
+    import('../data/realmConfig').then(({ calculateFinalStats }) => {
+      const newStats = calculateFinalStats(1, [p.playerTalent]);
+      const wudangStats = {
+        hp: newStats.hp, maxHp: newStats.hp,
+        mp: newStats.mp, maxMp: newStats.mp,
+        atk: newStats.atk, def: newStats.def, agi: newStats.agi, crit: newStats.crit,
+        level: 1, exp: 0,
+      };
+      const updated = { ...p, ...wudangStats, act: chapter.finalAct, tutorialDone: true };
+      setPlayer(updated);
+      saveGame(updated);
+      enterCamp();
+    });
+    return;
   }
   enterCamp();
 }

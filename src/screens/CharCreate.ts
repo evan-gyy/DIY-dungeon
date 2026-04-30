@@ -87,6 +87,8 @@ export function confirmCreate(): void {
     trialChampion: false,
     trueDisciple: false,
     blackmoonMissionStarted: false,
+    currentLocationId: 'wudang_mountain',
+    playerTalent: 'dragon_vein',
     _slot: _pendingSlot,
   };
 

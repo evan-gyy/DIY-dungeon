@@ -1,7 +1,7 @@
 # DIY-Dungeon 项目架构文档
 
 > 本文档面向开发者和 AI Agent，描述当前项目的完整架构、各模块职责，以及如何进行修改和新章节开发。
-> 最后更新：2026-04-28（第三章代码接入完成 + 新 NPC 对话 + RelationPanel 扩展 + StoryPanel 事件注册）
+> 最后更新：2026-04-30（大境界硬门槛 + 主角天赋属性系统 + NPC面板修为进度 + 地图栏布局修复 + NPC天赋简化）
 
 ---
 
@@ -36,8 +36,11 @@ DIY-dungeon/
 │   │   ├── skills.ts              SKILLS: Record<SkillId, SkillData>（按门派/境界分层，炼气~渡劫六境）
 │   │   ├── enemies.ts             ENEMIES: Record<EnemyId, EnemyTemplate>
 │   │   ├── npcs.ts                NPC_DIALOGS: Record<NpcId, NpcDialogData>
+│   │   ├── npcStats.ts            NPC 数值卡数据库（13 个 NPC 初始属性 + 天赋系统）
 │   │   ├── items.ts               ITEMS + DEFAULT_INVENTORY
 │   │   ├── fabao.ts               法宝系统：FABAO: Record<FabaoId, FabaoData>（6境×3类×3件=54件）
+│   │   ├── realmConfig.ts         境界基础数值配置（🆕 0430：基准值 + 大境界飞跃公式）
+│   │   ├── worldMap.ts            世界地图节点配置（🆕 0430：门派/大城市级别地点）
 │   │   ├── sects.ts               SECTS: Record<SectId, SectData>
 │   │   ├── story.ts               WUDANG_TIERS（关卡配置，遗留文件）
 │   │   └── chapters/
@@ -54,9 +57,10 @@ DIY-dungeon/
 │   │   └── schemas.ts             PlayerStateSchema（Zod，含所有字段的 .default()）
 │   │
 │   ├── systems/                   游戏逻辑（依赖 data + state，不依赖 DOM）
-│   │   ├── BattleEngine.ts        initBattle / playerUseSkill / basicAttack（支持4v4团队战）
+│   │   ├── BattleEngine.ts        initBattle / playerUseSkill / basicAttack（支持4v4团队战 + 队友AI）
 │   │   ├── StatusEffects.ts       applyStatus / tickStatus / getStatusValue
 │   │   ├── EnemyAI.ts             enemyTurn / weightedRandom / predictAction
+│   │   ├── NpcBehavior.ts         NPC 行为引擎（🆕 0430：购买法器/学习技能/修炼/移动 四种行为统一回合）
 │   │   └── Inventory.ts           addItem / removeItem / useItem
 │   │
 │   ├── screens/                   UI 层（依赖全部下层模块）
@@ -64,14 +68,14 @@ DIY-dungeon/
 │   │   ├── MainMenu.ts            主菜单渲染
 │   │   ├── SaveSelect.ts          存档槽选择
 │   │   ├── CharCreate.ts          角色创建（选立绘 + 输入姓名）
-│   │   ├── Camp.ts                营地主容器（Tab 切换 + 侧边栏）
+│   │   ├── Camp.ts                营地主容器（Tab 切换 + 侧边栏 + 地图弹窗 + 地点移动）
 │   │   ├── camp/
 │   │   │   ├── AttrPanel.ts       属性面板（修炼点分配）
 │   │   │   ├── BagPanel.ts        背包面板（24 格，使用道具）
 │   │   │   ├── SkillPanel.ts      技能装配面板
-│   │   │   ├── StoryPanel.ts      营地剧情面板（人物活动 Tab）
-│   │   │   └── RelationPanel.ts   人物关系面板（可折叠分类 + 好感度）
-│   │   ├── DepartScreen.ts        出发/关卡选择
+│   │   │   ├── StoryPanel.ts      营地剧情面板（人物活动 Tab，含日常任务地点限制）
+│   │   │   ├── FabaoPanel.ts      法宝装备面板（🆕 0430：独立 Tab，三槽装备+选择器）
+│   │   │   └── RelationPanel.ts   人物关系面板（可折叠分类 + 好感度 + NPC 状态弹窗）
 │   │   ├── DialogScreen.ts        NPC 对话树
 │   │   ├── BattleScreen.ts        战斗 UI（多单位卡片 + 目标选择 + 技能栏 + 结算）
 │   │   ├── StoryScreen.ts         VN 引擎（打字机 / 对话 / CG / 选择枝）
@@ -143,13 +147,13 @@ export type SkillId =
 export type EnemyId = 'training_dummy' | 'shadow_scout' | 'shadow_agent' | ...;
 export type NpcId = 'mo_jiangqing' | 'liu_qinghan' | ...;
 
-// Screen ID（已移除 'learn'）
+// Screen ID（已移除 'learn' 和 'depart'）
 export type ScreenId =
   | 'main' | 'saveselect' | 'create' | 'story'
-  | 'camp' | 'depart' | 'dialog' | 'battle';
+  | 'camp' | 'dialog' | 'battle';
 
-// Camp Tab（新增 'relation'）
-export type CampTabId = 'story' | 'attr' | 'bag' | 'skill' | 'relation';
+// Camp Tab（新增 'relation' 和 'fabao'）
+export type CampTabId = 'story' | 'attr' | 'bag' | 'skill' | 'fabao' | 'relation';
 ```
 
 `PlayerState` 接口也在此定义，包含所有玩家字段（`chapter`、`act`、`chapter2Route`、`equippedFabao`、`ownedFabao` 等）。
@@ -300,6 +304,23 @@ export function loadAllSlots(): Array<{ slot: number; data: PlayerState } | null
 
 `PlayerStateSchema` 镜像 `PlayerState` 接口，所有字段带 `.default()`。**新增 `PlayerState` 字段时必须同步在此加对应的 Zod 定义**，否则旧存档加载会丢失该字段。
 
+**🆕 0429 新增 NPC 数据库 Schema**：
+```typescript
+npcDatabase: z.record(z.string(), z.object({
+  id: z.string(), name: z.string(),
+  talent: z.string().default('normal'),
+  sect: z.string().default('wudang'),
+  level: z.number().default(1), exp: z.number().default(0),
+  hp: z.number(), maxHp: z.number(),
+  mp: z.number(), maxMp: z.number(),
+  atk: z.number(), def: z.number(), agi: z.number(), crit: z.number(),
+  skills: z.array(z.string()).default([]),
+  equippedFabao: z.object({ weapon: z.string().nullable().default(null), ... }),
+  ownedFabao: z.array(z.string()).default([]),
+})).default({})
+```
+旧存档加载时 `npcDatabase` 自动补全为空对象 `{}`，首次进入游戏时通过 `initNpcDatabase()` 初始化。
+
 #### `LevelSystem.ts` — 10 层制修为系统
 
 ```typescript
@@ -315,6 +336,27 @@ export const REALM_NAMES = [
 - `level` 默认值从 `1` 改为 `0`（0=凡人，1=炼气一层）
 - `REALM_NAMES` 从原来的大境界名称改为精确的 10 层制名称
 - `checkLevelUp()` 中 `let lv = player.level || 0`
+
+**🆕 大境界硬门槛**：
+```typescript
+export function isRealmMaxLevel(lv: number): boolean {
+  return lv > 0 && lv % 10 === 0;
+}
+```
+- 大境界第十层（10/20/30/40/50/60）满后，经验条卡满不再增长，不会自动晋级
+- 必须通过对应剧情/试炼才能突破大境界（如炼气十层→筑基一层需完成C3突破剧情）
+- 属性面板中满层经验条显示红色"已满（需突破契机）"提示
+
+**经验曲线（🆕 0429 优化）**：
+```typescript
+export function getExpForLevel(lv: number): number {
+  // 统一公式 42 × lv^1.1，配合提升后的日常任务奖励
+  // 确保演武切磋（+55）升任意一级最多约 20 次点击
+  return Math.floor(42 * Math.pow(lv, 1.1));
+}
+```
+- 旧公式：`50 × lv^1.5`（分段），炼气八层→九层需约 35 次切磋
+- 新公式：`42 × lv^1.1`（统一），配合日常任务奖励提升，最多约 20 次点击升级
 
 ---
 
@@ -339,8 +381,16 @@ export function useHpPotion(): void
 1. `buildTurnOrder()` 构建回合顺序：1A-1B-2A-2B-3A-3B-4A-4B（交替穿插）
 2. 每个单位行动时检查 `alive`，跳过已死亡单位
 3. 玩家控制单位（`isPlayer: true`）进入 `player_turn` 状态，等待输入
-4. 非玩家单位自动执行 AI 行动
-5. 一方全部阵亡时结束战斗
+4. 非玩家友方单位（`side === 'ally' && !isPlayer`）自动执行队友 AI（`_allyTurn()`）
+5. 敌方单位自动执行敌方 AI（`_enemyTurn()`）
+6. 一方全部阵亡时结束战斗
+
+**队友 AI（🆕 0429 新增）**：
+- `_allyTurn(ally)`：自动控制 NPC 队友行动
+- 目标选择：HP 比例最低的敌人
+- 技能选择：从 `ally.skills` 中筛选非被动/非辅助、MP 足够、无冷却的攻击技能，随机使用
+- MP 不足时执行普通攻击
+- 支持暴击判定、状态效果附加、死亡检测
 
 **伤害公式**（不变）：
 ```
@@ -357,6 +407,80 @@ export function predictNextAction(enemy: BattleEnemyUnit): { icon: string; name:
 ```
 
 适配多单位架构，AI 选择目标时遍历存活友方单位。
+
+#### `NpcBehavior.ts` — NPC 动态行为引擎（🆕 0430 重构）
+
+NPC 每回合（存档/休息/地点移动时）执行以下行为判定：
+
+```typescript
+export function initNpcDatabase(): Record<string, NpcStats>   // 初始化 NPC 数据库（含初始位置）
+export function getNpcStats(id: string): NpcStats | null       // 获取单个 NPC 数值
+export function tickNpcBehaviors(): NpcTickResult[]            // 执行所有 NPC 行为 tick
+export function getNpcsAtLocation(locId: LocationId): NpcStats[] // 获取指定地点的 NPC
+```
+
+**回合行为模型**：
+- **主要行为（三选一）**：购买法器 / 学习技能 / 修炼，三者随机选一项执行
+- **移动（独立判定）**：在主要行为之后，额外独立判定是否移动（35%基础概率）
+- 同一回合内NPC可能既修炼升级又移动到新地点
+
+| 行为 | 触发条件 | 概率 | 结果分布 |
+|------|----------|------|----------|
+| 🗡️ 购买法器 | NPC 三件法器未全部装备 | 40% | 20%淘到宝(高一阶) / 30%同阶 / 50%来晚了 |
+| 📖 学习技能 | NPC 未学满同级技能 | 30% | 50%成功领悟 / 50%领悟失败 |
+| 🧘 修炼 | 剩余概率补齐至 100% | 可变 | 10%天人合一(+30exp) / 80%修行(+15exp) / 10%走火入魔(+5exp) |
+| 🚶 移动 | 独立判定（前3项之后） | 35%基础 | 随机移动到相邻地点 |
+
+**🆕 NPC天赋简化**：
+- 仅柳清寒保留专属天赋 `sword_heart_frost`（剑心·寒：修行速度×1.6，身法+15%，攻击+10%）
+- 主角保留 `dragon_vein`（九霄龙脉：修行速度×1.3，全属性+10%，暴击+5%），不在面板展示
+- 其余所有NPC天赋统一为 `normal`（无特殊），属性由 `calculateFinalStats` 按普通人基准计算
+- 天赋数据定义保留在 `npcStats.ts` 中供后续扩展
+
+NPC 数据库包含 13 个角色的初始数值卡（`src/data/npcStats.ts`），每个 NPC 的 `currentLocationId` 字段记录其当前位置，存储在 `PlayerState.npcDatabase` 中，随存档持久化。
+
+#### `realmConfig.ts` — 境界基础数值配置（🆕 0430 新增）
+
+```typescript
+export type MajorRealm = 'lianqi' | 'zhuji' | 'jiedan' | 'yuanying' | 'huashen' | 'dujie';
+
+export function calculateBaseStats(level: number): BaseStats     // 计算指定等级的基础属性
+export function calculateFinalStats(level: number, talents: TalentId[]): BaseStats & { crit: number }  // 含天赋加成
+export function getMajorRealmByLevel(level: number): MajorRealm | null
+export function validateRealmLeap(): { from: string; to: string; hpRatio: number; atkRatio: number }[]
+```
+
+**🆕 主角天赋属性系统**：
+- 主角创建时 `playerTalent: 'dragon_vein'`（九霄龙脉：全属性+10%，修行速度×1.3，暴击+5%）
+- `calculateFinalStats(level, [playerTalent])` 自动将天赋加成融入属性计算
+- 第一章序幕结束、C3突破筑基等关键节点均使用此函数重算属性
+- 主角天赋不在属性面板中展示（避免剧透），但实际属性已包含加成
+
+**基准值**（各境界第 1 层）：
+
+| 境界 | HP | MP | ATK | DEF | AGI |
+|------|-----|-----|------|------|------|
+| 炼气 | 100 | 30 | 15 | 8 | 10 |
+| 筑基 | 230 | 65 | 35 | 20 | 18 |
+| 结丹 | 500 | 140 | 75 | 45 | 28 |
+| 元婴 | 1100 | 300 | 160 | 95 | 42 |
+| 化神 | 2400 | 650 | 350 | 210 | 62 |
+| 渡劫 | 5200 | 1400 | 760 | 460 | 90 |
+
+**小层级增长**：每层 +10%（线性），大境界跨越时自动体现 100%~150% 断层增幅。
+
+#### `worldMap.ts` — 世界地图节点配置（🆕 0430 新增）
+
+只保留门派/大城市级别地点，内部区域（武当内门、传功崖等）通过对话和剧情触发，不在地图上展示。
+
+```typescript
+export type LocationId =
+  | 'wudang_mountain' | 'xiangyang_city' | 'jiangling_city'
+  | 'longyin_village' | 'han_river' | 'cangling_mountain'
+  | 'blackmoon_ruins' | 'shaolin_temple' | 'emei_mountain' | 'beggar_hq';
+```
+
+共 10 个地点节点，基于宋朝真实地理（武当山→襄阳→江陵 三角格局）。每个节点有 `connections` 定义相邻可移动地点，`unlockChapter` 控制解锁条件。
 
 #### `StatusEffects.ts`
 
@@ -427,7 +551,7 @@ interface DailyTask {
 | 🌙 后山修炼 | +30 | 0 | 第二章 + 炼气二层（level≥2） |
 | ⚔️ 演武切磋 | +35 | 0 | 第二章 + 炼气六层（level≥6） |
 
-`doDailyTask(task)` 执行任务：增加经验/铜钱 → `checkLevelUp()` → 保存 → 15% 概率触发小概率事件（宋知远偷懒/顾小桑小道消息/张玄素对话/陈静虚指点）。`renderDailyTasks()` 渲染可用的和锁定的任务按钮，在 `renderStoryPanel()` 的最顶部渲染。
+`doDailyTask(task)` 执行任务：先检查地点（武当山专属任务仅限 `wudang_mountain` 进行）→ 增加经验/铜钱 → `checkLevelUp()` → 保存 → 15% 概率触发小概率事件（宋知远偷懒/顾小桑小道消息/张玄素对话/陈静虚指点）。`renderDailyTasks()` 渲染可用的和锁定的任务按钮，在 `renderStoryPanel()` 的最顶部渲染。
 
 当前已有事件处理：
 
@@ -442,8 +566,8 @@ interface DailyTask {
 | `ch2_yeshou` | 等级门(lv≥2) → VN → 授技能 + act=2 |
 | `ch2_shijian` | 等级门(lv≥6) → VN → act=3 |
 | `ch2_xiasha` | 等级门(lv≥8) → VN → 晋升属性 + act=4 |
-| `enter_chapter3` | 设 chapter=3/act=0 → runStoryIntro('ch3_break_0', callback) → 突破筑基属性 + act=1 |
-| `ch3_breakthrough` | VN → 突破筑基属性 + act=1 |
+| `enter_chapter3` | 设 chapter=3/act=0 → runStoryIntro('ch3_break_0', callback) → calculateFinalStats(11) 突破筑基 + act=1 |
+| `ch3_breakthrough` | VN → calculateFinalStats(11) 突破筑基 + act=1 |
 | `ch3_giftshu` | VN → 赠宋知远手册 + act=2 |
 | `ch3_baishi` | VN → 拜陈静虚为师 + act=3 |
 | `ch3_shoujian` | 等级门(lv≥13) → VN → 授【云开】+ act=4 |
@@ -458,10 +582,15 @@ interface DailyTask {
 
 可折叠分类的人物关系面板：
 - **🌸 女主角**：柳清寒、沈霓裳、趙沁微、墨绐青
-- **☯️ 武当派**：张玄素、陈静虚、陆沉舟、顾小桑、宋知远、纪无双、苏云绣、方仲和、孟文渊、叶紫衣
-- **👤 其他**：周伯安
+- **☯️ 武当派**：张玄素、陈静虚、陆沉舟、顾小桑、宋知远、纪无双、苏云绣、方仲和、孟文渊、叶紫衣、周伯安（外门管事）
 
 每人显示小立绘（56×84px）+ 好感度数值，一行四列布局。分类标题带有光效动画（左侧光条、图标浮动、箭头弹跳），引导玩家点击展开。未解锁角色显示灰色立绘 + "未解锁"标注（如趙沁微在第三章前未解锁，沈霓裳在第二章 act≥4 后解锁，纪无双/苏云绣/方仲和在第三章 act≥8 后解锁，孟文渊/叶紫衣在第三章 act≥9 后解锁）。
+
+**🆕 NPC 状态弹窗**：点击已解锁角色的立绘卡片，弹出该角色的详细状态面板，显示修为、修为进度（经验条）、天赋、HP/MP/ATK/DEF/AGI/暴击、装备法宝等信息。支持关闭按钮、点击背景、ESC 键三种关闭方式。修为进度条在满层时显示红色"已满（等待突破契机）"。
+
+#### `camp/FabaoPanel.ts` — 法宝装备面板（🆕 0430 独立）
+
+法宝从人物关系中独立出来，作为左侧导航的独立 Tab（🔮 法宝装备）。提供三槽（武器/衣服/饰品）装备界面，点击槽位弹出法宝选择器，支持装备/卸下操作。法宝数据来自 `src/data/fabao.ts`（54件，6境×3类×3件）。
 
 #### `DialogScreen.ts` — NPC 对话树
 
@@ -860,6 +989,20 @@ second_meet: {
 
 8. **战斗单位 ID 命名约定**：我方单位用 `player_main`、`ally_1`、`ally_2`、`ally_3`；敌方单位用 `enemy_0`、`enemy_1`...。`id` 用于状态效果索引和 UI 渲染 key。
 
-9. **已删除 LearnScreen**：技能不再通过独立学功界面获取，改为在主线剧情 VN 的 `onFinish` 回调中通过 `setPlayer` 授予。`ScreenId` 中已移除 `'learn'`，HTML 中已移除 `#screen-learn`。
+9. **已删除 LearnScreen 和 DepartScreen**：技能不再通过独立学功界面获取，改为在主线剧情 VN 的 `onFinish` 回调中授予。`ScreenId` 中已移除 `'learn'` 和 `'depart'`。DepartScreen（选关界面）已废弃，营地顶部按钮改为「地图」弹窗。
 
-10. **营地导航变更**：`江湖往事` Tab 改名为 `人物活动`；新增 `人物关系` Tab；移除 `拜师学功` 按钮。新手引导中"前往学功"改为"前往人物活动"。
+10. **营地导航变更**：`江湖往事` Tab 改名为 `人物活动`；新增 `人物关系` 和 `法宝装备` Tab；移除 `拜师学功` 按钮。新手引导中"前往学功"改为"前往人物活动"。顶部「🗡️ 踏入江湖」按钮改为「🗺️ 地图」，点击弹出世界地图弹窗。地图导航栏精简为只显示当前地点名称，移除描述文字和附近城市按钮（移动统一通过地图弹窗进行）。
+
+11. **NPC 动态系统（🆕 0430 重构）**：`tickNpcBehaviors()` 在存档/休息/地点移动时调用，遍历 `PlayerState.npcDatabase` 中所有 NPC 执行行为判定。每回合从购买法器/学习技能/修炼中**三选一**作为主要行为，然后**独立判定**是否移动（35% 基础概率）。NPC 的修为提升会更新其 level 和属性，影响后续战斗中的队友强度。NPC 天赋已简化：仅柳清寒保留 `sword_heart_frost`，其余统一为 `normal`。
+
+12. **队友 AI 触发条件**：在 `_advanceTurn()` 中，当 `nextUnit.side === 'ally' && !nextUnit.isPlayer` 时触发 `_allyTurn()`。队友 AI 不依赖独立的 `AllyAI.ts` 文件，而是直接内嵌在 `BattleEngine.ts` 中。
+
+13. **境界数值系统（🆕 0430）**：`realmConfig.ts` 提供统一的属性计算系统。`calculateBaseStats(level)` 根据等级自动计算基础属性（基准值 + 每层 10% 线性增长），`calculateFinalStats(level, talents)` 叠加天赋乘数。大境界跨越自动体现 100%~150% 断层增幅。**主角天赋 `dragon_vein` 已融入属性计算**（全属性+10%），但不在面板展示。大境界第十层满后经验条卡满，需完成剧情突破。
+
+14. **世界地图系统（🆕 0430）**：`worldMap.ts` 定义 10 个门派/大城市级别地点节点，基于宋朝真实地理。玩家通过营地顶部地图栏或地图弹窗在相邻地点间移动。NPC 位置存储在 `npcDatabase[].currentLocationId` 中，随回合自动变化。
+
+15. **日常任务地点限制（🆕 0430）**：砍柴、挑水、打扫大殿、抄写道经、后山修炼、演武切磋 6 个日常任务仅限在武当山（`wudang_mountain`）进行。在其他地点点击任务会提示"此任务只能在武当山进行"。
+
+16. **NPC 状态弹窗（🆕 0430）**：`RelationPanel.ts` 中点击已解锁角色的立绘卡片，弹出 `npc-stats-overlay` 弹窗，显示该 NPC 的完整数值（修为、修为进度条、天赋、HP/MP/ATK/DEF/AGI/暴击、装备法宝）。支持关闭按钮、点击背景、ESC 键关闭。修为进度条直观展示NPC的晋升情况。
+
+17. **法宝独立面板（🆕 0430）**：法宝装备从人物关系面板中独立出来，作为左侧导航的 `fabao` Tab（🔮 法宝装备）。`FabaoPanel.ts` 提供三槽装备界面，复用原有的法宝选择器逻辑。

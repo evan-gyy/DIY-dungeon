@@ -93,7 +93,15 @@ export const PlayerStateSchema = z.object({
       accessory: z.string().nullable().default(null),
     }).default({ weapon: null, armor: null, accessory: null }),
     ownedFabao: z.array(z.string()).default([]),
+    // NPC当前所在地点
+    currentLocationId: z.string().default('wudang_mountain'),
   })).default({}),
+
+  // 世界地图系统
+  currentLocationId: z.string().default('wudang_mountain'),  // 玩家当前所在地点（默认武当山）
+
+  // 主角天赋系统
+  playerTalent: z.string().default('dragon_vein'),  // 主角天赋（默认九霄龙脉）
 
   _slot:    z.number().default(1),
   _savedAt: z.string().optional(),

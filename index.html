@@ -108,16 +108,27 @@
         <span class="bar-val" id="mp-val">100/100</span>
       </div>
       <span class="gold" id="gold-val">💰 50 两</span>
-      <button id="btn-depart" class="camp-adventure-btn" title="踏入江湖，历练武学">🗡️ 踏 入 江 湖</button>
+      <button id="btn-map" class="camp-adventure-btn" title="查看世界地图">🗺️ 地 图</button>
       <button id="btn-save" class="btn btn-sm" title="保存当前进度">💾 存 档</button>
       <button id="btn-rest" class="btn btn-sm" title="休息恢复气血与内力">🌙 休 息</button>
       <button id="btn-camp-back" class="btn btn-sm" style="margin-left:8px;">返 回 主 界</button>
+    </div>
+    <!-- 🆕 地图导航栏 -->
+    <div class="camp-map-bar" id="camp-map-bar">
+      <div class="map-bar-left">
+        <span class="map-icon">🗺️</span>
+        <span class="map-location-label" id="map-location-label">武当外门</span>
+      </div>
+      <div class="map-bar-right" id="map-nearby-locations">
+        <!-- 通过地图弹窗进行移动 -->
+      </div>
     </div>
     <nav class="camp-nav">
       <button class="camp-nav-btn" data-tab="story"><span class="nav-icon">💬</span>人物活动</button>
       <button class="camp-nav-btn" data-tab="attr"><span class="nav-icon">📊</span>角色属性</button>
       <button class="camp-nav-btn" data-tab="bag"><span class="nav-icon">📦</span>随身包裹</button>
       <button class="camp-nav-btn" data-tab="skill"><span class="nav-icon">⚔️</span>技能配置</button>
+      <button class="camp-nav-btn" data-tab="fabao"><span class="nav-icon">🔮</span>法宝装备</button>
       <button class="camp-nav-btn" data-tab="relation"><span class="nav-icon">👥</span>人物关系</button>
     </nav>
     <div class="camp-content" id="camp-content"></div>
@@ -162,22 +173,7 @@
   </div>
 </div>
 
-<!-- =========================================================
-     屏幕5：踏入江湖（选关）
-========================================================= -->
-<div id="screen-depart" class="screen">
-  <div class="depart-layout">
-    <div class="depart-inner">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
-        <div class="title-deco" style="flex:1;margin-bottom:0;"><h2>踏 入 江 湖</h2></div>
-        <button id="btn-back-depart" class="btn btn-sm btn-danger">← 返 回 营 地</button>
-      </div>
-      <p style="font-size:13px;color:var(--text-dim);letter-spacing:1px;margin-bottom:4px;">行走江湖，磨砺剑法，积累经验与金两。</p>
-      <p style="font-size:12px;color:#e74c3c;margin-bottom:20px;">⚠ 战斗失败将导致气血剩余1点、内力归零，请确认已备好药品与技能。</p>
-      <div id="depart-content"></div>
-    </div>
-  </div>
-</div>
+<!-- 🗺️ 地图弹窗（动态创建） -->
 
 <!-- =========================================================
      屏幕6：战斗

@@ -1,6 +1,6 @@
 import { getPlayer, setPlayer } from '../../state/GameState';
 import { saveGame } from '../../state/SaveSystem';
-import { checkLevelUp, getRealmName, getExpForLevel, spendCultivationPoint, ATTR_BOOST_DEFS } from '../../state/LevelSystem';
+import { checkLevelUp, getRealmName, getExpForLevel, spendCultivationPoint, ATTR_BOOST_DEFS, isRealmMaxLevel } from '../../state/LevelSystem';
 import { SECTS } from '../../data/sects';
 import { showToast } from '../../ui/toast';
 import type { AttrKey } from '../../data/types';
@@ -11,7 +11,8 @@ export function renderAttrPanel(content: HTMLElement): void {
   const lv = p.level;
   const exp = p.exp;
   const expNeeded = getExpForLevel(lv);
-  const expPct = Math.min(100, Math.floor(exp / expNeeded * 100));
+  const atRealmMax = isRealmMaxLevel(lv);
+  const expPct = atRealmMax ? 100 : Math.min(100, Math.floor(exp / expNeeded * 100));
   const realmName = getRealmName(lv);
   const cultPt = p.cultivationPoints;
   const ab = p.attrBoosts;
@@ -55,11 +56,12 @@ export function renderAttrPanel(content: HTMLElement): void {
     <div style="margin-bottom:20px;padding:12px 16px;background:rgba(255,255,255,0.03);border:1px solid var(--border-dim);border-radius:6px;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
         <span style="font-size:12px;color:var(--text-dim);letter-spacing:2px;">📖 修为进度</span>
-        <span style="font-size:12px;color:var(--text-gold);">${exp} / ${expNeeded}</span>
+        <span style="font-size:12px;color:${atRealmMax ? '#e74c3c' : 'var(--text-gold)'};">${atRealmMax ? '已满（需突破契机）' : `${exp} / ${expNeeded}`}</span>
       </div>
       <div style="height:8px;background:#1a1a2e;border-radius:4px;overflow:hidden;">
-        <div style="height:100%;width:${expPct}%;background:linear-gradient(90deg,#5dade2,#9b59b6);border-radius:4px;transition:width 0.3s;"></div>
+        <div style="height:100%;width:${expPct}%;background:${atRealmMax ? 'linear-gradient(90deg,#e74c3c,#c0392b)' : 'linear-gradient(90deg,#5dade2,#9b59b6)'};border-radius:4px;transition:width 0.3s;"></div>
       </div>
+      ${atRealmMax ? '<div style="font-size:11px;color:#e74c3c;margin-top:6px;letter-spacing:1px;">⚠ 大境界瓶颈，需要完成突破剧情方可晋升下一境界</div>' : ''}
     </div>
     ${cultPt > 0 ? `
     <div style="margin-bottom:20px;padding:12px 16px;background:rgba(155,89,182,0.08);border:1px solid rgba(155,89,182,0.3);border-radius:6px;">

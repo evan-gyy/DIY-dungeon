@@ -164,11 +164,11 @@ export type StatusType =
 export type SkillType = 'attack' | 'support' | 'control' | 'passive';
 export type TargetType = 'enemy' | 'self';
 
-export type CampTabId = 'story' | 'attr' | 'bag' | 'skill' | 'relation';
+export type CampTabId = 'story' | 'attr' | 'bag' | 'skill' | 'relation' | 'fabao';
 
 export type ScreenId =
   | 'main' | 'saveselect' | 'create' | 'story'
-  | 'camp' | 'depart' | 'dialog' | 'battle';
+  | 'camp' | 'dialog' | 'battle';
 
 export type BattleResult = 'win' | 'lose';
 
@@ -357,7 +357,8 @@ export interface AttrBoosts {
   mp: number;
 }
 
-import type { NpcStats } from './npcStats';
+import type { NpcStats, TalentId } from './npcStats';
+import type { LocationId } from './worldMap';
 
 export interface PlayerState {
   name: string;
@@ -402,6 +403,10 @@ export interface PlayerState {
   trueDisciple: boolean;               // 是否晋升真传弟子
   blackmoonMissionStarted: boolean;    // 黑月教讨伐是否开始
   npcDatabase?: Record<string, NpcStats>; // NPC 数值卡数据库（可选，首次加载时初始化）
+  // 世界地图系统
+  currentLocationId: LocationId;       // 玩家当前所在地点
+  // 主角天赋系统
+  playerTalent: TalentId;              // 主角天赋（默认为 dragon_vein 九霄龙脉）
   _slot: number;
   _savedAt?: string;
 }

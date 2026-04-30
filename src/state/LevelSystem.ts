@@ -40,6 +40,14 @@ export interface LevelUpResult {
   updatedPlayer: PlayerState;
 }
 
+/**
+ * 判断当前等级是否为大境界的第十层（满层）
+ * 炼气10层=10, 筑基10层=20, 结丹10层=30, 元婴10层=40, 化神10层=50, 渡劫10层=60
+ */
+export function isRealmMaxLevel(lv: number): boolean {
+  return lv > 0 && lv % 10 === 0;
+}
+
 export function checkLevelUp(player: PlayerState): LevelUpResult {
   let lv = player.level || 0;
   let exp = player.exp || 0;
@@ -47,6 +55,12 @@ export function checkLevelUp(player: PlayerState): LevelUpResult {
   const oldLv = lv;
 
   while (exp >= getExpForLevel(lv)) {
+    // 大境界第十层满后，经验条不再增加，也不会晋级
+    // 需要完成对应试炼/剧情才能突破大境界
+    if (isRealmMaxLevel(lv)) {
+      exp = getExpForLevel(lv); // 经验条卡满，不再增长
+      break;
+    }
     exp -= getExpForLevel(lv);
     lv++;
     gainedPoints++;

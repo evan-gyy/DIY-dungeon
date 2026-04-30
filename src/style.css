@@ -250,7 +250,7 @@ body {
 }
 .camp-layout {
   display: grid;
-  grid-template-rows: 60px 1fr;
+  grid-template-rows: 60px auto 1fr;
   grid-template-columns: 220px 1fr 280px;
   height: 100vh;
   width: 100vw;
@@ -271,6 +271,55 @@ body {
 .bar-fill-mp { height: 100%; background: linear-gradient(to right, #1a5276, #2980b9); border-radius: 4px; transition: width 0.4s; }
 .bar-val { font-size: 12px; color: var(--text-dim); }
 .camp-topbar .gold { color: var(--text-gold); font-size: 14px; margin-left: auto; }
+
+/* 🆕 地图导航栏 */
+.camp-map-bar {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  background: linear-gradient(to right, #0d1117, #161b22, #0d1117);
+  border-bottom: 1px solid var(--border-dim);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 24px; gap: 16px;
+  min-height: 44px;
+  overflow: hidden;
+}
+.map-bar-left {
+  display: flex; align-items: center; gap: 10px;
+}
+.map-icon {
+  font-size: 18px;
+}
+.map-location-label {
+  font-size: 15px; color: var(--text-gold); letter-spacing: 2px; font-weight: bold;
+}
+.map-location-desc {
+  font-size: 12px; color: var(--text-dim); max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.map-bar-right {
+  display: flex; align-items: center; gap: 8px;
+}
+.map-travel-btn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 5px 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-dim);
+  border-radius: 6px;
+  color: var(--text-light);
+  font-family: var(--font-cn); font-size: 13px; letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.map-travel-btn:hover {
+  border-color: var(--border-gold);
+  background: #1e1e32;
+  color: var(--text-gold);
+}
+.map-travel-name {
+  font-size: 13px;
+}
+.map-travel-danger {
+  font-size: 11px;
+}
 
 /* 左侧导航 */
 .camp-nav {
@@ -325,11 +374,11 @@ body {
 .stat-row .stat-name { color: var(--text-dim); }
 .stat-row .stat-val { color: var(--text-light); font-size: 13px; }
 
-/* ===== 顶部「踏入江湖」大按钮 ===== */
+/* ===== 顶部「地图」按钮 ===== */
 .camp-adventure-btn {
-  background: linear-gradient(135deg, #1a3a1a, #2d5a2d);
-  border: 1px solid rgba(46, 204, 113, 0.5);
-  color: #2ecc71;
+  background: linear-gradient(135deg, #1a2a3a, #2d3a5a);
+  border: 1px solid rgba(93, 173, 226, 0.5);
+  color: #5dade2;
   font-size: 13px;
   letter-spacing: 3px;
   padding: 6px 18px;
@@ -340,9 +389,9 @@ body {
   font-weight: bold;
 }
 .camp-adventure-btn:hover {
-  background: linear-gradient(135deg, #2d5a2d, #3d7a3d);
-  border-color: rgba(46, 204, 113, 0.8);
-  box-shadow: 0 0 12px rgba(46, 204, 113, 0.3);
+  background: linear-gradient(135deg, #2d3a5a, #3d5a7a);
+  border-color: rgba(93, 173, 226, 0.8);
+  box-shadow: 0 0 12px rgba(93, 173, 226, 0.3);
   transform: translateY(-1px);
 }
 
@@ -778,6 +827,10 @@ body {
 }
 
 /* ===== 法宝装备面板 ===== */
+.fabao-panel {
+  max-width: 100%;
+  overflow: hidden;
+}
 .fabao-section {
   margin-top: 24px;
   border: 1px solid rgba(142, 68, 173, 0.3);
@@ -997,20 +1050,122 @@ body {
   cursor: not-allowed;
 }
 
-/* ===== 踏入江湖（选关）大屏布局 ===== */
-.depart-layout {
-  width: 100vw;
-  height: 100vh;
-  background: radial-gradient(ellipse at center, #0d0d18 0%, #080810 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow-y: auto;
-  padding: 20px;
+/* ===== 地图弹窗 ===== */
+.map-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.85);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 300;
 }
-.depart-inner {
-  width: 100%;
-  max-width: 640px;
+.map-overlay-inner {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-gold);
+  border-radius: 12px;
+  padding: 28px;
+  max-width: 680px; width: 90%;
+  max-height: 85vh; overflow-y: auto;
+}
+.map-overlay-title {
+  font-size: 18px; color: var(--text-gold); letter-spacing: 4px;
+  text-align: center; margin-bottom: 20px;
+}
+.map-node-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 10px;
+}
+.map-node-card {
+  background: var(--bg-card); border: 1px solid var(--border-dim);
+  border-radius: 8px; padding: 12px 14px;
+  cursor: pointer; transition: all 0.2s;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.map-node-card:hover {
+  border-color: var(--border-gold);
+  background: #1e1e32;
+}
+.map-node-card.locked {
+  opacity: 0.4; cursor: not-allowed;
+}
+.map-node-card.current {
+  border-color: var(--border-gold);
+  box-shadow: 0 0 8px rgba(201,168,76,0.2);
+}
+.map-node-name {
+  font-size: 14px; color: var(--text-gold); letter-spacing: 2px;
+}
+.map-node-desc {
+  font-size: 11px; color: var(--text-dim); line-height: 1.5;
+}
+.map-node-danger {
+  font-size: 10px; margin-top: 2px;
+}
+.map-overlay-close {
+  display: block; margin: 20px auto 0;
+  padding: 8px 24px;
+  background: transparent; border: 1px solid var(--border-dim);
+  border-radius: 6px; color: var(--text-dim);
+  font-family: var(--font-cn); font-size: 13px; letter-spacing: 2px;
+  cursor: pointer; transition: all 0.2s;
+}
+.map-overlay-close:hover {
+  border-color: var(--border-gold); color: var(--text-gold);
+}
+
+/* ===== NPC 状态弹窗 ===== */
+.npc-stats-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.8);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 400;
+}
+.npc-stats-overlay-inner {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-gold);
+  border-radius: 12px;
+  padding: 24px 28px;
+  max-width: 380px; width: 90%;
+  max-height: 85vh; overflow-y: auto;
+}
+.npc-stats-header {
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+  margin-bottom: 16px;
+}
+.npc-stats-portrait {
+  width: 120px; height: 180px;
+  object-fit: cover;
+  border: 1px solid rgba(201,168,76,0.5);
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+}
+.npc-stats-title {
+  font-size: 18px; color: var(--text-gold); letter-spacing: 4px; font-weight: bold;
+}
+.npc-stats-body {
+  display: flex; flex-direction: column; gap: 6px;
+}
+.npc-stats-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 5px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  font-size: 13px;
+}
+.npc-stats-label {
+  color: var(--text-dim); letter-spacing: 1px;
+}
+.npc-stats-value {
+  color: var(--text-light); letter-spacing: 1px; font-weight: bold;
+}
+.npc-stats-divider {
+  height: 1px; background: rgba(201,168,76,0.2); margin: 4px 0;
+}
+.npc-stats-close {
+  display: block; margin: 20px auto 0;
+  padding: 8px 28px;
+  background: transparent; border: 1px solid var(--border-dim);
+  border-radius: 6px; color: var(--text-dim);
+  font-family: var(--font-cn); font-size: 13px; letter-spacing: 2px;
+  cursor: pointer; transition: all 0.2s;
+}
+.npc-stats-close:hover {
+  border-color: var(--border-gold); color: var(--text-gold);
 }
 
 /* ===== 属性面板 ===== */
