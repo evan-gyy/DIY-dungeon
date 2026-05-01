@@ -1,7 +1,7 @@
 # DIY-Dungeon 项目架构文档
 
 > 本文档面向开发者和 AI Agent，描述当前项目的完整架构、各模块职责，以及如何进行修改和新章节开发。
-> 最后更新：2026-04-30（大境界硬门槛 + 主角天赋属性系统 + NPC面板修为进度 + 地图栏布局修复 + NPC天赋简化）
+> 最后更新：2026-05-01（日常任务地点化 + 右侧sidebar「附近的人」+ NPC移动可视化）
 
 ---
 
@@ -73,7 +73,7 @@ DIY-dungeon/
 │   │   │   ├── AttrPanel.ts       属性面板（修炼点分配）
 │   │   │   ├── BagPanel.ts        背包面板（24 格，使用道具）
 │   │   │   ├── SkillPanel.ts      技能装配面板
-│   │   │   ├── StoryPanel.ts      营地剧情面板（人物活动 Tab，含日常任务地点限制）
+│   │   │   ├── StoryPanel.ts      营地剧情面板（人物活动 Tab，日常任务按地点动态读取）
 │   │   │   ├── FabaoPanel.ts      法宝装备面板（🆕 0430：独立 Tab，三槽装备+选择器）
 │   │   │   └── RelationPanel.ts   人物关系面板（可折叠分类 + 好感度 + NPC 状态弹窗）
 │   │   ├── DialogScreen.ts        NPC 对话树
@@ -469,7 +469,7 @@ export function validateRealmLeap(): { from: string; to: string; hpRatio: number
 
 **小层级增长**：每层 +10%（线性），大境界跨越时自动体现 100%~150% 断层增幅。
 
-#### `worldMap.ts` — 世界地图节点配置（🆕 0430 新增）
+#### `worldMap.ts` — 世界地图节点配置（🆕 0430 新增，0501 更新）
 
 只保留门派/大城市级别地点，内部区域（武当内门、传功崖等）通过对话和剧情触发，不在地图上展示。
 
@@ -481,6 +481,19 @@ export type LocationId =
 ```
 
 共 10 个地点节点，基于宋朝真实地理（武当山→襄阳→江陵 三角格局）。每个节点有 `connections` 定义相邻可移动地点，`unlockChapter` 控制解锁条件。
+
+**🆕 地点可用行动（`actions` 字段）**：
+
+每个 `MapLocation` 可定义 `actions?: LocationAction[]`，指定该地点可执行的日常任务：
+
+| 地点 | 可用行动 |
+|------|----------|
+| 武当山 | 🪓砍柴、💧挑水、🧹打扫大殿、📜抄写道经、🌙后山修炼、⚔️演武切磋 |
+| 襄阳城 | 🧘城中静修（+30经验） |
+| 江陵城 | 🧘城中静修（+30经验） |
+| 其他门派 | 暂无（预留后续扩展） |
+
+`StoryPanel.ts` 不再使用硬编码的 `DAILY_TASKS` 数组，改为从 `WORLD_MAP[currentLocationId].actions` 动态读取。玩家移动到不同地点时，日常任务列表自动切换。
 
 #### `StatusEffects.ts`
 
@@ -523,35 +536,42 @@ export function skipStoryIntro(): void
 - 有 `onFinish` 回调：执行回调（第二章各段独立剧情使用此模式）
 - 无回调（默认，第一章序幕）：应用武当入门属性（HP230/ATK30 等），设 `act = chapter.finalAct`，进入营地
 
-#### `camp/StoryPanel.ts` — 营地事件派发
+#### `camp/StoryPanel.ts` — 营地事件派发（🆕 0501 重构）
 
 `triggerStoryEvent(eventId)` 处理所有营地按钮点击。营地场景由 `getChapter(p.chapter).campScenes[p.act]` 确定，按钮点击触发对应 `actionEvent`。
 
-**可重复日常任务系统**：
+**🆕 可重复日常任务系统（按地点动态读取）**：
 
-面板上方常驻显示可重复日常任务，使用 `DailyTask` 接口定义：
+日常任务不再使用硬编码的 `DAILY_TASKS` 数组，改为从 `WORLD_MAP[currentLocationId].actions` 动态读取。每个地点通过 `worldMap.ts` 的 `LocationAction` 接口定义可用行动：
 
 ```typescript
-interface DailyTask {
+// src/data/worldMap.ts
+interface LocationAction {
   id: string; icon: string; name: string; desc: string;
   exp: number; gold: number;
-  unlockChapter: number;  // 需要达到的章节
-  unlockLevel: number;     // 需要达到的等级
+  unlockChapter?: number;
+  unlockLevel?: number;
 }
 ```
 
-已定义 6 个日常任务（`DAILY_TASKS`）：
+**当前各地点行动**：
 
-| 任务 | 经验 | 铜钱 | 解锁条件 |
-|------|------|------|----------|
-| 🪓 砍柴 | +15 | +5 | 第二章（chapter≥2） |
-| 💧 挑水 | +10 | +3 | 第二章（chapter≥2） |
-| 🧹 打扫大殿 | +12 | +4 | 第二章（chapter≥2） |
-| 📜 抄写道经 | +25 | +8 | 第二章（chapter≥2） |
-| 🌙 后山修炼 | +30 | 0 | 第二章 + 炼气二层（level≥2） |
-| ⚔️ 演武切磋 | +35 | 0 | 第二章 + 炼气六层（level≥6） |
+| 地点 | 行动 | 经验 | 铜钱 | 解锁条件 |
+|------|------|------|------|----------|
+| 武当山 | 🪓 砍柴 | +20 | +5 | chapter≥2 |
+| 武当山 | 💧 挑水 | +15 | +3 | chapter≥2 |
+| 武当山 | 🧹 打扫大殿 | +18 | +4 | chapter≥2 |
+| 武当山 | 📜 抄写道经 | +35 | +8 | chapter≥2 |
+| 武当山 | 🌙 后山修炼 | +45 | 0 | chapter≥2, level≥2 |
+| 武当山 | ⚔️ 演武切磋 | +55 | 0 | chapter≥2, level≥6 |
+| 襄阳城 | 🧘 城中静修 | +30 | 0 | chapter≥2 |
+| 江陵城 | 🧘 城中静修 | +30 | 0 | chapter≥2 |
 
-`doDailyTask(task)` 执行任务：先检查地点（武当山专属任务仅限 `wudang_mountain` 进行）→ 增加经验/铜钱 → `checkLevelUp()` → 保存 → 15% 概率触发小概率事件（宋知远偷懒/顾小桑小道消息/张玄素对话/陈静虚指点）。`renderDailyTasks()` 渲染可用的和锁定的任务按钮，在 `renderStoryPanel()` 的最顶部渲染。
+`doDailyTask(action)` 执行任务：增加经验/铜钱 → `checkLevelUp()` → 保存 → 15% 概率触发小概率事件。`renderDailyTasks()` 从当前地点的 `actions` 过滤可用/锁定任务并渲染，标题显示 `📋 日常修行 · {地点名}`。
+
+**与旧版的关键区别**：
+- 旧版：硬编码 `DAILY_TASKS` + `wudangOnlyTasks` 硬编码地点检查
+- 新版：`WORLD_MAP[locId].actions` 动态读取，自然按地点过滤，无需额外检查
 
 当前已有事件处理：
 
@@ -578,7 +598,7 @@ interface DailyTask {
 | `ch3_zhenchuan` | VN → 晋升真传弟子 + act=9 |
 | `ch3_chuzheng` | VN → 出征黑月教讨伐 |
 
-#### `camp/RelationPanel.ts` — 人物关系面板（新增）
+#### `camp/RelationPanel.ts` — 人物关系面板（新增，0501 更新）
 
 可折叠分类的人物关系面板：
 - **🌸 女主角**：柳清寒、沈霓裳、趙沁微、墨绐青
@@ -586,7 +606,21 @@ interface DailyTask {
 
 每人显示小立绘（56×84px）+ 好感度数值，一行四列布局。分类标题带有光效动画（左侧光条、图标浮动、箭头弹跳），引导玩家点击展开。未解锁角色显示灰色立绘 + "未解锁"标注（如趙沁微在第三章前未解锁，沈霓裳在第二章 act≥4 后解锁，纪无双/苏云绣/方仲和在第三章 act≥8 后解锁，孟文渊/叶紫衣在第三章 act≥9 后解锁）。
 
-**🆕 NPC 状态弹窗**：点击已解锁角色的立绘卡片，弹出该角色的详细状态面板，显示修为、修为进度（经验条）、天赋、HP/MP/ATK/DEF/AGI/暴击、装备法宝等信息。支持关闭按钮、点击背景、ESC 键三种关闭方式。修为进度条在满层时显示红色"已满（等待突破契机）"。
+**🆕 NPC 状态弹窗**：点击已解锁角色的立绘卡片，弹出该角色的详细状态面板，显示修为、修为进度（经验条）、天赋、HP/MP/ATK/DEF/AGI/暴击、装备法宝等信息。支持关闭按钮、点击背景、ESC 键三种关闭方式。修为进度条在满层时显示红色"已满（等待突破契机）"。`showNpcStatsOverlay()` 已导出为 public API，供 `Camp.ts` 的 sidebar 复用。
+
+#### `Camp.ts` — 营地主容器（🆕 0501 更新）
+
+**🆕 右侧 sidebar「附近的人」**：
+
+`renderSidebar()` 不再是显示剧情 NPC 大立绘，而是显示**当前地点所有 NPC 的小立绘卡片**（一行两个，56×84px，与人物关系面板风格一致）：
+
+- 从 `npcDatabase` 中过滤 `currentLocationId === 当前地点` 的 NPC
+- 每个 NPC 卡片显示：立绘 + 名字 + 修为 + 地点标签
+- 点击 NPC 卡片弹出 `showNpcStatsOverlay()` 详细状态面板
+- NPC 随回合移动到其他地点后，sidebar 实时更新（在 `travelToLocation`/`doRest`/`doSaveGame` 后调用 `renderSidebar()`）
+- 没有 NPC 时显示"此地暂无他人"
+
+NPC 立绘路径通过 `getNpcImageMap()` 维护，与 `RelationPanel.ts` 中的图片路径保持一致。
 
 #### `camp/FabaoPanel.ts` — 法宝装备面板（🆕 0430 独立）
 
@@ -1001,8 +1035,10 @@ second_meet: {
 
 14. **世界地图系统（🆕 0430）**：`worldMap.ts` 定义 10 个门派/大城市级别地点节点，基于宋朝真实地理。玩家通过营地顶部地图栏或地图弹窗在相邻地点间移动。NPC 位置存储在 `npcDatabase[].currentLocationId` 中，随回合自动变化。
 
-15. **日常任务地点限制（🆕 0430）**：砍柴、挑水、打扫大殿、抄写道经、后山修炼、演武切磋 6 个日常任务仅限在武当山（`wudang_mountain`）进行。在其他地点点击任务会提示"此任务只能在武当山进行"。
+15. **🆕 日常任务地点化（0501 重构）**：日常任务不再使用硬编码的 `DAILY_TASKS` 数组 + `wudangOnlyTasks` 检查，改为从 `WORLD_MAP[currentLocationId].actions` 动态读取。每个地点的 `actions` 字段定义该地点可执行的日常任务。玩家移动到不同地点时，日常任务列表自动切换。新增城市「城中静修」行动（+30经验）。`renderDailyTasks()` 标题显示 `📋 日常修行 · {地点名}`。
 
-16. **NPC 状态弹窗（🆕 0430）**：`RelationPanel.ts` 中点击已解锁角色的立绘卡片，弹出 `npc-stats-overlay` 弹窗，显示该 NPC 的完整数值（修为、修为进度条、天赋、HP/MP/ATK/DEF/AGI/暴击、装备法宝）。支持关闭按钮、点击背景、ESC 键关闭。修为进度条直观展示NPC的晋升情况。
+16. **NPC 状态弹窗（🆕 0430）**：`RelationPanel.ts` 中点击已解锁角色的立绘卡片，弹出 `npc-stats-overlay` 弹窗，显示该 NPC 的完整数值（修为、修为进度条、天赋、HP/MP/ATK/DEF/AGI/暴击、装备法宝）。支持关闭按钮、点击背景、ESC 键关闭。修为进度条直观展示NPC的晋升情况。`showNpcStatsOverlay()` 已导出，被 `Camp.ts` 的 sidebar 复用。
 
 17. **法宝独立面板（🆕 0430）**：法宝装备从人物关系面板中独立出来，作为左侧导航的 `fabao` Tab（🔮 法宝装备）。`FabaoPanel.ts` 提供三槽装备界面，复用原有的法宝选择器逻辑。
+
+18. **🆕 右侧 sidebar「附近的人」（0501 新增）**：`Camp.ts` 的 `renderSidebar()` 显示当前地点所有 NPC 的小立绘卡片（一行两个，56×84px）。NPC 数据来自 `npcDatabase`，按 `currentLocationId` 过滤。点击卡片弹出 NPC 状态弹窗。NPC 随回合移动到其他地点后 sidebar 实时更新。旧版剧情 NPC 大立绘 (`sidebar-story-npc`) 已废弃。
