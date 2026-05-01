@@ -1,6 +1,6 @@
 import { getPlayer } from '../../state/GameState';
 import { getNpcStats } from '../../systems/NpcBehavior';
-import { TALENTS } from '../../data/npcStats';
+import { TALENTS } from '../../data/realmConfig';
 import { getRealmName, getExpForLevel, isRealmMaxLevel } from '../../state/LevelSystem';
 import { FABAO } from '../../data/fabao';
 import type { NpcStats } from '../../data/npcStats';
@@ -31,11 +31,11 @@ function getRelationData(): { heroines: RelationChar[]; wudang: RelationChar[]; 
     { id: 'song_zhiyuan', name: '宋知远', img: 'picture/NPC/宋知远.png', affection: 35, unlocked: p.chapter >= 2, npcDbId: 'song_zhiyuan' },
     { id: 'gu_xiaosang', name: '顾小桑', img: 'picture/NPC/顾小桑.png', affection: 40, unlocked: p.chapter >= 2, npcDbId: 'gu_xiaosang' },
     { id: 'lu_chengzhou', name: '陆沉舟', img: 'picture/NPC/陆沉舟.png', affection: 10, unlocked: p.chapter >= 2 && p.act >= 3, npcDbId: 'lu_chengzhou' },
-    { id: 'ji_wushuang', name: '纪无双', img: 'picture/NPC/武当派-张三丰.png', affection: 5, unlocked: p.chapter >= 3 && p.act >= 8, npcDbId: 'ji_wushuang_npc' },
-    { id: 'su_yunxiu', name: '苏云绣', img: 'picture/NPC/武当派-张三丰.png', affection: 5, unlocked: p.chapter >= 3 && p.act >= 8, npcDbId: 'su_yunxiu_npc' },
-    { id: 'fang_zhonghe', name: '方仲和', img: 'picture/NPC/武当派-张三丰.png', affection: 5, unlocked: p.chapter >= 3 && p.act >= 8, npcDbId: 'fang_zhonghe_npc' },
-    { id: 'meng_wenyuan', name: '孟文渊', img: 'picture/NPC/武当派-张三丰.png', affection: 3, unlocked: p.chapter >= 3 && p.act >= 9, npcDbId: 'meng_wenyuan' },
-    { id: 'ye_ziyi', name: '叶紫衣', img: 'picture/NPC/武当派-张三丰.png', affection: 5, unlocked: p.chapter >= 3 && p.act >= 9, npcDbId: 'ye_ziyi' },
+    { id: 'ji_wushuang', name: '纪无双', img: 'picture/NPC/纪无双.png', affection: 5, unlocked: p.chapter >= 3 && p.act >= 8, npcDbId: 'ji_wushuang_npc' },
+    { id: 'su_yunxiu', name: '苏云绣', img: 'picture/NPC/苏云绣.png', affection: 5, unlocked: p.chapter >= 3 && p.act >= 8, npcDbId: 'su_yunxiu_npc' },
+    { id: 'fang_zhonghe', name: '方仲和', img: 'picture/NPC/方仲和.png', affection: 5, unlocked: p.chapter >= 3 && p.act >= 8, npcDbId: 'fang_zhonghe_npc' },
+    { id: 'meng_wenyuan', name: '孟文渊', img: 'picture/NPC/孟文渊.png', affection: 3, unlocked: p.chapter >= 3 && p.act >= 9, npcDbId: 'meng_wenyuan' },
+    { id: 'ye_ziyi', name: '叶紫衣', img: 'picture/NPC/叶紫衣.png', affection: 5, unlocked: p.chapter >= 3 && p.act >= 9, npcDbId: 'ye_ziyi' },
     { id: 'zhou_boan', name: '周伯安', img: 'picture/NPC/周伯安.png', affection: 15, unlocked: p.chapter >= 2 },
   ];
 
@@ -116,7 +116,7 @@ function bindNpcCardEvents(content: HTMLElement): void {
   });
 }
 
-function showNpcStatsOverlay(npcDbId: string, npcName: string, npcImg: string): void {
+export function showNpcStatsOverlay(npcDbId: string, npcName: string, npcImg: string): void {
   // 移除旧弹窗
   document.getElementById('npc-stats-overlay')?.remove();
 

@@ -357,7 +357,8 @@ export interface AttrBoosts {
   mp: number;
 }
 
-import type { NpcStats, TalentId } from './npcStats';
+import type { NpcStats } from './npcStats';
+import type { TalentId } from './realmConfig';
 import type { LocationId } from './worldMap';
 
 export interface PlayerState {

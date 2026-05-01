@@ -8,10 +8,10 @@ import { renderSkillPanel } from './camp/SkillPanel';
 import { renderStoryPanel } from './camp/StoryPanel';
 import { renderRelationPanel } from './camp/RelationPanel';
 import { renderFabaoPanel } from './camp/FabaoPanel';
-import { getChapter } from '../data/chapters/index';
 import { showToast } from '../ui/toast';
 import { initNpcDatabase, tickNpcBehaviors } from '../systems/NpcBehavior';
 import { WORLD_MAP, type LocationId } from '../data/worldMap';
+import { getRealmName } from '../state/LevelSystem';
 import type { CampTabId } from '../data/types';
 
 export function renderCampTopbar(): void {
@@ -171,11 +171,81 @@ export function showMapOverlay(): void {
 
 export function renderSidebar(): void {
   const p = getPlayer();
-  const chapter = getChapter(p.chapter);
-  const scene = chapter.campScenes[p.act] ?? chapter.campScenes[0]!;
-  import('./camp/StoryPanel').then(m => {
-    m.updateStorySidebar(scene);
+  const locId = p.currentLocationId ?? 'wudang_mountain';
+  const location = WORLD_MAP[locId];
+  const npcDb = p.npcDatabase ?? {};
+  
+  // 获取当前地点的所有 NPC
+  const nearbyNpcs = Object.values(npcDb).filter(
+    npc => (npc.currentLocationId ?? 'wudang_mountain') === locId
+  );
+  
+  const gridEl = document.getElementById('sidebar-nearby-grid');
+  if (!gridEl) return;
+  
+  if (nearbyNpcs.length === 0) {
+    gridEl.innerHTML = `<p style="font-size:12px;color:var(--text-dim);text-align:center;padding:20px;">此地暂无他人</p>`;
+    return;
+  }
+  
+  // 获取 NPC 立绘映射（复用 RelationPanel 中的图片路径逻辑）
+  const npcImages = getNpcImageMap();
+  
+  const cardsHtml = nearbyNpcs.map(npc => {
+    const imgPath = npcImages[npc.id] ?? '';
+    const realm = getRealmName(npc.level);
+    const locName = location?.name ?? '未知';
+    
+    return `<div class="nearby-npc-card" data-npc-db-id="${npc.id}" data-npc-name="${npc.name}" data-npc-img="${imgPath}">
+      <div class="nearby-npc-img-wrap">
+        <img src="${imgPath}" alt="${npc.name}" onerror="this.style.display='none'">
+        <div class="nearby-npc-img-fallback" style="display:${imgPath ? 'none' : 'flex'};">?</div>
+      </div>
+      <div class="nearby-npc-info">
+        <div class="nearby-npc-name">${npc.name}</div>
+        <div class="nearby-npc-realm">${realm}</div>
+        <div class="nearby-npc-location">📍 ${locName}</div>
+      </div>
+    </div>`;
+  }).join('');
+  
+  gridEl.innerHTML = cardsHtml;
+  
+  // 绑定点击事件 → 弹出 NPC 状态面板
+  import('./camp/RelationPanel').then(m => {
+    gridEl.querySelectorAll<HTMLElement>('.nearby-npc-card').forEach(card => {
+      card.addEventListener('click', () => {
+        const npcDbId = card.dataset['npcDbId'];
+        const npcName = card.dataset['npcName'] || '';
+        const npcImg = card.dataset['npcImg'] || '';
+        if (npcDbId) {
+          m.showNpcStatsOverlay(npcDbId, npcName, npcImg);
+        }
+      });
+    });
   });
+}
+
+/**
+ * NPC ID → 立绘图片路径映射
+ * 与 RelationPanel.ts 中的 getRelationData() 保持一致
+ */
+function getNpcImageMap(): Record<string, string> {
+  return {
+    'liu_qinghan':      'picture/Female-main/柳清寒.png',
+    'shen_nishang':     'picture/Female-main/沈霓裳.png',
+    'mo_jiangqing':     'picture/Female-main/墨绐青.png',
+    'zhang_xuansu':     'picture/NPC/张玄素.png',
+    'chen_jingxu':      'picture/NPC/陈静虚.png',
+    'song_zhiyuan':     'picture/NPC/宋知远.png',
+    'gu_xiaosang':      'picture/NPC/顾小桑.png',
+    'lu_chengzhou':     'picture/NPC/陆沉舟.png',
+    'ji_wushuang_npc':  'picture/NPC/纪无双.png',
+    'su_yunxiu_npc':    'picture/NPC/苏云绣.png',
+    'fang_zhonghe_npc': 'picture/NPC/方仲和.png',
+    'meng_wenyuan':     'picture/NPC/孟文渊.png',
+    'ye_ziyi':          'picture/NPC/叶紫衣.png',
+  };
 }
 
 export function switchCampTab(tab: CampTabId): void {

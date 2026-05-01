@@ -4,58 +4,28 @@ import { NPC_DIALOGS } from '../../data/npcs';
 import { getChapter } from '../../data/chapters/index';
 import { showToast } from '../../ui/toast';
 import { openDialog } from '../DialogScreen';
-import { enterCamp, switchCampTab } from '../Camp';
+import { enterCamp, switchCampTab, renderSidebar } from '../Camp';
 import { checkLevelUp, getRealmName } from '../../state/LevelSystem';
 import { calculateFinalStats } from '../../data/realmConfig';
+import { WORLD_MAP, type LocationAction } from '../../data/worldMap';
 import type { CampScene } from '../../data/chapters/types';
 import type { SkillId } from '../../data/types';
 
-// ── 可重复日常任务定义 ──
-interface DailyTask {
-  id: string;
-  icon: string;
-  name: string;
-  desc: string;
-  exp: number;
-  gold: number;
-  unlockChapter: number;  // 需要达到的章节
-  unlockLevel: number;     // 需要达到的等级
-}
-
-const DAILY_TASKS: DailyTask[] = [
-  { id: 'chop_wood', icon: '🪓', name: '砍柴',   desc: '山门外劈柴，练臂力也练心性', exp: 20, gold: 5,  unlockChapter: 2, unlockLevel: 0 },
-  { id: 'carry_water', icon: '💧', name: '挑水',  desc: '去最远的山泉挑水，腿能废三天', exp: 15, gold: 3,  unlockChapter: 2, unlockLevel: 0 },
-  { id: 'clean_hall', icon: '🧹', name: '打扫大殿', desc: '真武大殿除尘，心静则尘净',     exp: 18, gold: 4,  unlockChapter: 2, unlockLevel: 0 },
-  { id: 'copy_scripture', icon: '📜', name: '抄写道经', desc: '静心抄写道藏，字字入心',     exp: 35, gold: 8,  unlockChapter: 2, unlockLevel: 0 },
-  { id: 'pine_train', icon: '🌙', name: '后山修炼', desc: '老松树下打坐，月华入体',       exp: 45, gold: 0,  unlockChapter: 2, unlockLevel: 2 },
-  { id: 'arena_spar', icon: '⚔️', name: '演武切磋', desc: '演武场与同门过招，实战精进',    exp: 55, gold: 0,  unlockChapter: 2, unlockLevel: 6 },
-];
-
-function doDailyTask(task: DailyTask): void {
+function doDailyTask(action: LocationAction): void {
   const p = getPlayer();
-  
-  // 武当山专属任务检查：砍柴、挑水、打扫大殿、抄写道经、后山修炼、演武切磋 只能在武当山进行
-  const wudangOnlyTasks = ['chop_wood', 'carry_water', 'clean_hall', 'copy_scripture', 'pine_train', 'arena_spar'];
-  if (wudangOnlyTasks.includes(task.id)) {
-    const locId = p.currentLocationId ?? 'wudang_mountain';
-    if (locId !== 'wudang_mountain') {
-      showToast('此任务只能在武当山进行，请先返回武当山。');
-      return;
-    }
-  }
   
   const updated = {
     ...p,
-    exp: p.exp + task.exp,
-    gold: p.gold + task.gold,
+    exp: p.exp + action.exp,
+    gold: p.gold + action.gold,
   };
   const lvResult = checkLevelUp(updated);
   const finalPlayer = lvResult.leveled ? lvResult.updatedPlayer : updated;
   setPlayer(finalPlayer);
   saveGame(finalPlayer);
 
-  let msg = `${task.icon} ${task.name}完成！经验 +${task.exp}`;
-  if (task.gold > 0) msg += `，铜钱 +${task.gold}`;
+  let msg = `${action.icon} ${action.name}完成！经验 +${action.exp}`;
+  if (action.gold > 0) msg += `，铜钱 +${action.gold}`;
   if (lvResult.leveled) {
     const realm = getRealmName(lvResult.newLevel);
     msg += `\n🎉 修为突破至 ${realm}！获得 ${lvResult.gainedPoints} 修为点！`;
@@ -64,13 +34,13 @@ function doDailyTask(task: DailyTask): void {
 
   // 小概率随机事件
   const rand = Math.random();
-  if (task.id === 'chop_wood' && rand < 0.15) {
+  if (action.id === 'chop_wood' && rand < 0.15) {
     setTimeout(() => showToast('👤 宋知远偷懒被抓，讪笑着帮你劈了两捆柴。好感 +1'), 1500);
-  } else if (task.id === 'carry_water' && rand < 0.15) {
+  } else if (action.id === 'carry_water' && rand < 0.15) {
     setTimeout(() => showToast('💬 顾小桑路过，悄悄告诉你陆沉舟最近在打听你的事。'), 1500);
-  } else if (task.id === 'clean_hall' && rand < 0.15) {
+  } else if (action.id === 'clean_hall' && rand < 0.15) {
     setTimeout(() => showToast('☯️ 张玄素掌门路过，微微颔首："心静则尘净。"'), 1500);
-  } else if (task.id === 'copy_scripture' && rand < 0.15) {
+  } else if (action.id === 'copy_scripture' && rand < 0.15) {
     setTimeout(() => showToast('📖 陈静虚长老看到你的抄本，指点了几句。经验 +10'), 1500);
     const bonus = { ...finalPlayer, exp: finalPlayer.exp + 10 };
     setPlayer(bonus);
@@ -84,12 +54,23 @@ function doDailyTask(task: DailyTask): void {
 
 function renderDailyTasks(): string {
   const p = getPlayer();
-  const availableTasks = DAILY_TASKS.filter(t => p.chapter >= t.unlockChapter && p.level >= t.unlockLevel);
-  const lockedTasks = DAILY_TASKS.filter(t => !(p.chapter >= t.unlockChapter && p.level >= t.unlockLevel));
+  const locId = p.currentLocationId ?? 'wudang_mountain';
+  const location = WORLD_MAP[locId];
+  const actions = location?.actions ?? [];
+  
+  const availableTasks = actions.filter(t => p.chapter >= (t.unlockChapter ?? 0) && p.level >= (t.unlockLevel ?? 0));
+  const lockedTasks = actions.filter(t => !(p.chapter >= (t.unlockChapter ?? 0) && p.level >= (t.unlockLevel ?? 0)));
+
+  if (actions.length === 0) {
+    return `<div class="daily-tasks-section">
+      <div class="daily-tasks-header">📋 日常修行 · ${location?.name ?? '未知'}</div>
+      <p style="font-size:12px;color:var(--text-dim);text-align:center;padding:16px;">此地暂无可用行动。</p>
+    </div>`;
+  }
 
   if (availableTasks.length === 0 && p.chapter < 2) {
     return `<div class="daily-tasks-section">
-      <div class="daily-tasks-header">📋 日常修行</div>
+      <div class="daily-tasks-header">📋 日常修行 · ${location?.name ?? '未知'}</div>
       <p style="font-size:12px;color:var(--text-dim);text-align:center;padding:16px;">完成第一章序幕后解锁日常任务。</p>
     </div>`;
   }
@@ -114,9 +95,9 @@ function renderDailyTasks(): string {
     const label = '<div class="daily-tasks-locked-label">🔒 待解锁</div>';
     const cards = lockedTasks.map(t => {
       let unlockText: string;
-      if (t.unlockChapter > p.chapter) {
+      if ((t.unlockChapter ?? 0) > p.chapter) {
         unlockText = '第' + t.unlockChapter + '章解锁';
-      } else if (t.unlockLevel > 0) {
+      } else if ((t.unlockLevel ?? 0) > 0) {
         unlockText = '需 炼气' + t.unlockLevel + '层';
       } else {
         unlockText = '需 外门弟子';
@@ -134,7 +115,7 @@ function renderDailyTasks(): string {
   }
 
   return `<div class="daily-tasks-section">
-    <div class="daily-tasks-header">📋 日常修行</div>
+    <div class="daily-tasks-header">📋 日常修行 · ${location?.name ?? '未知'}</div>
     <div class="daily-tasks-grid">${availableHtml}${lockedHtml}</div>
   </div>`;
 }
@@ -144,7 +125,8 @@ export function renderStoryPanel(content: HTMLElement): void {
   const chapter = getChapter(p.chapter);
   const scene = chapter.campScenes[p.act] ?? chapter.campScenes[0]!;
 
-  updateStorySidebar(scene);
+  // 刷新右侧 sidebar「附近的人」
+  renderSidebar();
 
   const npcHtml = scene.npc ? `
     <div class="story-npc-portrait">
@@ -179,11 +161,14 @@ export function renderStoryPanel(content: HTMLElement): void {
 
   content.querySelector('#story-action-btn')?.addEventListener('click', () => triggerStoryEvent(scene.actionEvent));
 
-  // 绑定日常任务按钮
+  // 绑定日常任务按钮（从当前地点的 actions 中查找）
   content.querySelectorAll<HTMLElement>('.daily-task-btn:not(.locked)').forEach(btn => {
     btn.addEventListener('click', () => {
       const taskId = btn.dataset['taskId'];
-      const task = DAILY_TASKS.find(t => t.id === taskId);
+      const p = getPlayer();
+      const locId = p.currentLocationId ?? 'wudang_mountain';
+      const location = WORLD_MAP[locId];
+      const task = location?.actions?.find(t => t.id === taskId);
       if (task) doDailyTask(task);
     });
   });
@@ -478,12 +463,7 @@ function triggerStoryEvent(eventId: string): void {
   }
 }
 
-export function updateStorySidebar(scene: CampScene): void {
-  const imgEl  = document.getElementById('sidebar-npc-img')  as HTMLImageElement | null;
-  const nameEl = document.getElementById('sidebar-npc-name');
-  const subEl  = document.getElementById('sidebar-npc-sub');
-  if (!scene.npc) return;
-  if (imgEl)  imgEl.src         = scene.npc.img;
-  if (nameEl) nameEl.textContent = scene.npc.name;
-  if (subEl)  subEl.textContent  = scene.npc.sub;
+/** 已废弃：右侧 sidebar 已改为「附近的人」，不再显示剧情 NPC */
+export function updateStorySidebar(_scene: CampScene): void {
+  // no-op: sidebar 现在由 renderSidebar() 统一管理
 }

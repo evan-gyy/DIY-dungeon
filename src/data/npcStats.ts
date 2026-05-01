@@ -1,56 +1,6 @@
 import type { SkillId, FabaoId, SectId } from './types';
 import type { LocationId } from './worldMap';
-import { calculateFinalStats } from './realmConfig';
-
-// ──── 天赋系统 ────
-
-export type TalentId = 
-  | 'sword_heart' | 'lazy' | 'diligent' | 'genius' | 'normal'
-  | 'strong_as_ox' | 'iron_skin' | 'swift_shadow'  // 通用天赋
-  | 'dragon_vein' | 'sword_heart_frost';  // 🆕 特殊天赋：主角和女主专属
-
-export interface TalentData {
-  name: string;
-  desc: string;
-  cultivationMul: number;   // 修行经验倍率
-  skillLearnBonus: number;  // 技能学习成功率加成（0.0~1.0）
-  // 属性加成（最终属性乘数）
-  statBonus?: {
-    hpMul?: number;
-    mpMul?: number;
-    atkMul?: number;
-    defMul?: number;
-    agiMul?: number;
-  };
-}
-
-export const TALENTS: Record<TalentId, TalentData> = {
-  // 通用天赋
-  sword_heart: { name: '剑心',   desc: '修行速度×1.5，身法+10%',       cultivationMul: 1.5, skillLearnBonus: 0.0, statBonus: { agiMul: 1.10 } },
-  lazy:        { name: '贪玩',   desc: '修行速度×0.7',       cultivationMul: 0.7, skillLearnBonus: 0.0 },
-  diligent:    { name: '勤勉',   desc: '修行速度×1.2',       cultivationMul: 1.2, skillLearnBonus: 0.0 },
-  genius:      { name: '天才',   desc: '技能学习成功率+20%，真气+15%', cultivationMul: 1.0, skillLearnBonus: 0.2, statBonus: { mpMul: 1.15 } },
-  normal:      { name: '无特殊', desc: '无特殊天赋',         cultivationMul: 1.0, skillLearnBonus: 0.0 },
-  strong_as_ox: { name: '力大如牛', desc: '攻击+20%', cultivationMul: 1.0, skillLearnBonus: 0.0, statBonus: { atkMul: 1.20 } },
-  iron_skin:    { name: '铜皮铁骨', desc: '防御+20%', cultivationMul: 1.0, skillLearnBonus: 0.0, statBonus: { defMul: 1.20 } },
-  swift_shadow: { name: '疾如风',   desc: '身法+20%', cultivationMul: 1.0, skillLearnBonus: 0.0, statBonus: { agiMul: 1.20 } },
-  
-  // 🆕 专属天赋
-  dragon_vein: { 
-    name: '九霄龙脉', 
-    desc: '前朝皇室血脉，修行速度×1.3，全属性+10%，暴击率+5%', 
-    cultivationMul: 1.3, 
-    skillLearnBonus: 0.1, 
-    statBonus: { hpMul: 1.10, mpMul: 1.10, atkMul: 1.10, defMul: 1.10, agiMul: 1.10 } 
-  },
-  sword_heart_frost: { 
-    name: '剑心·寒', 
-    desc: '柳清寒专属天赋，修行速度×1.6，身法+15%，攻击+10%', 
-    cultivationMul: 1.6, 
-    skillLearnBonus: 0.0, 
-    statBonus: { agiMul: 1.15, atkMul: 1.10 } 
-  },
-};
+import { calculateFinalStats, type TalentId } from './realmConfig';
 
 // ──── NPC 数值卡 ────
 

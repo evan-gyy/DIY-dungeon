@@ -349,13 +349,112 @@ body {
 .camp-content::-webkit-scrollbar { width: 4px; }
 .camp-content::-webkit-scrollbar-thumb { background: var(--border-dim); border-radius: 2px; }
 
-/* 右侧角色预览 */
+/* 右侧「附近的人」面板 */
 .camp-sidebar {
   background: linear-gradient(to bottom, #0e0e18, #0a0a0f);
   border-left: 1px solid var(--border-dim);
-  padding: 20px 16px;
-  display: flex; flex-direction: column; align-items: center; gap: 14px;
+  padding: 16px 10px;
+  display: flex; flex-direction: column;
+  overflow-y: auto;
+  scrollbar-width: thin; scrollbar-color: var(--border-dim) transparent;
+  min-width: 180px;
+  max-width: 200px;
 }
+.camp-sidebar::-webkit-scrollbar { width: 3px; }
+.camp-sidebar::-webkit-scrollbar-thumb { background: var(--border-dim); border-radius: 2px; }
+
+/* 标题 */
+.sidebar-nearby-header {
+  color: var(--text-gold);
+  font-size: 13px;
+  letter-spacing: 3px;
+  text-align: center;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(201, 168, 76, 0.15);
+  margin-bottom: 12px;
+}
+
+/* NPC 卡片网格：一行两个 */
+.sidebar-nearby-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+/* 单个 NPC 卡片 */
+.nearby-npc-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 4px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.02);
+  cursor: pointer;
+  transition: all 0.25s;
+}
+.nearby-npc-card:hover {
+  border-color: var(--border-gold);
+  background: rgba(201, 168, 76, 0.08);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* 立绘容器（参考 rel-card-img-wrap 的 56×84px） */
+.nearby-npc-img-wrap {
+  width: 56px;
+  height: 84px;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #111;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.nearby-npc-img-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.nearby-npc-img-fallback {
+  font-size: 22px;
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+/* NPC 信息 */
+.nearby-npc-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.nearby-npc-name {
+  font-size: 11px;
+  color: var(--text-light);
+  letter-spacing: 1px;
+  text-align: center;
+  white-space: nowrap;
+}
+.nearby-npc-realm {
+  font-size: 10px;
+  color: var(--text-dim);
+  letter-spacing: 1px;
+}
+.nearby-npc-location {
+  font-size: 9px;
+  color: rgba(201, 168, 76, 0.6);
+  letter-spacing: 1px;
+}
+
+/* 旧的 sidebar 样式（已废弃，保留兼容） */
 .sidebar-char-img {
   width: 180px; height: 260px;
   object-fit: cover;
@@ -395,35 +494,11 @@ body {
   transform: translateY(-1px);
 }
 
-/* ===== 右侧剧情NPC立绘 ===== */
-.sidebar-story-npc {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  padding-top: 20px;
-}
-.sidebar-npc-img {
-  width: 160px;
-  height: 240px;
-  object-fit: cover;
-  border: 1px solid rgba(201, 168, 76, 0.4);
-  border-radius: 6px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
-}
-.sidebar-npc-name {
-  color: var(--text-gold);
-  font-size: 15px;
-  letter-spacing: 3px;
-  text-align: center;
-}
-.sidebar-npc-sub {
-  color: var(--text-dim);
-  font-size: 11px;
-  letter-spacing: 1px;
-  text-align: center;
-  line-height: 1.6;
-}
+/* ===== 旧侧边栏样式（已废弃，保留兼容） ===== */
+.sidebar-story-npc { display: none; }
+.sidebar-npc-img { display: none; }
+.sidebar-npc-name { display: none; }
+.sidebar-npc-sub { display: none; }
 
 /* ===== 剧情场景「江湖往事」面板 ===== */
 .story-scene-wrap {

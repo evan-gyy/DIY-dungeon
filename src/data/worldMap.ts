@@ -29,6 +29,18 @@ export type LocationId =
   | 'emei_mountain'      // 峨眉山（四川·成都府路）
   | 'beggar_hq';         // 丐帮总舵（襄阳城外）
 
+/** 地点可执行的行动定义 */
+export interface LocationAction {
+  id: string;
+  icon: string;
+  name: string;
+  desc: string;
+  exp: number;
+  gold: number;
+  unlockChapter?: number;
+  unlockLevel?: number;
+}
+
 export interface MapLocation {
   id: LocationId;
   name: string;
@@ -38,6 +50,8 @@ export interface MapLocation {
   dangerLevel: number;
   connections: LocationId[];
   unlockChapter?: number;
+  /** 该地点可执行的日常行动 */
+  actions?: LocationAction[];
 }
 
 // ──── 世界地图数据 ────
@@ -52,6 +66,14 @@ export const WORLD_MAP: Record<LocationId, MapLocation> = {
     region: 'wudang',
     dangerLevel: 2,
     connections: ['han_river', 'cangling_mountain', 'longyin_village'],
+    actions: [
+      { id: 'chop_wood', icon: '🪓', name: '砍柴',   desc: '山门外劈柴，练臂力也练心性', exp: 20, gold: 5,  unlockChapter: 2, unlockLevel: 0 },
+      { id: 'carry_water', icon: '💧', name: '挑水',  desc: '去最远的山泉挑水，腿能废三天', exp: 15, gold: 3,  unlockChapter: 2, unlockLevel: 0 },
+      { id: 'clean_hall', icon: '🧹', name: '打扫大殿', desc: '真武大殿除尘，心静则尘净',     exp: 18, gold: 4,  unlockChapter: 2, unlockLevel: 0 },
+      { id: 'copy_scripture', icon: '📜', name: '抄写道经', desc: '静心抄写道藏，字字入心',     exp: 35, gold: 8,  unlockChapter: 2, unlockLevel: 0 },
+      { id: 'pine_train', icon: '🌙', name: '后山修炼', desc: '老松树下打坐，月华入体',       exp: 45, gold: 0,  unlockChapter: 2, unlockLevel: 2 },
+      { id: 'arena_spar', icon: '⚔️', name: '演武切磋', desc: '演武场与同门过招，实战精进',    exp: 55, gold: 0,  unlockChapter: 2, unlockLevel: 6 },
+    ],
   },
   
   // ── 汉水渡口 ──
@@ -74,6 +96,9 @@ export const WORLD_MAP: Record<LocationId, MapLocation> = {
     region: 'jingxi',
     dangerLevel: 3,
     connections: ['han_river', 'longyin_village', 'beggar_hq'],
+    actions: [
+      { id: 'city_meditate', icon: '🧘', name: '城中静修', desc: '在客栈中静心打坐，感悟天地', exp: 30, gold: 0, unlockChapter: 2, unlockLevel: 0 },
+    ],
   },
   
   jiangling_city: {
@@ -84,6 +109,9 @@ export const WORLD_MAP: Record<LocationId, MapLocation> = {
     region: 'jinghu',
     dangerLevel: 3,
     connections: ['longyin_village'],
+    actions: [
+      { id: 'city_meditate', icon: '🧘', name: '城中静修', desc: '在客栈中静心打坐，感悟天地', exp: 30, gold: 0, unlockChapter: 2, unlockLevel: 0 },
+    ],
   },
   
   // ── 村庄 ──

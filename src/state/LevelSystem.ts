@@ -1,4 +1,5 @@
 import type { PlayerState, AttrKey } from '../data/types';
+import { calculateFinalStats } from '../data/realmConfig';
 
 // 境界名称（10层制：每个大境界分为1~10小层）
 // level 0=凡人, 1~10=炼气一层~十层, 11~20=筑基一层~十层, ...
@@ -66,16 +67,27 @@ export function checkLevelUp(player: PlayerState): LevelUpResult {
     gainedPoints++;
   }
 
-  const updatedPlayer: PlayerState = gainedPoints > 0
-    ? {
-        ...player,
-        level: lv,
-        exp,
-        cultivationPoints: (player.cultivationPoints || 0) + gainedPoints,
-      }
-    : player;
+  if (gainedPoints > 0) {
+    // 升级后重算基础属性：该等级普通人属性 × 主角天赋（dragon_vein）
+    const newStats = calculateFinalStats(lv, [player.playerTalent]);
+    const updatedPlayer: PlayerState = {
+      ...player,
+      level: lv,
+      exp,
+      cultivationPoints: (player.cultivationPoints || 0) + gainedPoints,
+      maxHp: newStats.hp + (player.attrBoosts?.hp || 0),
+      hp: Math.min(player.hp, newStats.hp + (player.attrBoosts?.hp || 0)),
+      maxMp: newStats.mp + (player.attrBoosts?.mp || 0),
+      mp: Math.min(player.mp, newStats.mp + (player.attrBoosts?.mp || 0)),
+      atk: newStats.atk + (player.attrBoosts?.atk || 0),
+      def: newStats.def + (player.attrBoosts?.def || 0),
+      agi: newStats.agi + (player.attrBoosts?.agi || 0),
+      crit: newStats.crit,
+    };
+    return { leveled: true, oldLevel: oldLv, newLevel: lv, gainedPoints, updatedPlayer };
+  }
 
-  return { leveled: gainedPoints > 0, oldLevel: oldLv, newLevel: lv, gainedPoints, updatedPlayer };
+  return { leveled: false, oldLevel: oldLv, newLevel: lv, gainedPoints: 0, updatedPlayer: player };
 }
 
 export const ATTR_BOOST_DEFS: Record<AttrKey, { amount: number; label: string; field: keyof PlayerState }> = {
