@@ -54,7 +54,7 @@ export function renderSaveSelectScreen(mode?: 'new' | 'load'): void {
           import('./CharCreate').then(m => {
             m.setPendingSlot(slot);
             showScreen('create');
-            m.renderCreateScreen();
+            m.renderModeSelect();
           });
         });
       }

@@ -6,6 +6,11 @@ import { showToast } from '../ui/toast';
 import { showScreen } from './ScreenManager';
 import { renderCampTopbar } from './Camp';
 import type { NpcId, SkillId } from '../data/types';
+import {
+  canRecommend, executeRecommend,
+  canRecruit, executeRecruit,
+} from '../systems/NPCManager';
+import { getNpcStats } from '../systems/NpcBehavior';
 
 export function openDialog(npcId: NpcId): void {
   const npcData = NPC_DIALOGS[npcId];
@@ -76,6 +81,54 @@ function renderChoices(npcId: NpcId, nodeId: string): void {
 
 function applyDialogEffect(effect: string): void {
   const p = getPlayer();
+
+  // 🆕 沙盒：对话招募 NPC（格式：recruit:<npcDbId>）
+  if (effect.startsWith('recruit:')) {
+    const npcDbId = effect.slice('recruit:'.length);
+    const stats = getNpcStats(npcDbId);
+    const affection = p.npcAffection?.[npcDbId] ?? 0;
+    if (stats) {
+      const check = canRecruit(p, stats, affection);
+      if (check.success) {
+        const result = executeRecruit(p, npcDbId);
+        const updated = {
+          ...p,
+          npcCollection: { ...p.npcCollection, ...result },
+        };
+        setPlayer(updated);
+        saveGame(updated);
+        showToast(`${stats.name}已成为你的随从！`);
+      } else {
+        showToast(check.message);
+      }
+    }
+    return;
+  }
+
+  // 🆕 沙盒：对话推荐入宗（格式：recommend:<npcDbId>）
+  if (effect.startsWith('recommend:')) {
+    const npcDbId = effect.slice('recommend:'.length);
+    const stats = getNpcStats(npcDbId);
+    const affection = p.npcAffection?.[npcDbId] ?? 0;
+    if (stats) {
+      const check = canRecommend(p, stats, affection);
+      if (check.success) {
+        const result = executeRecommend(p, stats);
+        const updated = {
+          ...p,
+          npcDatabase: { ...p.npcDatabase, [npcDbId]: result.npc },
+          sectContribution: (p.sectContribution ?? 0) + result.contributionGain,
+        };
+        setPlayer(updated);
+        saveGame(updated);
+        showToast(`${stats.name}已加入${getSectShortName(p.sect)}！贡献 +${result.contributionGain}`);
+      } else {
+        showToast(check.message);
+      }
+    }
+    return;
+  }
+
   switch (effect) {
     case 'acceptMission': {
       const updated = { ...p, wudangMissionAccepted: true };
@@ -93,6 +146,14 @@ function applyDialogEffect(effect: string): void {
       break;
     }
   }
+}
+
+function getSectShortName(sect: string): string {
+  const names: Record<string, string> = {
+    wudang: '武当', emei: '峨眉', shaolin: '少林',
+    beggar: '丐帮', huashan: '华山', demon: '魔教',
+  };
+  return names[sect] ?? sect;
 }
 
 export function closeDialog(): void {

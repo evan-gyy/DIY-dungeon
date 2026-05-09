@@ -517,7 +517,7 @@ export const NPC_DIALOGS: Record<NpcId, NpcDialogData> = {
 
   ji_wushuang_npc: {
     name: '纪无双',
-    img: 'picture/NPC/武当派-张三丰.png',
+    img: 'picture/NPC/纪无双.png',
     sect: '内门弟子·筑基七层·武当双璧',
     dialogs: {
       start: {
@@ -541,7 +541,7 @@ export const NPC_DIALOGS: Record<NpcId, NpcDialogData> = {
 
   su_yunxiu_npc: {
     name: '苏云绣',
-    img: 'picture/NPC/武当派-张三丰.png',
+    img: 'picture/NPC/苏云绣.png',
     sect: '内门弟子·筑基六层',
     dialogs: {
       start: {
@@ -565,7 +565,7 @@ export const NPC_DIALOGS: Record<NpcId, NpcDialogData> = {
 
   fang_zhonghe_npc: {
     name: '方仲和',
-    img: 'picture/NPC/武当派-张三丰.png',
+    img: 'picture/NPC/方仲和.png',
     sect: '内门弟子·筑基五层',
     dialogs: {
       start: {
@@ -589,7 +589,7 @@ export const NPC_DIALOGS: Record<NpcId, NpcDialogData> = {
 
   meng_wenyuan: {
     name: '孟文渊',
-    img: 'picture/NPC/武当派-张三丰.png',
+    img: 'picture/NPC/孟文渊.png',
     sect: '陈静虚门下·筑基九层',
     dialogs: {
       start: {
@@ -624,7 +624,7 @@ export const NPC_DIALOGS: Record<NpcId, NpcDialogData> = {
 
   ye_ziyi: {
     name: '叶紫衣',
-    img: 'picture/NPC/武当派-张三丰.png',
+    img: 'picture/NPC/叶紫衣.png',
     sect: '陈静虚门下·筑基八层',
     dialogs: {
       start: {

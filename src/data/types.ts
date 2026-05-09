@@ -4,7 +4,7 @@
 
 // ──── ID 联合类型（所有 ID 都在这里集中定义）────
 
-export type SectId = 'wudang' | 'emei' | 'shaolin' | 'beggar' | 'huashan' | 'demon';
+export type SectId = 'wudang' | 'emei' | 'shaolin' | 'beggar' | 'huashan' | 'demon' | 'maoshan' | 'kunlun' | 'qingcheng' | 'tangmen' | 'xiaoyao' | 'quanzhen' | 'kongtong' | 'diancang' | 'none';
 
 export type CharId = 'male_good' | 'male_evil' | 'female_good' | 'female_evil';
 
@@ -50,8 +50,8 @@ export type ItemId = 'hp_potion' | 'mp_potion' | 'exp_scroll' | 'iron_guard';
 
 // ──── 法宝系统 ────
 
-/** 法宝境界等级（对应六大境界） */
-export type FabaoRealm = 'lianqi' | 'zhuji' | 'jiedan' | 'yuanying' | 'huashen' | 'dujie';
+/** 法宝境界等级（对应八大境界） */
+export type FabaoRealm = 'lianqi' | 'zhuji' | 'jiedan' | 'yuanying' | 'huashen' | 'dujie' | 'dacheng' | 'feisheng';
 
 /** 法宝类型：武器(攻击) / 衣服(防御) / 饰品(增益) */
 export type FabaoType = 'weapon' | 'armor' | 'accessory';
@@ -64,6 +64,8 @@ export const REALM_COLORS: Record<FabaoRealm, { name: string; color: string; css
   yuanying: { name: '元婴', color: '紫色', css: '#ab47bc', levelRange: [31, 40] },
   huashen:  { name: '化神', color: '金色', css: '#ffd700', levelRange: [41, 50] },
   dujie:    { name: '渡劫', color: '红色', css: '#ef5350', levelRange: [51, 60] },
+  dacheng:  { name: '大乘', color: '暗金', css: '#daa520', levelRange: [61, 70] },
+  feisheng: { name: '飞升', color: '霞光', css: '#7b68ee', levelRange: [71, 80] },
 };
 
 /** 根据 level 获取对应境界 */
@@ -74,6 +76,8 @@ export function getRealmByLevel(level: number): FabaoRealm | null {
   if (level >= 31 && level <= 40) return 'yuanying';
   if (level >= 41 && level <= 50) return 'huashen';
   if (level >= 51 && level <= 60) return 'dujie';
+  if (level >= 61 && level <= 70) return 'dacheng';
+  if (level >= 71 && level <= 80) return 'feisheng';
   return null;
 }
 
@@ -113,7 +117,19 @@ export type FabaoId =
   // 渡劫·红色衣服
   | 'tribulation_robe' | 'immortal_mail' | 'heaven_vest'
   // 渡劫·红色饰品
-  | 'blood_ring' | 'immortal_pendant' | 'tribulation_talisman';
+  | 'blood_ring' | 'immortal_pendant' | 'tribulation_talisman'
+  // 大乘·暗金武器
+  | 'saint_blade' | 'mahayana_staff' | 'nirvana_bow'
+  // 大乘·暗金衣服
+  | 'saint_robe' | 'mahayana_mail' | 'nirvana_vest'
+  // 大乘·暗金饰品
+  | 'saint_ring' | 'mahayana_pendant' | 'nirvana_talisman'
+  // 飞升·霞光武器
+  | 'ascension_blade' | 'immortal_sword' | 'heaven_breaker'
+  // 飞升·霞光衣服
+  | 'ascension_robe' | 'immortal_armor' | 'immortal_vest'
+  // 飞升·霞光饰品
+  | 'ascension_ring' | 'immortal_jade' | 'ascension_talisman';
 
 export interface FabaoData {
   id: FabaoId;
@@ -148,6 +164,28 @@ export type NpcId =
   | 'song_zhiyuan' | 'gu_xiaosang' | 'lu_chengzhou' | 'shen_nishang'
   // 第三章新增 NPC
   | 'meng_wenyuan' | 'ye_ziyi' | 'ji_wushuang_npc' | 'su_yunxiu_npc' | 'fang_zhonghe_npc'
+  // 🆕 沙盒：各派传功长老
+  | 'shaolin_kongjian' | 'emei_jingxuan' | 'beggar_lu'
+  | 'huashan_feng' | 'demon_yang'
+  // 🆕 沙盒：城市官员
+  | 'kaifeng_fuyin' | 'luoyang_zhifu' | 'changan_zhifu'
+  | 'xiangyang_zhifu' | 'jiangling_zhifu' | 'chengdu_zhifu'
+  | 'yangzhou_zhizhou' | 'suzhou_zhizhou' | 'hangzhou_zhifu'
+  | 'dali_guoxiang'
+  // 🆕 新门派掌门+长老
+  | 'maoshan_zhangmen' | 'maoshan_elder'
+  | 'kunlun_zhangmen' | 'kunlun_elder'
+  | 'qingcheng_zhangmen' | 'qingcheng_elder'
+  | 'tangmen_zhangmen' | 'tangmen_elder'
+  | 'xiaoyao_zhangmen' | 'xiaoyao_elder'
+  // 🆕 全真教
+  | 'quanzhen_zhangmen' | 'quanzhen_elder' | 'quanzhen_qiuchuji'
+  // 🆕 崆峒派
+  | 'kongtong_zhangmen' | 'kongtong_elder'
+  // 🆕 点苍派
+  | 'diancang_zhangmen' | 'diancang_elder'
+  // 🆕 新城市官员
+  | 'jiangzhou_zhizhou' | 'tanzhou_zhifu' | 'guangzhou_shibosi'
   ;
 
 export type ElderId = 'wudang_elder' | 'emei_elder' | 'shaolin_elder' | 'beggar_elder';
@@ -164,7 +202,7 @@ export type StatusType =
 export type SkillType = 'attack' | 'support' | 'control' | 'passive';
 export type TargetType = 'enemy' | 'self';
 
-export type CampTabId = 'story' | 'attr' | 'bag' | 'skill' | 'relation' | 'fabao';
+export type CampTabId = 'story' | 'attr' | 'bag' | 'skill' | 'relation' | 'fabao' | 'mission' | 'court' | 'world';
 
 export type ScreenId =
   | 'main' | 'saveselect' | 'create' | 'story'
@@ -188,6 +226,10 @@ export interface SectData {
   icon: string;
   bonus: Partial<Record<'hp' | 'mp' | 'atk' | 'def' | 'agi' | 'crit', number>>;
   intro: string;
+  /** 势力倾向：'righteous'|'neutral'|'unorthodox'|'chaotic'（沙盒扩展） */
+  alignment?: string;
+  /** 势力文化标签（沙盒扩展） */
+  culture?: string[];
 }
 
 export interface ElderData {
@@ -360,6 +402,8 @@ export interface AttrBoosts {
 import type { NpcStats } from './npcStats';
 import type { TalentId } from './realmConfig';
 import type { LocationId } from './worldMap';
+import type { NpcCollection } from './sandboxTypes';
+import type { WorldStateData, ChronicleData } from '../systems/WorldState';
 
 export interface PlayerState {
   name: string;
@@ -386,6 +430,8 @@ export interface PlayerState {
   equippedFabao: { weapon: FabaoId | null; armor: FabaoId | null; accessory: FabaoId | null };
   ownedFabao: FabaoId[];  // 已拥有的法宝
   tutorialDone: boolean;
+  /** 游戏模式：'story'=剧情模式, 'sandbox'=沙盒模式 */
+  gameMode: 'story' | 'sandbox';
   chapter: number;
   act: number;
   wudangMissionAccepted: boolean;
@@ -394,7 +440,7 @@ export interface PlayerState {
   wudangElderCleared: boolean;
   chapter2Route: '' | 'hotblood' | 'wisdom';
   // 第三章剧情标记
-  chapter3Breakthrough: boolean;       // 是否完成突破剧情
+  chapter3Breakthrough: boolean;       // 是否完成突破剧情（已废弃，改用 realmBreakUnlocked）
   master: string;                      // 师父 ID
   blackmoonToken: boolean;             // 是否获得黑月教令牌碎片
   luChenzhouRespect: number;           // 陆沉舟认可度
@@ -404,6 +450,45 @@ export interface PlayerState {
   trueDisciple: boolean;               // 是否晋升真传弟子
   blackmoonMissionStarted: boolean;    // 黑月教讨伐是否开始
   npcDatabase?: Record<string, NpcStats>; // NPC 数值卡数据库（可选，首次加载时初始化）
+  /** 🆕 NPC 好感度字典：key=NPC的npcDbId，value=好感度数值 */
+  npcAffection: Record<string, number>;
+  // 🆕 突破与宗门系统（沙盒模式预留）
+  /** 已解锁突破的大境界列表（如 ['zhuji'] 表示筑基突破已解锁） */
+  realmBreakUnlocked: string[];
+  /** 宗门身份等级：'outer'=外门, 'inner'=内门, 'true'=真传, 'elder'=长老 */
+  discipleRank: string;
+  /** 🆕 庙堂身份（庙堂之上）：'commoner'=平民, 'xiucai'=秀才, ... 'zaixiang'=宰相 */
+  courtRank: string;
+  /** 🆕 朝廷四维属性 */
+  courtStats: { strategy: number; eloquence: number; charisma: number; scholarship: number };
+  /** 🆕 朝廷影响力（朝廷的"修为"） */
+  influence: number;
+  /** 🆕 朝廷路线（null=未选择） */
+  courtPath: 'wen' | 'wu' | null;
+  /** 🆕 上一行动领域（用于分心惩罚） */
+  lastActionType: 'martial' | 'court' | 'idle';
+  // 🆕 沙盒：宗门贡献值系统
+  /** 宗门贡献值 */
+  sectContribution: number;
+  /** 贡献值变动日志 */
+  contributionLog: Array<{ amount: number; source: string; reason: string; timestamp: number }>;
+  // 🆕 沙盒：晋升系统
+  /** 已完成的晋升试炼 ID 列表 */
+  completedTrials: string[];
+  /** 声望值（0-1000，预留后续扩展） */
+  reputation: number;
+  /** 🆕 NPC 收纳（已招募的随从 + 指派任务） */
+  npcCollection: NpcCollection;
+  /** 🆕 沙盒：当前接取的主命任务列表 */
+  activeMissions: Array<{ defId: string; status: string; acceptedAt: number; progress: number; progressMax: number }>;
+  /** 🆕 沙盒：势力外交关系（outer: factionId, inner: targetFactionId → relation data） */
+  factionRelations: Record<string, Record<string, { relation: string; trust: number; lastEvent?: string; lastEventTurn?: number }>>;
+  /** 🆕 沙盒：外交回合计数（内部） */
+  diplomacyTickCounter: number;
+  /** 🆕 沙盒：江湖态势数据（势力资源、回合、世界事件） */
+  worldState?: WorldStateData;
+  /** 🆕 沙盒：个人日志（修行历程） */
+  chronicle?: ChronicleData;
   // 世界地图系统
   currentLocationId: LocationId;       // 玩家当前所在地点
   // 主角天赋系统

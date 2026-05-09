@@ -4,7 +4,7 @@ export const PlayerStateSchema = z.object({
   name:     z.string().default('无名'),
   charId:   z.enum(['male_good', 'male_evil', 'female_good', 'female_evil']).default('male_good'),
   charImg:  z.string().default('picture/maincharacter/male_good.png'),
-  sect:     z.enum(['wudang', 'emei', 'shaolin', 'beggar', 'huashan', 'demon']).default('wudang'),
+  sect:     z.enum(['wudang', 'emei', 'shaolin', 'beggar', 'huashan', 'demon', 'none']).default('wudang'),
 
   hp:    z.number().default(80),
   maxHp: z.number().default(80),
@@ -20,6 +20,7 @@ export const PlayerStateSchema = z.object({
   level: z.number().default(1),
   cultivationPoints: z.number().default(0),
 
+  gameMode: z.enum(['story', 'sandbox']).default('story'),
   chapter: z.number().default(1),
   act:     z.number().default(0),
   tutorialDone: z.boolean().default(false),
@@ -95,7 +96,99 @@ export const PlayerStateSchema = z.object({
     ownedFabao: z.array(z.string()).default([]),
     // NPC当前所在地点
     currentLocationId: z.string().default('wudang_mountain'),
+    // 🆕 双身份系统
+    discipleRank: z.string().default('outer'),
+    courtRank:    z.string().default('commoner'),
+    // 🆕 NPC性格（影响互动倍率）
+    personality: z.enum(['aloof','kind','cunning','upright','gentle','bold']).default('gentle'),
+    // 🆕 朝廷属性
+    courtStats: z.object({
+      strategy: z.number().default(5),
+      eloquence: z.number().default(5),
+      charisma: z.number().default(5),
+      scholarship: z.number().default(5),
+    }).default({ strategy: 5, eloquence: 5, charisma: 5, scholarship: 5 }),
+    influence: z.number().default(0),
+    courtPath: z.enum(['wen', 'wu']).nullable().default(null),
   })).default({}),
+
+  // 🆕 NPC 好感度字典
+  npcAffection: z.record(z.string(), z.number()).default({}),
+
+  // 🆕 突破解锁状态（旧存档兼容：默认为空数组）
+  realmBreakUnlocked: z.array(z.string()).default([]),
+  // 🆕 宗门身份（武林之中 / 旧存档兼容：默认外门）
+  discipleRank: z.string().default('outer'),
+  // 🆕 庙堂身份（庙堂之上 / 旧存档兼容：默认平民）
+  courtRank: z.string().default('commoner'),
+
+  // 🆕 沙盒：宗门贡献值系统
+  sectContribution: z.number().default(0),
+  contributionLog: z.array(z.object({
+    amount: z.number(),
+    source: z.string(),
+    reason: z.string(),
+    timestamp: z.number(),
+  })).default([]),
+  // 🆕 沙盒：晋升系统
+  completedTrials: z.array(z.string()).default([]),
+  reputation: z.number().default(0),
+
+  // 🆕 NPC 收纳系统（已招募的随从 + 指派）
+  npcCollection: z.object({
+    recruited: z.array(z.string()).default([]),
+    maxSlots: z.number().default(0),
+    assignments: z.record(z.string(), z.string()).default({}),
+    assignmentTargets: z.record(z.string(), z.string()).default({}),
+  }).default({ recruited: [], maxSlots: 0, assignments: {}, assignmentTargets: {} }),
+
+  // 🆕 沙盒：当前接取的主命任务列表
+  activeMissions: z.array(z.object({
+    defId: z.string(),
+    status: z.string().default('accepted'),
+    acceptedAt: z.number().default(0),
+    progress: z.number().default(0),
+    progressMax: z.number().default(1),
+  })).default([]),
+
+  // 🆕 沙盒：势力外交关系（旧存档兼容）
+  factionRelations: z.record(z.string(), z.record(z.string(), z.object({
+    relation: z.string().default('neutral'),
+    trust: z.number().default(50),
+    lastEvent: z.string().optional(),
+    lastEventTurn: z.number().optional(),
+  }))).default({}),
+  diplomacyTickCounter: z.number().default(0),
+
+  // 🆕 朝廷系统
+  courtStats: z.object({
+    strategy: z.number().default(10),
+    eloquence: z.number().default(10),
+    charisma: z.number().default(10),
+    scholarship: z.number().default(10),
+  }).default({ strategy: 10, eloquence: 10, charisma: 10, scholarship: 10 }),
+  influence: z.number().default(0),
+  courtPath: z.enum(['wen', 'wu']).nullable().default(null),
+  lastActionType: z.enum(['martial', 'court', 'idle']).default('idle'),
+
+  // 🆕 沙盒：世界态势系统（江湖演化引擎）
+  worldState: z.object({
+    worldEvents: z.array(z.object({
+      eventId: z.string(), turn: z.number(), timestamp: z.number(),
+    })).default([]),
+    turn: z.number().default(0),
+    lastEvolveTurn: z.number().default(0),
+  }).optional(),
+
+  // 🆕 沙盒：个人日志系统
+  chronicle: z.object({
+    entries: z.array(z.object({
+      id: z.string(), turn: z.number(), timestamp: z.number(),
+      category: z.string(), title: z.string(), description: z.string(),
+      locationId: z.string().optional(), relatedSect: z.string().optional(),
+    })).default([]),
+    entryCounter: z.number().default(0),
+  }).optional(),
 
   // 世界地图系统
   currentLocationId: z.string().default('wudang_mountain'),  // 玩家当前所在地点（默认武当山）
