@@ -76,13 +76,38 @@ function expNeeded(level: number): number {
   return Math.floor(42 * Math.pow(level, 1.1));
 }
 
+// ── NPC 沙盒模式初始位置（各NPC分布在各自门派/城市） ──
+const NPC_SANDBOX_LOCATION: Record<string, LocationId> = {
+  'liu_qinghan':       'wudang_mountain',
+  'shen_nishang':      'wudang_mountain',
+  'mo_jiangqing':      'wudang_mountain',
+  'zhang_xuansu':      'wudang_mountain',
+  'chen_jingxu':       'wudang_mountain',
+  'lu_chengzhou':      'wudang_mountain',
+  'gu_xiaosang':       'wudang_mountain',
+  'song_zhiyuan':      'wudang_mountain',
+  'ji_wushuang_npc':   'wudang_mountain',
+  'su_yunxiu_npc':     'wudang_mountain',
+  'fang_zhonghe_npc':  'wudang_mountain',
+  'meng_wenyuan':      'wudang_mountain',
+  'ye_ziyi':           'wudang_mountain',
+};
+
 // ── Public API ──
 
 export function initNpcDatabase(): Record<string, NpcStats> {
   const db: Record<string, NpcStats> = {};
   for (const [id, init] of Object.entries(NPC_STATS_INIT)) {
-    // 设置初始位置
     const initialLoc = NPC_INITIAL_LOCATION[id] ?? 'wudang_mountain';
+    db[id] = { ...init, exp: 0, currentLocationId: initialLoc };
+  }
+  return db;
+}
+
+export function initSandboxNpcDatabase(): Record<string, NpcStats> {
+  const db: Record<string, NpcStats> = {};
+  for (const [id, init] of Object.entries(NPC_STATS_INIT)) {
+    const initialLoc = NPC_SANDBOX_LOCATION[id] ?? 'wudang_mountain';
     db[id] = { ...init, exp: 0, currentLocationId: initialLoc };
   }
   return db;

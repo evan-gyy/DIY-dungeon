@@ -4,7 +4,7 @@ export const PlayerStateSchema = z.object({
   name:     z.string().default('无名'),
   charId:   z.enum(['male_good', 'male_evil', 'female_good', 'female_evil']).default('male_good'),
   charImg:  z.string().default('picture/maincharacter/male_good.png'),
-  sect:     z.enum(['wudang', 'emei', 'shaolin', 'beggar', 'huashan', 'demon']).default('wudang'),
+  sect:     z.enum(['wudang', 'emei', 'shaolin', 'beggar', 'huashan', 'demon', 'none']).default('wudang'),
 
   hp:    z.number().default(80),
   maxHp: z.number().default(80),
@@ -102,6 +102,39 @@ export const PlayerStateSchema = z.object({
 
   // 主角天赋系统
   playerTalent: z.string().default('dragon_vein'),  // 主角天赋（默认九霄龙脉）
+
+  // 游戏模式
+  gameMode: z.enum(['story', 'sandbox']).default('story'),
+
+  // 沙盒模式专用字段
+  sandboxOrigin: z.enum(['street_kid', 'scholar', 'martial_apprentice', 'jianghu_orphan']).optional(),
+
+  sandboxData: z.object({
+    time: z.object({
+      year: z.number().default(1208),
+      month: z.number().default(1),
+      day: z.number().default(1),
+      hourSlot: z.number().default(0),
+      season: z.enum(['spring', 'summer', 'autumn', 'winter']).default('spring'),
+    }).default({}),
+    wulinReputation: z.object({
+      jianghuFame: z.number().default(0),
+      sectStanding: z.record(z.string(), z.number()).default({}),
+      alignment: z.number().default(0),
+    }).default({}),
+    courtReputation: z.object({
+      courtRank: z.number().default(0),
+      influence: z.number().default(0),
+      intelligence: z.number().default(0),
+    }).default({}),
+    identityProgress: z.number().default(0),
+    completedEvents: z.array(z.string()).default([]),
+    actionLog: z.array(z.object({
+      day: z.number(),
+      month: z.number(),
+      action: z.string(),
+    })).default([]),
+  }).optional(),
 
   _slot:    z.number().default(1),
   _savedAt: z.string().optional(),

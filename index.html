@@ -20,6 +20,7 @@
   <nav class="main-menu">
     <button id="btn-newgame" class="btn">开 始 新 游</button>
     <button id="btn-continue" class="btn">继 续 冒 险</button>
+    <button id="btn-sandbox" class="btn btn-sandbox">沙 盒 模 式</button>
   </nav>
   <div style="position:absolute;bottom:20px;font-size:11px;color:var(--text-dim);letter-spacing:2px;">宝可梦 × 暗黑地牢 × 武侠世界</div>
 </div>
@@ -169,6 +170,49 @@
       <div class="dialog-choices" id="dialog-choices"></div>
     </div>
     <button id="btn-close-dialog" class="btn btn-sm dialog-close-btn">关 闭</button>
+  </div>
+</div>
+
+<!-- =========================================================
+     屏幕SB-C：沙盒角色创建
+========================================================= -->
+<div id="screen-sandbox-create" class="screen">
+  <div class="create-container sandbox-create-container">
+    <div class="panel">
+      <div class="title-deco"><h2>选择立绘</h2></div>
+      <div id="sandbox-char-grid" class="char-select-grid"></div>
+    </div>
+    <div class="panel" style="display:flex;flex-direction:column;gap:16px;">
+      <div class="title-deco"><h2>沙盒模式 · 角色创建</h2></div>
+      <div>
+        <label class="form-label">江湖名号</label>
+        <input id="sandbox-name-input" class="name-input" type="text" maxlength="10" placeholder="输入角色名字…">
+      </div>
+      <div>
+        <label class="form-label">选择出身</label>
+        <div id="sandbox-origin-grid" class="sandbox-origin-grid"></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:auto;">
+        <button id="btn-confirm-sandbox-create" class="btn">踏 入 临 安</button>
+        <button id="btn-back-sandbox-create" class="btn btn-danger btn-sm">返 回</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- =========================================================
+     屏幕SB：沙盒主界面
+========================================================= -->
+<div id="screen-sandbox" class="screen">
+  <div class="sandbox-layout">
+    <div class="sandbox-topbar" id="sandbox-topbar"></div>
+    <div class="sandbox-main">
+      <div class="sandbox-content" id="sandbox-content"></div>
+      <aside class="sandbox-sidebar">
+        <div class="sidebar-nearby-header">📍 附近的人</div>
+        <div class="sandbox-sidebar-grid" id="sandbox-sidebar-grid"></div>
+      </aside>
+    </div>
   </div>
 </div>
 

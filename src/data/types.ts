@@ -4,7 +4,7 @@
 
 // ──── ID 联合类型（所有 ID 都在这里集中定义）────
 
-export type SectId = 'wudang' | 'emei' | 'shaolin' | 'beggar' | 'huashan' | 'demon';
+export type SectId = 'wudang' | 'emei' | 'shaolin' | 'beggar' | 'huashan' | 'demon' | 'none';
 
 export type CharId = 'male_good' | 'male_evil' | 'female_good' | 'female_evil';
 
@@ -168,7 +168,8 @@ export type CampTabId = 'story' | 'attr' | 'bag' | 'skill' | 'relation' | 'fabao
 
 export type ScreenId =
   | 'main' | 'saveselect' | 'create' | 'story'
-  | 'camp' | 'dialog' | 'battle';
+  | 'camp' | 'dialog' | 'battle'
+  | 'sandbox-create' | 'sandbox';
 
 export type BattleResult = 'win' | 'lose';
 
@@ -360,6 +361,7 @@ export interface AttrBoosts {
 import type { NpcStats } from './npcStats';
 import type { TalentId } from './realmConfig';
 import type { LocationId } from './worldMap';
+import type { GameMode, SandboxOrigin, SandboxData } from './sandbox/sandboxTypes';
 
 export interface PlayerState {
   name: string;
@@ -408,6 +410,11 @@ export interface PlayerState {
   currentLocationId: LocationId;       // 玩家当前所在地点
   // 主角天赋系统
   playerTalent: TalentId;              // 主角天赋（默认为 dragon_vein 九霄龙脉）
+  // 游戏模式
+  gameMode: GameMode;
+  // 沙盒模式专用字段
+  sandboxOrigin?: SandboxOrigin;
+  sandboxData?: SandboxData;
   _slot: number;
   _savedAt?: string;
 }

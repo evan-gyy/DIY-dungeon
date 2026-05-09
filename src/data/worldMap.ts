@@ -27,7 +27,13 @@ export type LocationId =
   // ── 其他门派 ──
   | 'shaolin_temple'     // 少林寺（河南·京西北路）
   | 'emei_mountain'      // 峨眉山（四川·成都府路）
-  | 'beggar_hq';         // 丐帮总舵（襄阳城外）
+  | 'beggar_hq'          // 丐帮总舵（襄阳城外）
+  // ── 沙盒模式新增 ──
+  | 'linan_capital'      // 临安府（南宋京城·行在）
+  | 'jiankang_city'      // 建康府（南京·留都）
+  | 'chengdu_city'       // 成都府（四川·峨眉腹地）
+  | 'luoyang_city'       // 洛阳（中原·金国南境）
+  | 'quanzhou_port';     // 泉州港（福建·海上丝路）
 
 /** 地点可执行的行动定义 */
 export interface LocationAction {
@@ -177,6 +183,72 @@ export const WORLD_MAP: Record<LocationId, MapLocation> = {
     region: 'jingxi',
     dangerLevel: 3,
     connections: ['xiangyang_city'],
+  },
+
+  // ── 沙盒模式新增地点 ──
+
+  linan_capital: {
+    id: 'linan_capital',
+    name: '临安府',
+    description: '南宋行在，天子脚下。西湖绝色，御街繁华，政治与江湖的交汇之地。',
+    backgroundImg: 'picture/scene/linan_capital.png',
+    region: 'other',
+    dangerLevel: 1,
+    connections: ['jiankang_city', 'quanzhou_port'],
+    actions: [
+      { id: 'city_meditate', icon: '🧘', name: '城中静修', desc: '在客栈中静心打坐', exp: 30, gold: 0 },
+      { id: 'city_patrol', icon: '🗡️', name: '行侠仗义', desc: '在市井中除暴安良', exp: 35, gold: 15 },
+      { id: 'city_work', icon: '💪', name: '码头搬货', desc: '在钱塘码头做苦力', exp: 10, gold: 25 },
+    ],
+  },
+
+  jiankang_city: {
+    id: 'jiankang_city',
+    name: '建康府',
+    description: '南宋留都，长江防线核心。虎踞龙蟠，兵家必争。',
+    backgroundImg: 'picture/scene/jiankang_city.png',
+    region: 'other',
+    dangerLevel: 3,
+    connections: ['linan_capital', 'xiangyang_city'],
+    actions: [
+      { id: 'city_meditate', icon: '🧘', name: '城中静修', desc: '在客栈中静心打坐', exp: 30, gold: 0 },
+    ],
+  },
+
+  chengdu_city: {
+    id: 'chengdu_city',
+    name: '成都府',
+    description: '天府之国，峨眉派腹地。富饶安逸，文人墨客云集。',
+    backgroundImg: 'picture/scene/chengdu_city.png',
+    region: 'other',
+    dangerLevel: 2,
+    connections: ['emei_mountain', 'jiangling_city'],
+    actions: [
+      { id: 'city_meditate', icon: '🧘', name: '城中静修', desc: '在客栈中静心打坐', exp: 30, gold: 0 },
+    ],
+  },
+
+  luoyang_city: {
+    id: 'luoyang_city',
+    name: '洛阳',
+    description: '中原古都，金国南境。少林寺近在咫尺，中原武林汇聚之地。',
+    backgroundImg: 'picture/scene/luoyang_city.png',
+    region: 'other',
+    dangerLevel: 5,
+    connections: ['shaolin_temple'],
+  },
+
+  quanzhou_port: {
+    id: 'quanzhou_port',
+    name: '泉州港',
+    description: '海上丝路起点，万国商船云集。异域珍宝与江湖消息交汇之地。',
+    backgroundImg: 'picture/scene/quanzhou_port.png',
+    region: 'other',
+    dangerLevel: 2,
+    connections: ['linan_capital'],
+    actions: [
+      { id: 'city_work', icon: '🚢', name: '码头贸易', desc: '在港口搬运货物，赚取工钱', exp: 8, gold: 30 },
+    ],
   },
 };
 

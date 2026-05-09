@@ -7,4 +7,5 @@ export const SECTS: Record<SectId, SectData> = {
   beggar:  { name: '丐帮',   color: '#a9cce3', icon: '🐉', bonus: { atk: 8, agi: 3 },  intro: '行走江湖，降龙十八掌威震四方。' },
   huashan: { name: '华山派', color: '#82e0aa', icon: '⚔️', bonus: { atk: 10, crit: 5 }, intro: '剑气凌云，华山论剑，气宗与剑宗各领风骚。' },
   demon:   { name: '魔教',   color: '#c39bd3', icon: '🌙', bonus: { atk: 15, hp: -20 }, intro: '乾坤大挪移，日月神教，绝世神功令群雄胆寒。' },
+  none:    { name: '自由身', color: '#aaaaaa', icon: '🌍', bonus: {},                  intro: '不属于任何门派，自由自在行走江湖。' },
 };

@@ -51,6 +51,16 @@ window.addEventListener('DOMContentLoaded', () => {
   // ── Confirm character creation ──
   document.getElementById('btn-confirm-create')?.addEventListener('click', () => confirmCreate());
 
+  // ── Sandbox: confirm creation ──
+  document.getElementById('btn-confirm-sandbox-create')?.addEventListener('click', () => {
+    import('./screens/SandboxCharCreate').then(m => m.confirmSandboxCreate());
+  });
+
+  // ── Sandbox: back from creation ──
+  document.getElementById('btn-back-sandbox-create')?.addEventListener('click', () => {
+    import('./screens/MainMenu').then(m => m.closeSaveSelect(true));
+  });
+
   // ── Close NPC dialog ──
   document.getElementById('btn-close-dialog')?.addEventListener('click', () => closeDialog());
 

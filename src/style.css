@@ -2158,3 +2158,273 @@ body {
   .btn { min-height: 40px; }
   .btn-sm { min-height: 36px; }
 }
+
+/* ============================================================
+   沙盒模式专用样式
+   ============================================================ */
+
+.btn-sandbox {
+  background: linear-gradient(135deg, #2d5016 0%, #1a3a0a 100%);
+  border: 1px solid #4a7a28;
+  color: #a8d87f;
+}
+.btn-sandbox:hover {
+  background: linear-gradient(135deg, #3d6820 0%, #2a4a14 100%);
+  border-color: #6aaa38;
+  color: #c8f89f;
+}
+
+/* ── 沙盒角色创建 ── */
+.sandbox-create-container {
+  max-width: 900px;
+}
+
+.sandbox-origin-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sandbox-origin-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: rgba(255,255,255,0.02);
+}
+.sandbox-origin-card:hover {
+  border-color: var(--color-gold);
+  background: rgba(201, 168, 76, 0.05);
+}
+.sandbox-origin-card.selected {
+  border-color: var(--color-gold);
+  background: rgba(201, 168, 76, 0.12);
+  box-shadow: 0 0 8px rgba(201, 168, 76, 0.3);
+}
+.origin-icon {
+  font-size: 24px;
+  width: 36px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.origin-info {
+  flex: 1;
+}
+.origin-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-gold);
+  letter-spacing: 1px;
+}
+.origin-desc {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+
+/* ── 沙盒主界面布局 ── */
+.sandbox-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100%;
+  overflow: hidden;
+}
+
+.sandbox-topbar {
+  padding: 8px 16px;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.sandbox-topbar-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.sandbox-time-row {
+  margin-top: 4px;
+  font-size: 12px;
+}
+
+.sandbox-char-name {
+  font-size: 16px;
+  font-weight: bold;
+  color: var(--text-gold);
+  letter-spacing: 2px;
+}
+
+.sandbox-realm {
+  font-size: 12px;
+  color: var(--text-dim);
+  background: rgba(255,255,255,0.05);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.sandbox-date {
+  color: var(--text-light);
+}
+.sandbox-hour {
+  color: #e8b84d;
+}
+.sandbox-hour-dots {
+  font-family: monospace;
+  color: var(--text-dim);
+  letter-spacing: 2px;
+}
+.sandbox-location {
+  color: #5dade2;
+}
+
+.sandbox-main {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.sandbox-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.sandbox-sidebar {
+  width: 200px;
+  background: var(--bg-panel);
+  border-left: 1px solid var(--border);
+  overflow-y: auto;
+  flex-shrink: 0;
+  padding: 8px;
+}
+
+/* ── 行动面板 ── */
+.sandbox-panel {
+  max-width: 700px;
+}
+
+.sandbox-section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-gold);
+  letter-spacing: 1px;
+  margin: 16px 0 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(201, 168, 76, 0.2);
+}
+.sandbox-section-title:first-child {
+  margin-top: 0;
+}
+
+.sandbox-action-grid, .sandbox-daily-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.sandbox-action-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(255,255,255,0.02);
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+  color: var(--text-light);
+  font-family: inherit;
+  font-size: 13px;
+}
+.sandbox-action-btn:hover:not(.disabled) {
+  border-color: var(--color-gold);
+  background: rgba(201, 168, 76, 0.08);
+}
+.sandbox-action-btn.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.action-icon {
+  font-size: 18px;
+}
+.action-name {
+  font-weight: 600;
+  color: var(--text-gold);
+}
+.action-cost {
+  font-size: 11px;
+  color: #e8b84d;
+}
+.action-desc {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+/* ── 沙盒侧边栏 NPC ── */
+.sandbox-sidebar-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sandbox-npc-card {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.sandbox-npc-card:hover {
+  border-color: var(--color-gold);
+  background: rgba(201, 168, 76, 0.06);
+}
+.npc-card-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-light);
+}
+.npc-card-realm {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+/* ── 地图弹窗 ── */
+.map-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+}
+.map-dest-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.map-dest-btn {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  text-align: left;
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .sandbox-action-grid, .sandbox-daily-grid {
+    grid-template-columns: 1fr;
+  }
+  .sandbox-sidebar {
+    display: none;
+  }
+}

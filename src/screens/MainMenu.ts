@@ -13,6 +13,11 @@ export function initMainMenu(): void {
     showScreen('saveselect');
   });
 
+  document.getElementById('btn-sandbox')?.addEventListener('click', () => {
+    renderSaveSelectScreen('sandbox');
+    showScreen('saveselect');
+  });
+
   // sect preview on main menu
   document.addEventListener('click', e => {
     const target = e.target as HTMLElement;
@@ -32,7 +37,7 @@ export function initMainMenu(): void {
   renderSaveSelectScreen();
 }
 
-export function renderSaveSelectScreen(mode?: 'new' | 'load'): void {
+export function renderSaveSelectScreen(mode?: 'new' | 'load' | 'sandbox'): void {
   const summaries = getAllSaveSummaries();
   const container = document.getElementById('saveselect-slots');
   if (!container) return;
@@ -57,13 +62,24 @@ export function renderSaveSelectScreen(mode?: 'new' | 'load'): void {
             m.renderCreateScreen();
           });
         });
+      } else if (mode === 'sandbox') {
+        div.addEventListener('click', () => {
+          import('./SandboxCharCreate').then(m => {
+            m.setSandboxPendingSlot(slot);
+            showScreen('sandbox-create');
+            m.renderSandboxCreateScreen();
+          });
+        });
       }
     } else {
+      const isSandbox = save.gameMode === 'sandbox';
+      const modeLabel = isSandbox ? '🎲 沙盒' : '📖 剧情';
       const sect = SECTS[save.sect] ?? { icon: '', name: '' };
+      const sectLabel = save.sect === 'none' ? '自由身' : `${sect.icon} ${sect.name}`;
       div.innerHTML = `
         <div class="slot-header">
           <span class="slot-name">${save.name}</span>
-          <span class="slot-sect">${sect.icon} ${sect.name}</span>
+          <span class="slot-sect">${modeLabel} ${sectLabel}</span>
         </div>
         <div class="slot-meta">
           <span>等级 Lv.${save.level}</span>
@@ -75,16 +91,21 @@ export function renderSaveSelectScreen(mode?: 'new' | 'load'): void {
           <button class="btn btn-sm btn-danger slot-del-btn">删除</button>
         </div>
       `;
-      div.querySelector('.slot-load-btn')?.addEventListener('click', e => {
-        e.stopPropagation();
-        import('./Camp').then(m => {
-          import('../state/GameState').then(gs => {
-            gs.setPlayer({ ...save, _slot: slot });
-            closeSaveSelect(false);
-            m.enterCamp();
-          });
+
+      const loadHandler = (e?: Event) => {
+        e?.stopPropagation();
+        import('../state/GameState').then(gs => {
+          gs.setPlayer({ ...save, _slot: slot });
+          closeSaveSelect(false);
+          if (isSandbox) {
+            import('./SandboxHub').then(m => m.enterSandbox());
+          } else {
+            import('./Camp').then(m => m.enterCamp());
+          }
         });
-      });
+      };
+
+      div.querySelector('.slot-load-btn')?.addEventListener('click', loadHandler);
       div.querySelector('.slot-del-btn')?.addEventListener('click', e => {
         e.stopPropagation();
         if (confirm(`确定删除存档「${save.name}」？此操作不可撤销。`)) {
@@ -94,16 +115,8 @@ export function renderSaveSelectScreen(mode?: 'new' | 'load'): void {
           });
         }
       });
-      if (mode === 'load') {
-        div.addEventListener('click', () => {
-          import('./Camp').then(m => {
-            import('../state/GameState').then(gs => {
-              gs.setPlayer({ ...save, _slot: slot });
-              closeSaveSelect(false);
-              m.enterCamp();
-            });
-          });
-        });
+      if (mode === 'load' || mode === 'sandbox') {
+        div.addEventListener('click', loadHandler);
       }
     }
     container.appendChild(div);
