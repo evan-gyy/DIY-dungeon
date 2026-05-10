@@ -1,8 +1,29 @@
 import { getPlayer, setPlayer } from '../../state/GameState';
 import { saveGame } from '../../state/SaveSystem';
+import { getNpcStats } from '../../systems/NpcBehavior';
+import { TALENTS } from '../../data/realmConfig';
+import { getRealmName, getExpForLevel, isRealmMaxLevel } from '../../state/LevelSystem';
 import { FABAO } from '../../data/fabao';
-import { showToast } from '../../ui/toast';
-import type { FabaoId, FabaoType } from '../../data/types';
+import type { NpcStats, NpcPersonality } from '../../data/npcStats';
+import { PERSONALITY } from '../../data/npcStats';
+import {
+  canRecommend, executeRecommend,
+  canRecruit, executeRecruit,
+  canDismiss, executeDismiss,
+  canAssign, executeAssign,
+  getRankLabel, getAssignmentLabel,
+  getMaxRecruitSlots,
+} from '../../systems/NPCManager';
+import type { DiscipleRank, NpcAssignment } from '../../data/sandboxTypes';
+import {
+  ASSIGNMENT_LABEL, RECOMMEND_MIN_AFFECTION, RECRUIT_MIN_AFFECTION,
+  COURT_RANK_LABEL, type CourtRank,
+} from '../../data/sandboxTypes';
+import {
+  talkWithNpc, giveGiftToNpc, sparWithNpc,
+  getInteractionInfo, GIFT_TIERS,
+  type TalkResult, type GiftResult, type SparResult,
+} from '../../systems/NPCInteraction';
 
 interface RelationChar {
   id: string;
@@ -10,31 +31,133 @@ interface RelationChar {
   img: string;
   affection: number;
   unlocked: boolean;
+  /** NPC 数值卡 ID（对应 npcDatabase 中的 key） */
+  npcDbId?: string;
 }
 
-function getRelationData(): { heroines: RelationChar[]; wudang: RelationChar[]; other: RelationChar[] } {
+/**
+ * NPC 好感度初始值定义
+ * - 柳清寒：30（师姐，初始好感稍高）
+ * - 墨绐青：80（前朝国师，守护主角多年）
+ * - 武当派 NPC：统一 20（点头之交）
+ * - 沈霓裳：15（初识）
+ * - 趙沁微：0（未解锁）
+ * - 第三章 NPC：5（初识）
+ */
+const AFFECTION_INITIAL: Record<string, number> = {
+  'liu_qinghan':      30,
+  'shen_nishang':     15,
+  'zhao_qinwei':      0,
+  'mo_jiangqing':     80,
+  'zhang_xuansu':     20,
+  'chen_jingxu':      20,
+  'song_zhiyuan':     20,
+  'gu_xiaosang':      20,
+  'lu_chengzhou':     20,
+  'ji_wushuang_npc':  5,
+  'su_yunxiu_npc':    5,
+  'fang_zhonghe_npc': 5,
+  'meng_wenyuan':     5,
+  'ye_ziyi':          5,
+  'zhou_boan':        20,
+};
+
+/**
+ * 确保 npcAffection 中有该 NPC 的初始值
+ * 在 enterCamp 时调用一次即可
+ */
+export function initNpcAffection(): void {
   const p = getPlayer();
+  const affection = { ...p.npcAffection };
+  let changed = false;
+  for (const [id, val] of Object.entries(AFFECTION_INITIAL)) {
+    if (!(id in affection)) {
+      affection[id] = val;
+      changed = true;
+    }
+  }
+  if (changed) {
+    setPlayer({ ...p, npcAffection: affection });
+  }
+}
+
+/**
+ * 获取指定 NPC 的好感度
+ */
+export function getNpcAffection(npcDbId: string): number {
+  const p = getPlayer();
+  return p.npcAffection?.[npcDbId] ?? AFFECTION_INITIAL[npcDbId] ?? 0;
+}
+
+/**
+ * 修改指定 NPC 的好感度（delta 可正可负）
+ */
+export function changeNpcAffection(npcDbId: string, delta: number): void {
+  const p = getPlayer();
+  const current = getNpcAffection(npcDbId);
+  const newVal = Math.max(0, Math.min(100, current + delta));
+  const updated = { ...p, npcAffection: { ...p.npcAffection, [npcDbId]: newVal } };
+  setPlayer(updated);
+  saveGame(updated);
+}
+
+function getRelationData(): { heroines: RelationChar[]; wudang: RelationChar[]; other: RelationChar[]; recruited: RelationChar[] } {
+  const p = getPlayer();
+  const aff = (id: string) => getNpcAffection(id);
+  const isSandbox = p.gameMode === 'sandbox';
 
   const heroines: RelationChar[] = [
-    { id: 'liu_qinghan', name: '柳清寒', img: 'picture/Female-main/柳清寒.png', affection: 55, unlocked: p.chapter >= 1 },
-    { id: 'shen_nishang', name: '沈霓裳', img: 'picture/Female-main/沈霓裳.png', affection: 15, unlocked: p.chapter >= 2 && p.act >= 4 },
-    { id: 'zhao_qinwei', name: '趙沁微', img: 'picture/Female-main/趙沁微.png', affection: 0,  unlocked: false },
-    { id: 'mo_jiangqing', name: '墨绐青', img: 'picture/Female-main/墨绐青.png', affection: 80, unlocked: p.chapter >= 1 },
+    { id: 'liu_qinghan', name: '柳清寒', img: 'picture/Female-main/柳清寒.png', affection: aff('liu_qinghan'), unlocked: isSandbox || p.chapter >= 1, npcDbId: 'liu_qinghan' },
+    { id: 'shen_nishang', name: '沈霓裳', img: 'picture/Female-main/沈霓裳.png', affection: aff('shen_nishang'), unlocked: isSandbox || (p.chapter >= 2 && p.act >= 4), npcDbId: 'shen_nishang' },
+    { id: 'zhao_qinwei', name: '趙沁微', img: 'picture/Female-main/趙沁微.png', affection: aff('zhao_qinwei'),  unlocked: false },
+    { id: 'mo_jiangqing', name: '墨绐青', img: 'picture/Female-main/墨绐青.png', affection: aff('mo_jiangqing'), unlocked: isSandbox || p.chapter >= 1, npcDbId: 'mo_jiangqing' },
   ];
 
   const wudang: RelationChar[] = [
-    { id: 'zhang_xuansu', name: '张玄素', img: 'picture/NPC/张玄素.png', affection: 20, unlocked: p.chapter >= 2 },
-    { id: 'chen_jingxu', name: '陈静虚', img: 'picture/NPC/陈静虚.png', affection: 30, unlocked: p.chapter >= 2 && p.act >= 1 },
-    { id: 'song_zhiyuan', name: '宋知远', img: 'picture/NPC/宋知远.png', affection: 35, unlocked: p.chapter >= 2 },
-    { id: 'gu_xiaosang', name: '顾小桑', img: 'picture/NPC/顾小桑.png', affection: 40, unlocked: p.chapter >= 2 },
-    { id: 'lu_chengzhou', name: '陆沉舟', img: 'picture/NPC/陆沉舟.png', affection: 10, unlocked: p.chapter >= 2 && p.act >= 3 },
+    { id: 'zhang_xuansu', name: '张玄素', img: 'picture/NPC/张玄素.png', affection: aff('zhang_xuansu'), unlocked: isSandbox || p.chapter >= 2, npcDbId: 'zhang_xuansu' },
+    { id: 'chen_jingxu', name: '陈静虚', img: 'picture/NPC/陈静虚.png', affection: aff('chen_jingxu'), unlocked: isSandbox || (p.chapter >= 2 && p.act >= 1), npcDbId: 'chen_jingxu' },
+    { id: 'song_zhiyuan', name: '宋知远', img: 'picture/NPC/宋知远.png', affection: aff('song_zhiyuan'), unlocked: isSandbox || p.chapter >= 2, npcDbId: 'song_zhiyuan' },
+    { id: 'gu_xiaosang', name: '顾小桑', img: 'picture/NPC/顾小桑.png', affection: aff('gu_xiaosang'), unlocked: isSandbox || p.chapter >= 2, npcDbId: 'gu_xiaosang' },
+    { id: 'lu_chengzhou', name: '陆沉舟', img: 'picture/NPC/陆沉舟.png', affection: aff('lu_chengzhou'), unlocked: isSandbox || (p.chapter >= 2 && p.act >= 3), npcDbId: 'lu_chengzhou' },
+    { id: 'ji_wushuang', name: '纪无双', img: 'picture/NPC/纪无双.png', affection: aff('ji_wushuang_npc'), unlocked: isSandbox || (p.chapter >= 3 && p.act >= 8), npcDbId: 'ji_wushuang_npc' },
+    { id: 'su_yunxiu', name: '苏云绣', img: 'picture/NPC/苏云绣.png', affection: aff('su_yunxiu_npc'), unlocked: isSandbox || (p.chapter >= 3 && p.act >= 8), npcDbId: 'su_yunxiu_npc' },
+    { id: 'fang_zhonghe', name: '方仲和', img: 'picture/NPC/方仲和.png', affection: aff('fang_zhonghe_npc'), unlocked: isSandbox || (p.chapter >= 3 && p.act >= 8), npcDbId: 'fang_zhonghe_npc' },
+    { id: 'meng_wenyuan', name: '孟文渊', img: 'picture/NPC/孟文渊.png', affection: aff('meng_wenyuan'), unlocked: isSandbox || (p.chapter >= 3 && p.act >= 9), npcDbId: 'meng_wenyuan' },
+    { id: 'ye_ziyi', name: '叶紫衣', img: 'picture/NPC/叶紫衣.png', affection: aff('ye_ziyi'), unlocked: isSandbox || (p.chapter >= 3 && p.act >= 9), npcDbId: 'ye_ziyi' },
+    { id: 'zhou_boan', name: '周伯安', img: 'picture/NPC/周伯安.png', affection: aff('zhou_boan'), unlocked: isSandbox || p.chapter >= 2 },
   ];
 
   const other: RelationChar[] = [
-    { id: 'zhou_boan', name: '周伯安', img: 'picture/NPC/周伯安.png', affection: 15, unlocked: p.chapter >= 2 },
   ];
 
-  return { heroines, wudang, other };
+  // 🆕 已招募的随从
+  const recruitedIds = p.npcCollection?.recruited ?? [];
+  const recruited: RelationChar[] = recruitedIds.map(npcId => {
+    const stats = p.npcDatabase?.[npcId];
+    const imgMap: Record<string, string> = {
+      song_zhiyuan: 'picture/NPC/宋知远.png',
+      gu_xiaosang: 'picture/NPC/顾小桑.png',
+      lu_chengzhou: 'picture/NPC/陆沉舟.png',
+      ji_wushuang_npc: 'picture/NPC/纪无双.png',
+      su_yunxiu_npc: 'picture/NPC/苏云绣.png',
+      fang_zhonghe_npc: 'picture/NPC/方仲和.png',
+      meng_wenyuan: 'picture/NPC/孟文渊.png',
+      ye_ziyi: 'picture/NPC/叶紫衣.png',
+      liu_qinghan: 'picture/Female-main/柳清寒.png',
+      shen_nishang: 'picture/Female-main/沈霓裳.png',
+      mo_jiangqing: 'picture/Female-main/墨绐青.png',
+    };
+    return {
+      id: npcId,
+      name: stats?.name ?? npcId,
+      img: imgMap[npcId] ?? '',
+      affection: aff(npcId),
+      unlocked: true,
+      npcDbId: npcId,
+    };
+  });
+
+  return { heroines, wudang, other, recruited };
 }
 
 function renderCharCard(char: RelationChar): string {
@@ -47,8 +170,9 @@ function renderCharCard(char: RelationChar): string {
         <div class="rel-card-name">未解锁</div>
       </div>`;
   }
+  const npcDbId = char.npcDbId || '';
   return `
-    <div class="rel-card">
+    <div class="rel-card" data-npc-db-id="${npcDbId}" data-npc-name="${char.name}" data-npc-img="${char.img}">
       <div class="rel-card-img-wrap">
         <img src="${char.img}" alt="${char.name}" onerror="this.style.display='none'">
       </div>
@@ -60,7 +184,6 @@ function renderCharCard(char: RelationChar): string {
 function renderSection(icon: string, title: string, chars: RelationChar[]): string {
   const cards = chars.map(renderCharCard).join('');
   const unlockedCount = chars.filter(c => c.unlocked).length;
-  // 根据分类选择不同的装饰色
   const accentColor = title === '女主角' ? '#f0a0b0' : title === '武当派' ? '#c9a84c' : '#8ec8a0';
   return `
     <details class="rel-section" open>
@@ -75,217 +198,457 @@ function renderSection(icon: string, title: string, chars: RelationChar[]): stri
 }
 
 export function renderRelationPanel(content: HTMLElement): void {
-  const { heroines, wudang, other } = getRelationData();
+  const p = getPlayer();
+  const { heroines, wudang, other, recruited } = getRelationData();
+
+  // 随从槽位信息
+  const currentSlots = p.npcCollection?.recruited?.length ?? 0;
+  const maxSlots = p.npcCollection?.maxSlots ?? 0;
+  const slotInfo = maxSlots > 0
+    ? `<span style="font-size:10px;color:var(--text-dim);">（${currentSlots}/${maxSlots}）</span>`
+    : '';
+
   content.innerHTML = `
     <div class="relation-panel">
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
         <span style="font-size:11px;color:var(--text-dim);letter-spacing:3px;padding:3px 10px;background:rgba(201,168,76,0.1);border:1px solid rgba(201,168,76,0.3);border-radius:20px;">人物关系</span>
       </div>
-      <p style="font-size:12px;color:var(--text-dim);margin-bottom:16px;">随着剧情推进，你将结识更多江湖人物。好感度会影响后续剧情发展。</p>
+      <p style="font-size:12px;color:var(--text-dim);margin-bottom:16px;">随着剧情推进，你将结识更多江湖人物。好感度会影响后续剧情发展。<br><span style="color:var(--text-gold);">点击立绘可查看角色详细状态与操作。</span></p>
+      ${recruited.length > 0 ? renderSection('👥', `随从${slotInfo}`, recruited) : ''}
       ${renderSection('🌸', '女主角', heroines)}
       ${renderSection('☯️', '武当派', wudang)}
-      ${renderSection('👤', '其他', other)}
-      ${renderFabaoSection()}
+      ${other.length > 0 ? renderSection('🌏', '江湖', other) : ''}
     </div>`;
 
-  // 绑定法宝装备事件
-  bindFabaoEvents(content);
+  // 绑定立绘点击事件 → 弹出NPC状态面板（含招募/指派）
+  bindNpcCardEvents(content);
 }
 
 // ═══════════════════════════════════════════════════════════
-//  法宝装备区域
+//  NPC 状态弹窗
 // ═══════════════════════════════════════════════════════════
 
-const FABAO_TYPE_LABELS: Record<FabaoType, { icon: string; name: string }> = {
-  weapon:    { icon: '⚔️', name: '武器' },
-  armor:     { icon: '🛡️', name: '衣服' },
-  accessory: { icon: '💎', name: '饰品' },
-};
-
-function renderFabaoSection(): string {
-  const p = getPlayer();
-  const slots: FabaoType[] = ['weapon', 'armor', 'accessory'];
-
-  const slotCards = slots.map(type => {
-    const fabaoId = p.equippedFabao[type];
-    const fabao = fabaoId ? FABAO[fabaoId] : null;
-    const label = FABAO_TYPE_LABELS[type];
-
-    if (fabao) {
-      return `
-        <div class="fabao-slot equipped" data-fabao-slot="${type}" style="--fabao-color:${fabao.colorCss}">
-          <div class="fabao-slot-type">${label.icon} ${label.name}</div>
-          <div class="fabao-slot-icon">${fabao.icon}</div>
-          <div class="fabao-slot-name" style="color:${fabao.colorCss}">${fabao.name}</div>
-          <div class="fabao-slot-bonus">
-            ${fabao.atkBonus ? `<span>⚔️+${fabao.atkBonus}</span>` : ''}
-            ${fabao.defBonus ? `<span>🛡️+${fabao.defBonus}</span>` : ''}
-            ${fabao.hpBonus ? `<span>❤️+${fabao.hpBonus}</span>` : ''}
-            ${fabao.specialEffect ? `<span>✨${fabao.specialEffect.desc}</span>` : ''}
-          </div>
-          <div class="fabao-slot-unequip" data-unequip="${type}" title="卸下">✕</div>
-        </div>`;
-    } else {
-      return `
-        <div class="fabao-slot empty" data-fabao-slot="${type}">
-          <div class="fabao-slot-type">${label.icon} ${label.name}</div>
-          <div class="fabao-slot-placeholder">点击装备</div>
-        </div>`;
-    }
-  }).join('');
-
-  return `
-    <div class="fabao-section">
-      <div class="fabao-section-header">
-        <span class="fabao-section-title">🔮 装备法宝</span>
-        <span class="fabao-section-hint">点击槽位装备 / 卸下法宝</span>
-      </div>
-      <div class="fabao-slots">${slotCards}</div>
-      <div class="fabao-selector hidden" id="fabao-selector">
-        <div class="fabao-selector-header">
-          <span id="fabao-selector-title">选择法宝</span>
-          <button class="fabao-selector-close" id="fabao-selector-close">✕</button>
-        </div>
-        <div class="fabao-selector-list" id="fabao-selector-list"></div>
-      </div>
-    </div>`;
-}
-
-function bindFabaoEvents(content: HTMLElement): void {
-  // 点击法宝槽位 → 打开选择器
-  content.querySelectorAll<HTMLElement>('[data-fabao-slot]').forEach(slot => {
-    slot.addEventListener('click', (e) => {
-      const target = e.target as HTMLElement;
-      // 如果点击的是卸下按钮，不打开选择器
-      if (target.closest('[data-unequip]')) return;
-      const fabaoType = slot.dataset['fabaoSlot'] as FabaoType;
-      openFabaoSelector(fabaoType);
+function bindNpcCardEvents(content: HTMLElement): void {
+  content.querySelectorAll<HTMLElement>('.rel-card:not(.locked)').forEach(card => {
+    card.addEventListener('click', () => {
+      const npcDbId = card.dataset['npcDbId'];
+      const npcName = card.dataset['npcName'] || '';
+      const npcImg = card.dataset['npcImg'] || '';
+      if (npcDbId) {
+        showNpcStatsOverlay(npcDbId, npcName, npcImg);
+      }
     });
   });
-
-  // 卸下按钮
-  content.querySelectorAll<HTMLElement>('[data-unequip]').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const fabaoType = btn.dataset['unequip'] as FabaoType;
-      unequipFabao(fabaoType);
-    });
-  });
-
-  // 关闭选择器
-  const closeBtn = content.querySelector('#fabao-selector-close');
-  if (closeBtn) {
-    closeBtn.addEventListener('click', closeFabaoSelector);
-  }
 }
 
-function openFabaoSelector(type: FabaoType): void {
+export function showNpcStatsOverlay(npcDbId: string, npcName: string, npcImg: string): void {
+  // 移除旧弹窗
+  document.getElementById('npc-stats-overlay')?.remove();
+
   const p = getPlayer();
-  const selector = document.getElementById('fabao-selector');
-  const title = document.getElementById('fabao-selector-title');
-  const list = document.getElementById('fabao-selector-list');
-  if (!selector || !title || !list) return;
+  const npcDb = p.npcDatabase || {};
+  const stats: NpcStats | null = npcDb[npcDbId] || null;
+  const npcSect = stats?.sect ?? '';
+  const playerSect = p.sect;
+  const affection = getNpcAffection(npcDbId);
+  const isRecruited = p.npcCollection?.recruited?.includes(npcDbId) ?? false;
 
-  const label = FABAO_TYPE_LABELS[type];
-  title.textContent = `选择${label.name}`;
-
-  // 获取该类型已拥有的法宝
-  const ownedOfType = p.ownedFabao
-    .filter(id => {
-      const f = FABAO[id];
-      return f && f.type === type;
-    })
-    .map(id => FABAO[id]!);
-
-  // 当前已装备的（排除掉，不可重复装备）
-  const equippedIds = new Set([
-    p.equippedFabao.weapon,
-    p.equippedFabao.armor,
-    p.equippedFabao.accessory,
-  ].filter(Boolean));
-
-  if (ownedOfType.length === 0) {
-    list.innerHTML = `<div class="fabao-selector-empty">暂未拥有该类型法宝<br><span style="font-size:11px;">通过剧情、战斗掉落或任务获得</span></div>`;
+  let bodyHtml = '';
+  if (!stats) {
+    bodyHtml = `<p style="color:var(--text-dim);text-align:center;padding:20px;">暂无该角色的详细数据。</p>`;
   } else {
-    list.innerHTML = ownedOfType.map(f => {
-      const isEquipped = equippedIds.has(f.id);
-      // 如果是当前槽位已装备的法宝，显示"已装备"
-      const isCurrentSlot = p.equippedFabao[type] === f.id;
-      const actionLabel = isCurrentSlot ? '✓ 已装备' : isEquipped ? '已装备于其他槽位' : '装备';
-      const disabled = isEquipped;
+    const talent = TALENTS[stats.talent];
+    const realm = getRealmName(stats.level);
+    const expNeeded = getExpForLevel(stats.level);
+    const atMax = isRealmMaxLevel(stats.level);
+    const expPct = atMax ? 100 : Math.min(100, Math.floor(stats.exp / expNeeded * 100));
+    const fabaoWeapon = stats.equippedFabao.weapon ? FABAO[stats.equippedFabao.weapon] : null;
+    const fabaoArmor = stats.equippedFabao.armor ? FABAO[stats.equippedFabao.armor] : null;
+    const fabaoAcc = stats.equippedFabao.accessory ? FABAO[stats.equippedFabao.accessory] : null;
 
-      return `
-        <div class="fabao-selector-item ${disabled ? 'disabled' : ''}" 
-             data-fabao-id="${f.id}" 
-             data-fabao-type="${type}"
-             style="--fabao-color:${f.colorCss}">
-          <div class="fabao-selector-item-icon">${f.icon}</div>
-          <div class="fabao-selector-item-info">
-            <div class="fabao-selector-item-name" style="color:${f.colorCss}">${f.name}</div>
-            <div class="fabao-selector-item-desc">${f.desc}</div>
-            <div class="fabao-selector-item-bonus">
-              ${f.atkBonus ? `<span>⚔️+${f.atkBonus}</span>` : ''}
-              ${f.defBonus ? `<span>🛡️+${f.defBonus}</span>` : ''}
-              ${f.hpBonus ? `<span>❤️+${f.hpBonus}</span>` : ''}
-              ${f.specialEffect ? `<span>✨${f.specialEffect.desc}</span>` : ''}
-            </div>
-          </div>
-          <button class="fabao-selector-item-btn ${disabled ? 'disabled' : ''}" 
-                  ${disabled ? 'disabled' : ''}>${actionLabel}</button>
-        </div>`;
-    }).join('');
+    // 🆕 双身份 + 好感度 + 性格
+    const discipleLabel = getRankLabel(stats.discipleRank);
+    const courtLabel = COURT_RANK_LABEL[stats.courtRank as CourtRank] ?? '平民';
+    const personality = stats.personality ?? 'gentle';
+    const persCfg = PERSONALITY[personality];
+
+    bodyHtml = `
+      <div class="npc-stats-body">
+        <!-- 双身份 -->
+        <div class="npc-stats-row">
+          <span class="npc-stats-label">武林身份</span>
+          <span class="npc-stats-value" style="color:#c9a84c;">${discipleLabel}</span>
+        </div>
+        <div class="npc-stats-row">
+          <span class="npc-stats-label">庙堂身份</span>
+          <span class="npc-stats-value" style="color:#8ec8a0;">${courtLabel}</span>
+        </div>
+        <div class="npc-stats-row">
+          <span class="npc-stats-label">❤️ 好感度</span>
+          <span class="npc-stats-value" style="color:#f0a0b0;">${affection} / 100</span>
+        </div>
+        <div class="npc-stats-row">
+          <span class="npc-stats-label">性格</span>
+          <span class="npc-stats-value" style="color:#c084fc;">${persCfg.icon} ${persCfg.name}</span>
+        </div>
+        <div style="font-size:11px;color:var(--text-dim);margin-bottom:6px;line-height:1.4;">${persCfg.desc}</div>
+        <div class="npc-stats-divider"></div>
+        <div class="npc-stats-row">
+          <span class="npc-stats-label">修为</span>
+          <span class="npc-stats-value" style="color:var(--text-gold);">${realm}</span>
+        </div>
+        <div class="npc-stats-row">
+          <span class="npc-stats-label">修为进度</span>
+          <span class="npc-stats-value" style="font-size:11px;color:${atMax ? '#e74c3c' : 'var(--text-dim)'};">${atMax ? '已满（等待突破契机）' : `${stats.exp} / ${expNeeded}`}</span>
+        </div>
+        <div style="height:4px;background:#1a1a2e;border-radius:2px;overflow:hidden;margin:4px 0 8px;">
+          <div style="height:100%;width:${expPct}%;background:${atMax ? '#e74c3c' : 'linear-gradient(90deg,#5dade2,#9b59b6)'};border-radius:2px;"></div>
+        </div>
+        <div class="npc-stats-row">
+          <span class="npc-stats-label">天赋</span>
+          <span class="npc-stats-value" style="color:#c084fc;">${talent?.name || '—'}</span>
+        </div>
+        <div class="npc-stats-row">
+          <span class="npc-stats-label">天赋说明</span>
+          <span class="npc-stats-value" style="font-size:11px;">${talent?.desc || '—'}</span>
+        </div>
+        <div class="npc-stats-divider"></div>
+        <div class="npc-stats-row">
+          <span class="npc-stats-label">❤️ 气血</span>
+          <span class="npc-stats-value">${stats.hp} / ${stats.maxHp}</span>
+        </div>
+        <div class="npc-stats-row">
+          <span class="npc-stats-label">💧 内力</span>
+          <span class="npc-stats-value">${stats.mp} / ${stats.maxMp}</span>
+        </div>
+        <div class="npc-stats-row">
+          <span class="npc-stats-label">⚔️ 攻击</span>
+          <span class="npc-stats-value">${stats.atk}</span>
+        </div>
+        <div class="npc-stats-row">
+          <span class="npc-stats-label">🛡️ 防御</span>
+          <span class="npc-stats-value">${stats.def}</span>
+        </div>
+        <div class="npc-stats-row">
+          <span class="npc-stats-label">💨 身法</span>
+          <span class="npc-stats-value">${stats.agi}</span>
+        </div>
+        <div class="npc-stats-row">
+          <span class="npc-stats-label">💥 暴击</span>
+          <span class="npc-stats-value">${stats.crit}%</span>
+        </div>
+        <div class="npc-stats-divider"></div>
+        <div class="npc-stats-row">
+          <span class="npc-stats-label">⚔️ 武器</span>
+          <span class="npc-stats-value" style="color:${fabaoWeapon?.colorCss || 'var(--text-dim)'};">${fabaoWeapon?.name || '无'}</span>
+        </div>
+        <div class="npc-stats-row">
+          <span class="npc-stats-label">🛡️ 衣服</span>
+          <span class="npc-stats-value" style="color:${fabaoArmor?.colorCss || 'var(--text-dim)'};">${fabaoArmor?.name || '无'}</span>
+        </div>
+        <div class="npc-stats-row">
+          <span class="npc-stats-label">💎 饰品</span>
+          <span class="npc-stats-value" style="color:${fabaoAcc?.colorCss || 'var(--text-dim)'};">${fabaoAcc?.name || '无'}</span>
+        </div>
+        ${isRecruited ? renderRecruitedActions(npcDbId, p) : ''}
+      </div>`;
   }
 
-  selector.classList.remove('hidden');
+  // 操作按钮区
+  const actionButtons = renderActionButtons(npcDbId, stats, p, affection, isRecruited);
 
-  // 绑定选择事件
-  list.querySelectorAll<HTMLElement>('.fabao-selector-item:not(.disabled)').forEach(item => {
-    item.addEventListener('click', () => {
-      const fabaoId = item.dataset['fabaoId'] as FabaoId;
-      const fabaoType = item.dataset['fabaoType'] as FabaoType;
-      equipFabao(fabaoType, fabaoId);
-    });
+  const overlay = document.createElement('div');
+  overlay.id = 'npc-stats-overlay';
+  overlay.className = 'npc-stats-overlay';
+  overlay.dataset['npcDbId'] = npcDbId;
+  overlay.dataset['npcName'] = npcName;
+  overlay.dataset['npcImg'] = npcImg;
+  overlay.innerHTML = `
+    <div class="npc-stats-overlay-inner">
+      <div class="npc-stats-header">
+        <img src="${npcImg}" alt="${npcName}" class="npc-stats-portrait" onerror="this.style.display='none'">
+        <div class="npc-stats-title">${npcName}</div>
+      </div>
+      ${bodyHtml}
+      <div class="npc-stats-actions">${actionButtons}</div>
+      <button class="npc-stats-close" id="npc-stats-close">关 闭</button>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  // 关闭按钮
+  overlay.querySelector('#npc-stats-close')?.addEventListener('click', () => {
+    overlay.remove();
+  });
+
+  // 点击背景关闭
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) overlay.remove();
+  });
+
+  // ESC 关闭
+  const escHandler = (e: KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      overlay.remove();
+      document.removeEventListener('keydown', escHandler);
+    }
+  };
+  document.addEventListener('keydown', escHandler);
+
+  // 绑定操作按钮事件
+  bindActionEvents(overlay, npcDbId, npcName, stats);
+}
+
+// ──── 操作按钮渲染 ────
+
+function renderActionButtons(
+  npcDbId: string,
+  stats: NpcStats | null,
+  p: ReturnType<typeof getPlayer>,
+  affection: number,
+  isRecruited: boolean,
+): string {
+  if (!stats) return '';
+
+  const buttons: string[] = [];
+
+  // ── 管理操作（招募/推荐/解除/指派） ──
+  if (isRecruited) {
+    const currentAssignment = p.npcCollection?.assignments?.[npcDbId] ?? 'idle';
+    buttons.push(`
+      <div class="npc-action-row">
+        <span style="font-size:11px;color:var(--text-dim);">当前指派：</span>
+        <select class="npc-assign-select" data-npc-id="${npcDbId}" style="flex:1;">
+          ${Object.entries(ASSIGNMENT_LABEL).map(([key, label]) =>
+            `<option value="${key}" ${key === currentAssignment ? 'selected' : ''}>${label}</option>`
+          ).join('')}
+        </select>
+      </div>`);
+    buttons.push(`<button class="npc-action-btn danger" data-action="dismiss" data-npc-id="${npcDbId}">解除随从</button>`);
+  } else if (stats.sect === p.sect) {
+    const check = canRecruit(p, stats, affection);
+    if (check.success) {
+      buttons.push(`<button class="npc-action-btn primary" data-action="recruit" data-npc-id="${npcDbId}">招募为随从</button>`);
+    } else {
+      buttons.push(`<button class="npc-action-btn disabled" disabled title="${check.message}">招募为随从（${check.message.slice(0, 15)}…）</button>`);
+    }
+  } else {
+    const check = canRecommend(p, stats, affection);
+    if (check.success) {
+      buttons.push(`<button class="npc-action-btn primary" data-action="recommend" data-npc-id="${npcDbId}">推荐加入${getSectShortName(p.sect)}</button>`);
+    } else {
+      buttons.push(`<button class="npc-action-btn disabled" disabled title="${check.message}">推荐入宗（${check.message.slice(0, 15)}…）</button>`);
+    }
+  }
+
+  // ── NPC交互操作（交谈/送礼/切磋） ──
+  const info = getInteractionInfo(npcDbId);
+  buttons.push('<div class="npc-interact-divider"></div>');
+  buttons.push(`<div style="font-size:11px;color:var(--text-dim);letter-spacing:2px;margin-bottom:4px;">互动</div>`);
+
+  // 交谈
+  buttons.push(`<button class="npc-action-btn npc-action-talk" data-action="talk" data-npc-id="${npcDbId}">💬 交谈${info ? `（×${info.talkTotalMult.toFixed(1)}）` : ''}</button>`);
+
+  // 送礼（档次选择 + 按钮）
+  buttons.push(`
+    <div class="npc-action-row">
+      <select class="npc-gift-select" data-npc-id="${npcDbId}" style="flex:1;">
+        ${GIFT_TIERS.map((t, i) => `<option value="${i}">${t.label}（${t.cost}两，+${info ? Math.round(t.baseAffection * info.giftTotalMult) : t.baseAffection}好感）</option>`).join('')}
+      </select>
+      <button class="npc-action-btn npc-action-gift" data-action="gift" data-npc-id="${npcDbId}" style="width:auto;padding:8px 14px;">🎁 送礼</button>
+    </div>`);
+
+  // 切磋
+  buttons.push(`<button class="npc-action-btn npc-action-spar" data-action="spar" data-npc-id="${npcDbId}">⚔️ 切磋</button>`);
+
+  return buttons.join('');
+}
+
+function renderRecruitedActions(npcDbId: string, p: ReturnType<typeof getPlayer>): string {
+  const assignment = p.npcCollection?.assignments?.[npcDbId] ?? 'idle';
+  const target = p.npcCollection?.assignmentTargets?.[npcDbId] ?? '';
+  const label = ASSIGNMENT_LABEL[assignment as NpcAssignment] ?? '闲置';
+  const targetText = target ? ` → ${target}` : '';
+  return `
+    <div class="npc-stats-divider"></div>
+    <div class="npc-stats-row">
+      <span class="npc-stats-label">👥 随从状态</span>
+      <span class="npc-stats-value" style="color:#8ec8a0;">${label}${targetText}</span>
+    </div>`;
+}
+
+// ──── 操作事件绑定 ────
+
+function bindActionEvents(overlay: HTMLElement, npcDbId: string, npcName: string, stats: NpcStats | null): void {
+  if (!stats) return;
+
+  // 招募按钮
+  overlay.querySelector<HTMLElement>('[data-action="recruit"]')?.addEventListener('click', () => {
+    doRecruit(npcDbId, npcName, stats);
+    overlay.remove();
+  });
+
+  // 推荐入宗按钮
+  overlay.querySelector<HTMLElement>('[data-action="recommend"]')?.addEventListener('click', () => {
+    doRecommend(npcDbId, npcName, stats);
+    overlay.remove();
+  });
+
+  // 解除按钮
+  overlay.querySelector<HTMLElement>('[data-action="dismiss"]')?.addEventListener('click', () => {
+    doDismiss(npcDbId, npcName);
+    overlay.remove();
+  });
+
+  // 指派下拉
+  overlay.querySelector<HTMLSelectElement>('.npc-assign-select')?.addEventListener('change', (e) => {
+    const select = e.target as HTMLSelectElement;
+    const assignment = select.value as NpcAssignment;
+    doAssign(npcDbId, npcName, assignment);
+    overlay.remove();
+  });
+
+  // ── 互动操作 ──
+
+  // 交谈
+  overlay.querySelector<HTMLElement>('[data-action="talk"]')?.addEventListener('click', () => {
+    const result = talkWithNpc(npcDbId);
+    showToast(result.message);
+    refreshNpcOverlay(overlay);
+  });
+
+  // 送礼
+  overlay.querySelector<HTMLElement>('[data-action="gift"]')?.addEventListener('click', () => {
+    const select = overlay.querySelector<HTMLSelectElement>('.npc-gift-select') as HTMLSelectElement | null;
+    const tierIndex = select ? parseInt(select.value, 10) : 0;
+    const result = giveGiftToNpc(npcDbId, tierIndex);
+    showToast(result.message);
+    refreshNpcOverlay(overlay);
+  });
+
+  // 切磋
+  overlay.querySelector<HTMLElement>('[data-action="spar"]')?.addEventListener('click', () => {
+    const result = sparWithNpc(npcDbId);
+    showToast(result.message);
+    refreshNpcOverlay(overlay);
   });
 }
 
-function closeFabaoSelector(): void {
-  document.getElementById('fabao-selector')?.classList.add('hidden');
+/** 互动后刷新弹窗（重新读取最新好感度/铜钱） */
+function refreshNpcOverlay(overlay: HTMLElement): void {
+  const npcDbId = overlay.dataset['npcDbId'] ?? '';
+  const npcName = overlay.dataset['npcName'] ?? '';
+  const npcImg = overlay.dataset['npcImg'] ?? '';
+  if (npcDbId) {
+    overlay.remove();
+    showNpcStatsOverlay(npcDbId, npcName, npcImg);
+  }
 }
 
-function equipFabao(type: FabaoType, fabaoId: FabaoId): void {
+// ──── 核心操作函数 ────
+
+function doRecommend(npcDbId: string, npcName: string, stats: NpcStats): void {
   const p = getPlayer();
+  const affection = getNpcAffection(npcDbId);
+  const check = canRecommend(p, stats, affection);
+  if (!check.success) {
+    showToast(check.message);
+    return;
+  }
+
+  const result = executeRecommend(p, stats);
   const updated = {
     ...p,
-    equippedFabao: { ...p.equippedFabao, [type]: fabaoId },
+    npcDatabase: { ...p.npcDatabase, [npcDbId]: result.npc },
+    sectContribution: (p.sectContribution ?? 0) + result.contributionGain,
   };
   setPlayer(updated);
   saveGame(updated);
-  closeFabaoSelector();
 
-  const fabao = FABAO[fabaoId];
-  showToast(`已装备 ${fabao?.name ?? fabaoId}`);
-
-  // 重新渲染面板
-  const content = document.getElementById('camp-content');
-  if (content) renderRelationPanel(content);
+  // 刷新面板
+  refreshRelationPanel();
+  showToast(`✅ ${npcName}已加入${getSectShortName(p.sect)}！贡献 +${result.contributionGain}`);
 }
 
-function unequipFabao(type: FabaoType): void {
+function doRecruit(npcDbId: string, npcName: string, stats: NpcStats): void {
   const p = getPlayer();
-  const fabaoId = p.equippedFabao[type];
-  if (!fabaoId) return;
+  const affection = getNpcAffection(npcDbId);
+  const check = canRecruit(p, stats, affection);
+  if (!check.success) {
+    showToast(check.message);
+    return;
+  }
 
+  const result = executeRecruit(p, npcDbId);
   const updated = {
     ...p,
-    equippedFabao: { ...p.equippedFabao, [type]: null },
+    npcCollection: { ...p.npcCollection, ...result },
   };
   setPlayer(updated);
   saveGame(updated);
 
-  const fabao = FABAO[fabaoId];
-  showToast(`已卸下 ${fabao?.name ?? fabaoId}`);
+  refreshRelationPanel();
+  showToast(`✅ ${npcName}已成为你的随从！`);
+}
 
-  // 重新渲染面板
-  const content = document.getElementById('camp-content');
-  if (content) renderRelationPanel(content);
+function doDismiss(npcDbId: string, npcName: string): void {
+  const p = getPlayer();
+  const check = canDismiss(p, npcDbId);
+  if (!check.success) {
+    showToast(check.message);
+    return;
+  }
+
+  const result = executeDismiss(p, npcDbId);
+  const updated = {
+    ...p,
+    npcCollection: { ...p.npcCollection, ...result },
+  };
+  setPlayer(updated);
+  saveGame(updated);
+
+  refreshRelationPanel();
+  showToast(`${npcName}已不再是你的随从。`);
+}
+
+function doAssign(npcDbId: string, npcName: string, assignment: NpcAssignment): void {
+  const p = getPlayer();
+  const check = canAssign(p, npcDbId, assignment);
+  if (!check.success) {
+    showToast(check.message);
+    return;
+  }
+
+  const result = executeAssign(p, npcDbId, assignment);
+  const updated = {
+    ...p,
+    npcCollection: { ...p.npcCollection, ...result },
+  };
+  setPlayer(updated);
+  saveGame(updated);
+
+  refreshRelationPanel();
+  showToast(`${npcName} → ${ASSIGNMENT_LABEL[assignment]}`);
+}
+
+function getSectShortName(sect: string): string {
+  const names: Record<string, string> = {
+    wudang: '武当', emei: '峨眉', shaolin: '少林',
+    beggar: '丐帮', huashan: '华山', demon: '魔教',
+  };
+  return names[sect] ?? sect;
+}
+
+function showToast(msg: string): void {
+  import('../../ui/toast').then(m => m.showToast(msg));
+}
+
+/** 强制刷新关系面板 */
+function refreshRelationPanel(): void {
+  const contentEl = document.querySelector<HTMLElement>('.camp-main-content, #camp-content');
+  if (contentEl) {
+    import('./AttrPanel');
+    renderRelationPanel(contentEl);
+  }
 }

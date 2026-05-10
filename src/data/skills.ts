@@ -418,6 +418,37 @@ export const SKILLS: Record<SkillId, SkillData> = {
     cost: { exp: 350 }, sect: 'beggar',
     battleTip: '终极爆发·高冷却',
   },
+
+  // ═══════════════════════════════════════════════════════════
+  //  第三章 · 武当真传剑法（筑基期）
+  // ═══════════════════════════════════════════════════════════
+
+  wudang_yunkai: {
+    id: 'wudang_yunkai', name: '武当剑法·云开', icon: '☁️', type: 'attack', target: 'enemy',
+    mp: 18, hit: 1, powerMul: 1.5, defPen: 0.4,
+    cooldown: 1, effect: null, healPct: 0,
+    desc: '剑出如晨曦破雾，专破护体真气。造成150%攻击伤害，高穿透。',
+    cost: { exp: 300 }, sect: 'wudang',
+    battleTip: '破防技·无视部分防御',
+  },
+
+  wudang_songtao: {
+    id: 'wudang_songtao', name: '武当剑法·松涛', icon: '🌲', type: 'attack', target: 'enemy',
+    mp: 25, hit: 3, powerMul: 0.6, defPen: 0.3,
+    cooldown: 2, effect: null, healPct: 0,
+    desc: '剑势连绵如松涛起伏，攻中带守，守中藏攻。三连击，每击60%伤害。',
+    cost: { exp: 500 }, sect: 'wudang',
+    battleTip: '三连击·持续输出',
+  },
+
+  wudang_guiyuan: {
+    id: 'wudang_guiyuan', name: '武当剑法·归元', icon: '✨', type: 'attack', target: 'enemy',
+    mp: 40, hit: 1, powerMul: 2.5, defPen: 0.5,
+    cooldown: 3, effect: null, healPct: 0,
+    desc: '万剑归宗，将所有剑意凝于一剑。造成250%攻击伤害，必定暴击。',
+    cost: { exp: 800 }, sect: 'wudang',
+    battleTip: '蓄力一击·必暴击·高冷却',
+  },
 };
 
 // 保留 ELDERS 导出（向后兼容，虽然 LearnScreen 已移除）

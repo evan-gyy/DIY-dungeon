@@ -66,13 +66,10 @@ window.addEventListener('DOMContentLoaded', () => {
   // ── Camp: manual save ──
   document.getElementById('btn-save')?.addEventListener('click', () => doSaveGame());
 
-  // ── Camp: depart ──
-  document.getElementById('btn-depart')?.addEventListener('click', () => {
-    import('./screens/DepartScreen').then(m => m.showDepartScreen());
+  // ── Camp: map ──
+  document.getElementById('btn-map')?.addEventListener('click', () => {
+    import('./screens/Camp').then(m => m.showMapOverlay());
   });
-
-  // ── Depart: back to camp ──
-  document.getElementById('btn-back-depart')?.addEventListener('click', () => enterCamp());
 
   // ── Audio toggle ──
   document.getElementById('audio-control')?.addEventListener('click', () => {

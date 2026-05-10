@@ -1,9 +1,12 @@
 import { getPlayer, setPlayer } from '../../state/GameState';
 import { saveGame } from '../../state/SaveSystem';
-import { checkLevelUp, getRealmName, getExpForLevel, spendCultivationPoint, ATTR_BOOST_DEFS } from '../../state/LevelSystem';
+import { checkLevelUp, getRealmName, getExpForLevel, spendCultivationPoint, ATTR_BOOST_DEFS, isRealmMaxLevel, canBreakThrough, breakThroughRealm, getMajorRealmId, MAJOR_REALM_NAMES } from '../../state/LevelSystem';
 import { SECTS } from '../../data/sects';
 import { showToast } from '../../ui/toast';
-import type { AttrKey } from '../../data/types';
+import type { AttrKey, EnemyId } from '../../data/types';
+import { canPromote, executePromotion, getRankLabel, getContributionProgress } from '../../systems/PromotionSystem';
+import { initBattle } from '../../systems/BattleEngine';
+import { bus } from '../../ui/events';
 
 export function renderAttrPanel(content: HTMLElement): void {
   const p = getPlayer();
@@ -11,10 +14,16 @@ export function renderAttrPanel(content: HTMLElement): void {
   const lv = p.level;
   const exp = p.exp;
   const expNeeded = getExpForLevel(lv);
-  const expPct = Math.min(100, Math.floor(exp / expNeeded * 100));
+  const atRealmMax = isRealmMaxLevel(lv);
+  const expPct = atRealmMax ? 100 : Math.min(100, Math.floor(exp / expNeeded * 100));
   const realmName = getRealmName(lv);
   const cultPt = p.cultivationPoints;
   const ab = p.attrBoosts;
+
+  // 🆕 检查是否可以突破大境界
+  const breakCheck = canBreakThrough(p);
+  const canBreak = breakCheck.success;
+  const breakBlocked = atRealmMax && !canBreak && lv > 0;
 
   const boostBtns = (['hp', 'atk', 'def', 'agi', 'mp'] as AttrKey[]).map(attr => {
     const def = ATTR_BOOST_DEFS[attr];
@@ -30,16 +39,60 @@ export function renderAttrPanel(content: HTMLElement): void {
     { icon: '⚡', name: '速度',      base: p.agi,   boost: ab.agi },
   ];
 
+  const contrib = p.sectContribution ?? 0;
+  const rankLabel = getRankLabel(p.discipleRank);
+  const promoCheck = canPromote(p);
+  const contribProgress = getContributionProgress(p);
+  const contribNeeded = promoCheck.requirement?.minContribution ?? 0;
+
+  // 晋升面板 HTML
+  let promoHtml = '';
+  if (promoCheck.nextRank) {
+    const nextLabel = getRankLabel(promoCheck.nextRank);
+    const progPct = Math.floor(contribProgress * 100);
+    const progBarColor = contribProgress >= 1 ? '#27ae60' : '#f39c12';
+
+    promoHtml = `
+    <div style="margin-bottom:20px;padding:12px 16px;background:rgba(243,156,18,0.06);border:1px solid rgba(243,156,18,0.25);border-radius:6px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <span style="font-size:12px;color:#f0b27a;letter-spacing:2px;">🏅 宗门晋升</span>
+        <span style="font-size:12px;color:var(--text-dim);">${rankLabel} → <span style="color:#f0b27a;">${nextLabel}</span></span>
+      </div>
+      <div style="font-size:11px;color:var(--text-dim);margin-bottom:6px;">
+        贡献进度：<span style="color:${contribProgress >= 1 ? '#27ae60' : '#f39c12'};">${contrib} / ${contribNeeded}</span>
+      </div>
+      <div style="height:6px;background:#1a1a2e;border-radius:3px;overflow:hidden;margin-bottom:8px;">
+        <div style="height:100%;width:${progPct}%;background:${progBarColor};border-radius:3px;transition:width 0.3s;"></div>
+      </div>
+      ${promoCheck.trial ? `
+      <div style="font-size:11px;color:${promoCheck.trialCompleted ? '#27ae60' : '#e67e22'};margin-bottom:8px;letter-spacing:1px;">
+        ${promoCheck.trialCompleted ? '✅' : '⚔️'} 晋升试炼：${promoCheck.trial.title}
+        ${!promoCheck.trialCompleted ? '<span style="color:var(--text-dim);">（未完成）</span>' : '<span style="color:#27ae60;">（已完成）</span>'}
+        ${promoCheck.trial.description ? `<div style="color:var(--text-dim);font-size:10px;margin-top:3px;">${promoCheck.trial.description}</div>` : ''}
+      </div>` : ''}
+      ${promoCheck.canPromote ? `
+      <button class="btn" id="btn-execute-promotion" style="width:100%;background:linear-gradient(135deg,#27ae60,#2ecc71);color:#fff;padding:8px 16px;font-size:13px;letter-spacing:2px;border:none;border-radius:6px;cursor:pointer;box-shadow:0 0 15px rgba(39,174,96,0.3);">
+        🎖️ 申 请 晋 升
+      </button>` : (promoCheck.contributionMet && !promoCheck.trialCompleted ? `
+      <button class="btn" id="btn-start-trial" style="width:100%;background:linear-gradient(135deg,#e67e22,#d35400);color:#fff;padding:8px 16px;font-size:13px;letter-spacing:2px;border:none;border-radius:6px;cursor:pointer;box-shadow:0 0 15px rgba(230,126,34,0.3);">
+        ⚔️ 开 始 试 炼
+      </button>` : `
+      <div style="font-size:11px;color:#e74c3c;text-align:center;letter-spacing:1px;">⚠ ${promoCheck.reason}</div>`)}
+    </div>`;
+  }
+
   content.innerHTML = `
     <div class="title-deco"><h2>角色属性</h2></div>
     <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;">
       <span style="font-size:36px;">${sect.icon}</span>
       <div>
         <div style="font-size:18px;color:var(--text-gold);letter-spacing:3px;">${p.name}</div>
-        <div style="font-size:12px;color:var(--text-dim);letter-spacing:2px;margin-top:4px;">${sect.name} · ${realmName}</div>
+        <div style="font-size:12px;color:var(--text-dim);letter-spacing:2px;margin-top:4px;">${sect.name} · ${rankLabel} · ${realmName}</div>
         <div style="font-size:12px;color:var(--text-dim);margin-top:4px;line-height:1.6;">${sect.intro}</div>
+        <div style="font-size:12px;color:#f0b27a;letter-spacing:1px;margin-top:6px;">🏅 宗门贡献：<strong>${contrib}</strong></div>
       </div>
     </div>
+    ${promoHtml}
     ${cultPt > 0 ? `
     <div style="margin-bottom:10px;padding:10px 14px;background:rgba(155,89,182,0.12);border:1px solid rgba(155,89,182,0.4);border-radius:6px;font-size:12px;color:#c39bd3;letter-spacing:1px;line-height:1.8;">
       🎁 修为突破！可用修为点：<strong>${cultPt}</strong>，请在下方进行属性突破！
@@ -55,11 +108,18 @@ export function renderAttrPanel(content: HTMLElement): void {
     <div style="margin-bottom:20px;padding:12px 16px;background:rgba(255,255,255,0.03);border:1px solid var(--border-dim);border-radius:6px;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
         <span style="font-size:12px;color:var(--text-dim);letter-spacing:2px;">📖 修为进度</span>
-        <span style="font-size:12px;color:var(--text-gold);">${exp} / ${expNeeded}</span>
+        <span style="font-size:12px;color:${atRealmMax ? '#e74c3c' : 'var(--text-gold)'};">${atRealmMax ? '已满（需突破契机）' : `${exp} / ${expNeeded}`}</span>
       </div>
       <div style="height:8px;background:#1a1a2e;border-radius:4px;overflow:hidden;">
-        <div style="height:100%;width:${expPct}%;background:linear-gradient(90deg,#5dade2,#9b59b6);border-radius:4px;transition:width 0.3s;"></div>
+        <div style="height:100%;width:${expPct}%;background:${atRealmMax ? 'linear-gradient(90deg,#e74c3c,#c0392b)' : 'linear-gradient(90deg,#5dade2,#9b59b6)'};border-radius:4px;transition:width 0.3s;"></div>
       </div>
+      ${breakBlocked ? `<div style="font-size:11px;color:#e74c3c;margin-top:6px;letter-spacing:1px;">⚠ ${breakCheck.reason}</div>` : ''}
+      ${canBreak ? `
+      <div style="margin-top:10px;text-align:center;">
+        <button class="btn" id="btn-break-through" style="background:linear-gradient(135deg,#e74c3c,#c0392b);color:#fff;padding:8px 24px;font-size:14px;letter-spacing:3px;border:none;border-radius:6px;cursor:pointer;box-shadow:0 0 20px rgba(231,76,60,0.4);">
+          ⚡ 突 破 境 界
+        </button>
+      </div>` : ''}
     </div>
     ${cultPt > 0 ? `
     <div style="margin-bottom:20px;padding:12px 16px;background:rgba(155,89,182,0.08);border:1px solid rgba(155,89,182,0.3);border-radius:6px;">
@@ -80,6 +140,97 @@ export function renderAttrPanel(content: HTMLElement): void {
       <div class="attr-card"><span class="attr-icon">💰</span><div class="attr-info"><div class="attr-name">金两</div><div class="attr-value">${p.gold}</div></div></div>
     </div>
   `;
+
+  // 🆕 绑定突破按钮
+  const breakBtn = content.querySelector('#btn-break-through');
+  if (breakBtn) {
+    breakBtn.addEventListener('click', () => {
+      const result = breakThroughRealm(getPlayer());
+      if (!result.success) {
+        showToast(result.reason || '突破失败。');
+        return;
+      }
+      setPlayer(result.updatedPlayer!);
+      saveGame(getPlayer());
+      const newRealm = getRealmName(result.newLevel!);
+      showToast(`⚡ 突破成功！晋升至 ${newRealm}！`);
+      renderAttrPanel(content);
+    });
+  }
+
+  // 🆕 绑定晋升试炼按钮
+  const trialBtn = content.querySelector('#btn-start-trial');
+  if (trialBtn) {
+    trialBtn.addEventListener('click', () => {
+      const player = getPlayer();
+      const check = canPromote(player);
+      if (!check.trial || !check.nextRank) {
+        showToast('无法开始试炼。');
+        return;
+      }
+
+      // 设置一次性试炼胜利监听
+      const onBattleEnd = (data: { result: string }) => {
+        bus.off('battle:end', onBattleEnd);
+        if (data.result !== 'win') {
+          showToast('试炼失败，再接再厉！');
+          renderAttrPanel(content);
+          return;
+        }
+
+        // 胜利 → 标记试炼完成
+        if (check.trial) {
+          const currentPlayer = getPlayer();
+          const trialId = check.requirement?.trialId ?? check.trial.id;
+          const updated: typeof currentPlayer = {
+            ...currentPlayer,
+            completedTrials: [...(currentPlayer.completedTrials || []), trialId],
+            contributionLog: [
+              ...(currentPlayer.contributionLog || []),
+              {
+                amount: check.trial.rewardContribution,
+                source: 'promotion_trial',
+                reason: `完成晋升试炼「${check.trial.title}」`,
+                timestamp: Date.now(),
+              },
+            ],
+            sectContribution: (currentPlayer.sectContribution || 0) + check.trial.rewardContribution,
+            exp: (currentPlayer.exp || 0) + check.trial.rewardExp,
+          };
+          setPlayer(updated);
+          saveGame(updated);
+          showToast(`试炼通过！获得贡献 +${check.trial.rewardContribution}，经验 +${check.trial.rewardExp}`);
+        }
+        renderAttrPanel(content);
+      };
+
+      bus.on('battle:end', onBattleEnd);
+
+      // 启动战斗
+      const enemyId = (check.trial.enemyId ?? 'shadow_scout') as EnemyId;
+      initBattle(enemyId);
+      showToast(`⚔️ 试炼开始：「${check.trial.title}」`);
+    });
+  }
+
+  // 🆕 绑定直接晋升按钮（试炼已完成的情况）
+  const promoBtn = content.querySelector('#btn-execute-promotion');
+  if (promoBtn) {
+    promoBtn.addEventListener('click', () => {
+      const player = getPlayer();
+      const result = executePromotion(player);
+      if (!result.success) {
+        showToast(result.reason || '晋升失败。');
+        return;
+      }
+      setPlayer(result.updatedPlayer!);
+      saveGame(getPlayer());
+      checkLevelUp(getPlayer());
+      const newLabel = getRankLabel(result.newRank!);
+      showToast(`🎖️ 晋升成功！你已是${newLabel}！`);
+      renderAttrPanel(content);
+    });
+  }
 
   // bind spend buttons
   content.querySelectorAll<HTMLButtonElement>('[data-spend-attr]').forEach(btn => {

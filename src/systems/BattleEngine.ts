@@ -252,11 +252,18 @@ function _advanceTurn(): void {
     return;
   }
 
-  _ctx.state = nextUnit.side === 'ally' ? 'player_turn' : 'enemy_turn';
-  _notifyUpdate();
-
   if (nextUnit.side === 'enemy') {
+    _ctx.state = 'enemy_turn';
+    _notifyUpdate();
     setTimeout(() => _enemyTurn(nextUnit as BattleEnemyUnit), 500);
+  } else if (!nextUnit.isPlayer) {
+    // 非玩家控制的友方单位（如 NPC 队友）：执行队友 AI
+    _ctx.state = 'player_turn';
+    _notifyUpdate();
+    setTimeout(() => _allyTurn(nextUnit), 500);
+  } else {
+    _ctx.state = 'player_turn';
+    _notifyUpdate();
   }
 }
 
@@ -350,9 +357,77 @@ function _enemyTurn(enemy: BattleEnemyUnit): void {
   setTimeout(() => _advanceTurn(), 500);
 }
 
-// ============================================================
-//  Public API
-// ============================================================
+// ── 友方非玩家单位回合（队友 AI）──
+function _allyTurn(ally: BattleUnit): void {
+  if (!_ctx) return;
+
+  const enemies = getAliveEnemies();
+  if (!enemies.length) { _advanceTurn(); return; }
+
+  // 目标：HP 比例最低的敌人
+  const target = enemies.reduce((a, b) => (a.hp / a.maxHp < b.hp / b.maxHp ? a : b));
+
+  // 可用技能：非被动、非辅助、MP 足够、无冷却
+  const availableSkills = ally.skills.filter(sid => {
+    const sk = SKILLS[sid];
+    if (!sk || sk.type === 'passive' || sk.type === 'support') return false;
+    if (ally.mp < sk.mp) return false;
+    if ((_ctx!.skillCooldowns[sid] ?? 0) > 0) return false;
+    return true;
+  });
+
+  const atkBuff = getStatusValue(_getUnitStatuses(ally), 'buff_atk');
+  const realAtk = ally.atk + atkBuff;
+  const targetStatuses = _getUnitStatuses(target);
+  const defDebuff = getStatusValue(targetStatuses, 'weaken_def');
+  const realTargetDef = Math.max(0, target.def - defDebuff);
+
+  if (availableSkills.length > 0) {
+    const skillId = availableSkills[Math.floor(Math.random() * availableSkills.length)]!;
+    const sk = SKILLS[skillId]!;
+    ally.mp -= sk.mp;
+    if (sk.cooldown > 0) _ctx.skillCooldowns[skillId] = sk.cooldown;
+
+    for (let h = 0; h < (sk.hit || 1); h++) {
+      if (sk.hit === 0) break;
+      const { damage, crit } = calcDamage(realAtk, realTargetDef, sk.powerMul, sk.defPen, ally.crit);
+      target.hp = Math.max(0, target.hp - damage);
+      _log(
+        `${sk.icon} ${ally.name} 使用「${sk.name}」${sk.hit > 1 ? ` 第${h + 1}击` : ''}：` +
+        `对 ${target.name} 造成 <span class="log-dmg">${damage}</span> 点伤害` +
+        `${crit ? ' <span class="log-crit">暴击！</span>' : ''}`,
+      );
+    }
+
+    if (sk.effect && target.alive) {
+      if (Math.random() < effectProcRate(sk.effect.type)) {
+        applyStatus(targetStatuses, sk.effect);
+        _setUnitStatuses(target, targetStatuses);
+      }
+    }
+  } else {
+    // MP 不足时普通攻击
+    const { damage, crit } = calcDamage(realAtk, realTargetDef, 1.0, 0.7, ally.crit);
+    target.hp = Math.max(0, target.hp - damage);
+    _log(
+      `👊 ${ally.name} 普通攻击：对 ${target.name} 造成 <span class="log-dmg">${damage}</span> 点伤害` +
+      `${crit ? ' <span class="log-crit">暴击！</span>' : ''}`,
+    );
+  }
+
+  if (target.hp <= 0) {
+    target.alive = false;
+    _log(`💀 ${target.name} 倒下！`);
+  }
+
+  _notifyUpdate();
+
+  if (_ctx.enemies.every(e => !e.alive)) {
+    setTimeout(() => _endBattle('win'), 600);
+    return;
+  }
+  setTimeout(() => _advanceTurn(), 600);
+}
 
 /** 初始化1v1战斗 */
 export function initBattle(enemyId?: EnemyId): void {

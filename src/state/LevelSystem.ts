@@ -1,7 +1,9 @@
 import type { PlayerState, AttrKey } from '../data/types';
+import { calculateFinalStats } from '../data/realmConfig';
 
 // 境界名称（10层制：每个大境界分为1~10小层）
-// level 0=凡人, 1~10=炼气一层~十层, 11~20=筑基一层~十层, ...
+// level 0=凡人, 1~10=炼气一层~十层, 11~20=筑基, 21~30=结丹, 31~40=元婴
+// 41~50=化神, 51~60=渡劫, 61~70=大乘, 71~80=飞升
 export const REALM_NAMES: readonly string[] = [
   '凡人',
   '炼气一层','炼气二层','炼气三层','炼气四层','炼气五层',
@@ -22,8 +24,40 @@ export const REALM_NAMES: readonly string[] = [
   '飞升六层','飞升七层','飞升八层','飞升九层','飞升十层',
 ];
 
+/** 大境界 ID 列表（按顺序） */
+export const MAJOR_REALMS = ['lianqi', 'zhuji', 'jiedan', 'yuanying', 'huashen', 'dujie', 'dacheng', 'feisheng'] as const;
+export type MajorRealmId = typeof MAJOR_REALMS[number];
+
+/** 大境界名称 */
+export const MAJOR_REALM_NAMES: Record<string, string> = {
+  lianqi: '炼气', zhuji: '筑基', jiedan: '结丹',
+  yuanying: '元婴', huashen: '化神', dujie: '渡劫',
+  dacheng: '大乘', feisheng: '飞升',
+};
+
+/** 大境界 → 突破后起始 level */
+export const REALM_START_LEVEL: Record<string, number> = {
+  lianqi: 1, zhuji: 11, jiedan: 21, yuanying: 31, huashen: 41, dujie: 51,
+  dacheng: 61, feisheng: 71,
+};
+
+/** 根据 level 获取大境界 ID */
+export function getMajorRealmId(lv: number): string | null {
+  if (lv >= 1 && lv <= 10) return 'lianqi';
+  if (lv >= 11 && lv <= 20) return 'zhuji';
+  if (lv >= 21 && lv <= 30) return 'jiedan';
+  if (lv >= 31 && lv <= 40) return 'yuanying';
+  if (lv >= 41 && lv <= 50) return 'huashen';
+  if (lv >= 51 && lv <= 60) return 'dujie';
+  if (lv >= 61 && lv <= 70) return 'dacheng';
+  if (lv >= 71 && lv <= 80) return 'feisheng';
+  return null;
+}
+
 export function getExpForLevel(lv: number): number {
-  return Math.floor(50 * Math.pow(lv, 1.5));
+  // 统一公式 42 × lv^1.1，配合提升后的日常任务奖励
+  // 确保演武切磋（+55）升任意一级最多约 20 次点击
+  return Math.floor(42 * Math.pow(lv, 1.1));
 }
 
 export function getRealmName(lv: number): string {
@@ -38,6 +72,14 @@ export interface LevelUpResult {
   updatedPlayer: PlayerState;
 }
 
+/**
+ * 判断当前等级是否为大境界的第十层（满层）
+ * 炼气10层=10, 筑基10层=20, 结丹10层=30, 元婴10层=40, 化神10层=50, 渡劫10层=60, 大乘10层=70, 飞升10层=80
+ */
+export function isRealmMaxLevel(lv: number): boolean {
+  return lv > 0 && lv % 10 === 0;
+}
+
 export function checkLevelUp(player: PlayerState): LevelUpResult {
   let lv = player.level || 0;
   let exp = player.exp || 0;
@@ -45,21 +87,38 @@ export function checkLevelUp(player: PlayerState): LevelUpResult {
   const oldLv = lv;
 
   while (exp >= getExpForLevel(lv)) {
+    // 大境界第十层满后，经验条不再增加，也不会晋级
+    // 需要完成对应试炼/剧情才能突破大境界
+    if (isRealmMaxLevel(lv)) {
+      exp = getExpForLevel(lv); // 经验条卡满，不再增长
+      break;
+    }
     exp -= getExpForLevel(lv);
     lv++;
     gainedPoints++;
   }
 
-  const updatedPlayer: PlayerState = gainedPoints > 0
-    ? {
-        ...player,
-        level: lv,
-        exp,
-        cultivationPoints: (player.cultivationPoints || 0) + gainedPoints,
-      }
-    : player;
+  if (gainedPoints > 0) {
+    // 升级后重算基础属性：该等级普通人属性 × 主角天赋（dragon_vein）
+    const newStats = calculateFinalStats(lv, [player.playerTalent]);
+    const updatedPlayer: PlayerState = {
+      ...player,
+      level: lv,
+      exp,
+      cultivationPoints: (player.cultivationPoints || 0) + gainedPoints,
+      maxHp: newStats.hp + (player.attrBoosts?.hp || 0),
+      hp: Math.min(player.hp, newStats.hp + (player.attrBoosts?.hp || 0)),
+      maxMp: newStats.mp + (player.attrBoosts?.mp || 0),
+      mp: Math.min(player.mp, newStats.mp + (player.attrBoosts?.mp || 0)),
+      atk: newStats.atk + (player.attrBoosts?.atk || 0),
+      def: newStats.def + (player.attrBoosts?.def || 0),
+      agi: newStats.agi + (player.attrBoosts?.agi || 0),
+      crit: newStats.crit,
+    };
+    return { leveled: true, oldLevel: oldLv, newLevel: lv, gainedPoints, updatedPlayer };
+  }
 
-  return { leveled: gainedPoints > 0, oldLevel: oldLv, newLevel: lv, gainedPoints, updatedPlayer };
+  return { leveled: false, oldLevel: oldLv, newLevel: lv, gainedPoints: 0, updatedPlayer: player };
 }
 
 export const ATTR_BOOST_DEFS: Record<AttrKey, { amount: number; label: string; field: keyof PlayerState }> = {
@@ -87,4 +146,94 @@ export function spendCultivationPoint(player: PlayerState, attr: AttrKey): Playe
   if (attr === 'mp') updated.mp = Math.min(updated.mp, updated.maxMp);
 
   return updated;
+}
+
+// ──── 🆕 突破大境界系统 ────
+
+/** 突破结果 */
+export interface BreakThroughResult {
+  success: boolean;
+  reason?: string;
+  newLevel?: number;
+  updatedPlayer?: PlayerState;
+}
+
+/**
+ * 检查玩家是否可以突破当前大境界
+ * 条件：
+ * 1. 当前等级是大境界第十层（满层）
+ * 2. 经验条已满
+ * 3. 该大境界的突破已被剧情解锁（realmBreakUnlocked 中包含）
+ */
+export function canBreakThrough(player: PlayerState): BreakThroughResult {
+  const lv = player.level || 0;
+  
+  // 必须是满层
+  if (!isRealmMaxLevel(lv)) {
+    return { success: false, reason: '尚未达到当前境界巅峰。' };
+  }
+  
+  // 经验条必须满
+  if ((player.exp || 0) < getExpForLevel(lv)) {
+    return { success: false, reason: '修为积累不足，尚无法突破。' };
+  }
+  
+  // 凡人→炼气：不需要解锁（入武当自动突破）
+  if (lv === 0) {
+    return { success: true, newLevel: 1 };
+  }
+  
+  // 获取下一境界 ID
+  const currentRealm = getMajorRealmId(lv);
+  if (!currentRealm) {
+    return { success: false, reason: '已达修为之巅。' };
+  }
+  
+  const currentIdx = MAJOR_REALMS.indexOf(currentRealm as MajorRealmId);
+  const nextRealm = MAJOR_REALMS[currentIdx + 1];
+  if (!nextRealm) {
+    return { success: false, reason: '已达修为之巅。' };
+  }
+  
+  // 检查是否已解锁
+  const unlocked = player.realmBreakUnlocked || [];
+  if (!unlocked.includes(nextRealm)) {
+    const realmName = MAJOR_REALM_NAMES[nextRealm] || nextRealm;
+    return { success: false, reason: `突破${realmName}的契机尚未到来，需完成对应剧情。` };
+  }
+  
+  const newLevel = REALM_START_LEVEL[nextRealm];
+  if (!newLevel) {
+    return { success: false, reason: '突破失败，境界数据异常。' };
+  }
+  
+  return { success: true, newLevel };
+}
+
+/**
+ * 执行突破大境界
+ * 消耗满经验条，提升到下一境界第一层，重算属性
+ */
+export function breakThroughRealm(player: PlayerState): BreakThroughResult {
+  const check = canBreakThrough(player);
+  if (!check.success || !check.newLevel) return check;
+  
+  const newLevel = check.newLevel;
+  const newStats = calculateFinalStats(newLevel, [player.playerTalent]);
+  
+  const updated: PlayerState = {
+    ...player,
+    level: newLevel,
+    exp: 0,
+    maxHp: newStats.hp + (player.attrBoosts?.hp || 0),
+    hp: newStats.hp + (player.attrBoosts?.hp || 0),
+    maxMp: newStats.mp + (player.attrBoosts?.mp || 0),
+    mp: newStats.mp + (player.attrBoosts?.mp || 0),
+    atk: newStats.atk + (player.attrBoosts?.atk || 0),
+    def: newStats.def + (player.attrBoosts?.def || 0),
+    agi: newStats.agi + (player.attrBoosts?.agi || 0),
+    crit: newStats.crit,
+  };
+  
+  return { success: true, newLevel, updatedPlayer: updated };
 }

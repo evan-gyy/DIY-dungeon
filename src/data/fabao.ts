@@ -6,10 +6,10 @@
  *   armor     — 衣服（主防御+气血加成）
  *   accessory — 饰品（特殊增益效果）
  *
- * 六大境界颜色：
- *   炼气·白色 → 筑基·绿色 → 结丹·蓝色 → 元婴·紫色 → 化神·金色 → 渡劫·红色
+ * 八大境界颜色：
+ *   炼气·白色 → 筑基·绿色 → 结丹·蓝色 → 元婴·紫色 → 化神·金色 → 渡劫·红色 → 大乘·暗金 → 飞升·霞光
  *
- * 每个境界各 3 类 × 3 件 = 9 件，共 54 件法宝。
+ * 每个境界各 3 类 × 3 件 = 9 件，共 72 件法宝。
  * 当前为草拟版本，后续可根据剧情需要调整获取方式和数值。
  */
 
@@ -403,6 +403,122 @@ const DUJIE_ACCESSORIES: Record<string, FabaoData> = {
 };
 
 // ═══════════════════════════════════════════════════════════════
+//  大乘期 · 暗金 🟤
+// ═══════════════════════════════════════════════════════════════
+
+const DACHENG_WEAPONS: Record<string, FabaoData> = {
+  saint_blade: fabao(
+    'saint_blade', '圣道剑', '⚔️', 'weapon', 'dacheng',
+    '以圣人道韵淬炼的神剑，剑身流淌着暗金色的法则纹路，一剑出而天地变色。',
+    { atkBonus: 110, obtain: '大乘突破后天地赐予' },
+  ),
+  mahayana_staff: fabao(
+    'mahayana_staff', '大乘杖', '🦯', 'weapon', 'dacheng',
+    '以大乘佛法加持的禅杖，杖身刻满梵文真言，蕴含渡化众生之力。',
+    { atkBonus: 100, obtain: '大乘试炼奖励' },
+  ),
+  nirvana_bow: fabao(
+    'nirvana_bow', '涅槃弓', '🏹', 'weapon', 'dacheng',
+    '以涅槃之火煅烧而成的神弓，弓弦为凤凰涅槃时脱落的尾羽所制。',
+    { atkBonus: 120, obtain: '城池灵宝阁购买（12000铜钱）' },
+  ),
+};
+
+const DACHENG_ARMORS: Record<string, FabaoData> = {
+  saint_robe: fabao(
+    'saint_robe', '圣道袍', '👘', 'armor', 'dacheng',
+    '以圣人道蕴织就的道袍，暗金丝线绣着天地法则，万法不侵。',
+    { defBonus: 100, hpBonus: 400, obtain: '大乘突破后天地赐予' },
+  ),
+  mahayana_mail: fabao(
+    'mahayana_mail', '大乘甲', '🛡️', 'armor', 'dacheng',
+    '以大乘佛光加持的战甲，金光内敛，可渡一切苦厄。',
+    { defBonus: 115, hpBonus: 250, obtain: '后期剧情奖励' },
+  ),
+  nirvana_vest: fabao(
+    'nirvana_vest', '涅槃背心', '🥋', 'armor', 'dacheng',
+    '以涅槃余烬织成的背心，穿戴者在绝境中可激发涅槃之力。',
+    { defBonus: 108, hpBonus: 330, obtain: '后山修炼小概率获得' },
+  ),
+};
+
+const DACHENG_ACCESSORIES: Record<string, FabaoData> = {
+  saint_ring: fabao(
+    'saint_ring', '圣道戒', '💍', 'accessory', 'dacheng',
+    '蕴含圣人一丝道韵的戒指，佩戴者与大道共鸣，内力用之不尽。',
+    { specialEffect: { type: 'mp_regen', value: 70, desc: '每回合额外恢复70点内力' }, obtain: '大乘修士抄写道经获得' },
+  ),
+  mahayana_pendant: fabao(
+    'mahayana_pendant', '大乘佩', '🔒', 'accessory', 'dacheng',
+    '以大乘佛法加持的玉佩，佩戴者心神如磐石，气血自生不息。',
+    { specialEffect: { type: 'hp_regen', value: 45, desc: '每回合恢复45点气血' }, obtain: '后期剧情奖励' },
+  ),
+  nirvana_talisman: fabao(
+    'nirvana_talisman', '涅槃符', '📿', 'accessory', 'dacheng',
+    '以涅槃之力书写的终极符箓，可在生死关头逆转乾坤。',
+    { specialEffect: { type: 'revive_once', value: 50, desc: '首次阵亡时以50%气血复活（每场战斗一次）' }, obtain: '陈静虚传授涅槃符法后获得' },
+  ),
+};
+
+// ═══════════════════════════════════════════════════════════════
+//  飞升期 · 霞光 🌈
+// ═══════════════════════════════════════════════════════════════
+
+const FEISHENG_WEAPONS: Record<string, FabaoData> = {
+  ascension_blade: fabao(
+    'ascension_blade', '飞升刃', '⚔️', 'weapon', 'feisheng',
+    '飞升之时天地赐予的神兵，刀身流转七彩虹光，蕴藏破碎虚空之力。',
+    { atkBonus: 150, obtain: '飞升成功后天地赐予' },
+  ),
+  immortal_sword: fabao(
+    'immortal_sword', '仙剑', '⚔️', 'weapon', 'feisheng',
+    '仙界流传下来的仙器，剑身透明如冰，出鞘时霞光万道。',
+    { atkBonus: 140, obtain: '飞升试炼奖励' },
+  ),
+  heaven_breaker: fabao(
+    'heaven_breaker', '破天弓', '🏹', 'weapon', 'feisheng',
+    '传说能一箭射穿天幕的终极神弓，弓弦为九天星辰之丝。',
+    { atkBonus: 165, obtain: '城池灵宝阁购买（30000铜钱）' },
+  ),
+};
+
+const FEISHENG_ARMORS: Record<string, FabaoData> = {
+  ascension_robe: fabao(
+    'ascension_robe', '飞升道袍', '👘', 'armor', 'feisheng',
+    '飞升之时天地织就的道袍，霞光流转，与天地同寿。',
+    { defBonus: 140, hpBonus: 600, obtain: '飞升成功后天地赐予' },
+  ),
+  immortal_armor: fabao(
+    'immortal_armor', '仙甲', '🛡️', 'armor', 'feisheng',
+    '以天界神铁锻造的仙甲，铭刻仙道法则，凡兵触之即碎。',
+    { defBonus: 160, hpBonus: 380, obtain: '终极剧情奖励' },
+  ),
+  immortal_vest: fabao(
+    'immortal_vest', '仙灵背心', '🥋', 'armor', 'feisheng',
+    '以仙灵之丝织成的背心，轻若无物，却能抵挡天劫余威。',
+    { defBonus: 150, hpBonus: 500, obtain: '后山修炼小概率获得' },
+  ),
+};
+
+const FEISHENG_ACCESSORIES: Record<string, FabaoData> = {
+  ascension_ring: fabao(
+    'ascension_ring', '飞升戒', '💍', 'accessory', 'feisheng',
+    '飞升之时天地凝聚的戒指，蕴含天道本源，内力取之不尽。',
+    { specialEffect: { type: 'mp_regen', value: 100, desc: '每回合额外恢复100点内力' }, obtain: '飞升成功后自行炼化' },
+  ),
+  immortal_jade: fabao(
+    'immortal_jade', '仙佩', '🔒', 'accessory', 'feisheng',
+    '仙界至宝，佩戴者可感天地气运，气血如江海不竭。',
+    { specialEffect: { type: 'hp_regen', value: 60, desc: '每回合恢复60点气血' }, obtain: '终极剧情奖励' },
+  ),
+  ascension_talisman: fabao(
+    'ascension_talisman', '飞升符', '📿', 'accessory', 'feisheng',
+    '以飞升之劫余威书写的终极符箓，蕴含破碎虚空的大道之力。',
+    { specialEffect: { type: 'double_attack', value: 25, desc: '25%概率触发连击（额外攻击一次）' }, obtain: '陈静虚传授飞升符法后获得' },
+  ),
+};
+
+// ═══════════════════════════════════════════════════════════════
 //  汇总导出
 // ═══════════════════════════════════════════════════════════════
 
@@ -425,6 +541,12 @@ export const FABAO = {
   ...DUJIE_WEAPONS,
   ...DUJIE_ARMORS,
   ...DUJIE_ACCESSORIES,
+  ...DACHENG_WEAPONS,
+  ...DACHENG_ARMORS,
+  ...DACHENG_ACCESSORIES,
+  ...FEISHENG_WEAPONS,
+  ...FEISHENG_ARMORS,
+  ...FEISHENG_ACCESSORIES,
 } as Record<FabaoId, FabaoData>;
 
 /** 按境界获取所有法宝 */
