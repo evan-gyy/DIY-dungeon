@@ -1,7 +1,7 @@
 # DIY-Dungeon 项目架构文档
 
 > 本文档面向开发者和 AI Agent，描述当前项目的完整架构、各模块职责，以及接下来的开发方向。
-> 最后更新：2026-05-09（沙盒模块全面接入 + 0509 新规划：宗门技能/地图扩展/NPC天赋天骄）
+> 最后更新：2026-05-10（宗门习武 UI + 任务战斗联动 + 地图35节点 + 单敌自动选中 + 地图不自动关闭）
 
 ---
 
@@ -41,7 +41,8 @@ DIY-dungeon/
 │   │   ├── items.ts               ITEMS + DEFAULT_INVENTORY
 │   │   ├── fabao.ts               法宝系统：FABAO: Record<FabaoId, FabaoData>（6境×3类×3件=54件）
 │   │   ├── realmConfig.ts         境界基础数值配置（基准值 + 大境界飞跃公式 + 主角天赋融入）
-│   │   ├── worldMap.ts            世界地图节点配置（14 个地点 + LocationAction 日常行动 + 特殊行动）
+│   │   ├── worldMap.ts            世界地图节点配置（~35 个地点 + LocationAction 日常行动 + sect_learn_skill 行动）
+│   │   ├── sectSkillTables.ts     🆕 各宗门技能表（WUDANG/SHAOLIN/RIYUE_SKILL_TABLE + SECT_SKILL_TABLES + getSkillRealm()）
 │   │   ├── sects.ts               SECTS: Record<SectId, SectData>（含 alignment + culture 标签）
 │   │   ├── story.ts               WUDANG_TIERS（关卡配置，遗留文件）
 │   │   └── chapters/
@@ -86,13 +87,14 @@ DIY-dungeon/
 │   │   │   ├── AttrPanel.ts       属性面板（修为突破按钮 + 宗门身份 + 贡献值 + 晋升进度/试炼按钮）
 │   │   │   ├── BagPanel.ts        背包面板（24 格，使用道具）
 │   │   │   ├── SkillPanel.ts      技能装配面板
-│   │   │   ├── StoryPanel.ts      营地剧情面板（日常任务按地点动态读取 + 主线触发 + 沙盒 tick 调用）
+│   │   │   ├── StoryPanel.ts      营地剧情面板（日常任务按地点动态读取 + 宗门习武入口 + 任务战斗按钮 + 沙盒 tick 调用）
 │   │   │   ├── FabaoPanel.ts      法宝装备面板（三槽装备/卸下）
 │   │   │   ├── RelationPanel.ts   人物关系面板（可折叠分类 + 好感度 + NPC 状态弹窗）
 │   │   │   ├── MissionPanel.ts    任务面板（接取/追踪/完成/放弃，左侧常驻）
 │   │   │   ├── WorldPanel.ts      江湖态势面板（势力排行/详情卡片/个人日志/宗门加入/世界推演）
 │   │   │   ├── CourtPanel.ts      朝廷面板（品阶/政务/影响力/文武双线）
-│   │   │   └── FabaoShopUI.ts     法器商店 UI 覆盖层（宗门/城市商店）
+│   │   │   ├── FabaoShopUI.ts     法器商店 UI 覆盖层（宗门/城市商店）
+│   │   │   └── SkillLearnOverlay.ts  🆕 宗门习武弹窗（按6境界分层显示本派技能，消耗贡献值学习）
 │   │   ├── DialogScreen.ts        NPC 对话树
 │   │   ├── BattleScreen.ts        战斗 UI（4v4 团队战：多单位卡片 + 目标选择 + 技能栏 + 结算）
 │   │   ├── StoryScreen.ts         VN 引擎（打字机 / 对话 / CG / 选择枝 / 战斗节点）
@@ -200,7 +202,10 @@ export interface PlayerState {
 
 ```typescript
 // 任务系统
-export interface MissionDef { id: string; name: string; ... }
+export interface MissionDef {
+  id: string; name: string; ...
+  enemyId?: string;  // 🆕 combat 类任务的战斗敌人 ID（对应 EnemyId）
+}
 export interface ActiveMission extends MissionDef { status: MissionStatus; progress: number; ... }
 
 // 晋升系统
@@ -515,7 +520,9 @@ export function predictNextAction(enemy: BattleEnemyUnit): { icon: string; name:
 
 适配多单位架构，AI 选择目标时遍历存活友方单位。
 
-#### `NpcBehavior.ts` — NPC 动态行为引擎（🆕 0430 重构）
+#### `NpcBehavior.ts` — NPC 动态行为引擎（🆕 0430 重构，0510 更新）
+
+技能表已从此文件提取到 `src/data/sectSkillTables.ts`，本文件改为 `import { SECT_SKILL_TABLES } from '../data/sectSkillTables'` 引用。
 
 NPC 每回合（存档/休息/地点移动时）执行以下行为判定：
 
@@ -576,32 +583,125 @@ export function validateRealmLeap(): { from: string; to: string; hpRatio: number
 
 **小层级增长**：每层 +10%（线性），大境界跨越时自动体现 100%~150% 断层增幅。
 
-#### `worldMap.ts` — 世界地图节点配置（🆕 0430 新增，0501 更新）
+#### `worldMap.ts` — 世界地图节点配置（🆕 0430 新增，0501 更新，0510 扩展至35地点）
 
 只保留门派/大城市级别地点，内部区域（武当内门、传功崖等）通过对话和剧情触发，不在地图上展示。
 
 ```typescript
 export type LocationId =
-  | 'wudang_mountain' | 'xiangyang_city' | 'jiangling_city' | 'beggar_hq'
-  | 'shaolin_temple' | 'emei_mountain'
-  | 'luoyang_city' | 'changan_city' | 'kaifeng_city' | 'yangzhou_city'
-  | 'suzhou_city' | 'hangzhou_city' | 'chengdu_city' | 'dali_city';
+  // 西北
+  | 'kunlun_mountain' | 'kongtong_mountain' | 'liangzhou_city'
+  // 关中
+  | 'changan_city' | 'huashan_base' | 'zhongnan_mountain'
+  // 北方
+  | 'taiyuan_city' | 'heimu_cliff' | 'yanjing_city'
+  // 中原
+  | 'luoyang_city' | 'kaifeng_city' | 'shaolin_temple'
+  // 湖广
+  | 'xiangyang_city' | 'beggar_hq' | 'wudang_mountain'
+  | 'jiangling_city' | 'wuchang_city'
+  // 江南
+  | 'yangzhou_city' | 'jinling_city' | 'maoshan_daoyuan'
+  | 'jiangzhou_city' | 'suzhou_city' | 'hangzhou_city'
+  | 'mingzhou_city' | 'xiaoyao_valley'
+  // 蜀中
+  | 'chengdu_city' | 'tangmen_estate' | 'chongqing_city'
+  | 'emei_mountain' | 'qingcheng_mountain'
+  // 岭南
+  | 'tanzhou_city' | 'dali_city' | 'diancang_mountain'
+  | 'fuzhou_city' | 'guangzhou_city';
 ```
 
-共 14 个地点节点，基于宋朝真实地理（武当山→襄阳→江陵 三角格局 + 洛阳/长安/开封/扬州/苏州/杭州/成都/大理）。每个节点有 `connections` 定义相邻可移动地点，`unlockChapter` 控制解锁条件。
+共 ~35 个地点节点，基于宋朝真实地理。每个节点有 `connections` 定义相邻可移动地点，`unlockChapter` 控制解锁条件。
 
 **🆕 地点可用行动（`actions` 字段）**：
 
 每个 `MapLocation` 可定义 `actions?: LocationAction[]`，指定该地点可执行的日常任务：
 
-| 地点 | 可用行动 |
-|------|----------|
-| 武当山 | 🪓砍柴、💧挑水、🧹打扫大殿、📜抄写道经、🌙后山修炼、⚔️演武切磋 |
-| 襄阳城 | 🧘城中静修（+30经验） |
-| 江陵城 | 🧘城中静修（+30经验） |
-| 其他门派 | 暂无（预留后续扩展） |
+```typescript
+interface LocationAction {
+  id: string; icon: string; name: string; desc: string;
+  exp: number; gold: number; contribution?: number;
+  unlockChapter?: number;
+  unlockLevel?: number;
+  sectTarget?: string;  // 仅指定宗门成员可见（如 'wudang'）
+}
+```
 
-`StoryPanel.ts` 不再使用硬编码的 `DAILY_TASKS` 数组，改为从 `WORLD_MAP[currentLocationId].actions` 动态读取。玩家移动到不同地点时，日常任务列表自动切换。
+**`sect_learn_skill` 行动**（🆕 0510 新增）：
+
+所有宗门据点均有此行动，点击弹出 `SkillLearnOverlay` 习武弹窗。该行动在 `StoryPanel.renderDailyTasks()` 中按 `sectTarget` 过滤，只有对应门派成员能看到。
+
+| 宗门据点 | sectTarget | unlockChapter |
+|---------|-----------|---------------|
+| 武当山 | wudang | 2 |
+| 少林寺 | shaolin | 2 |
+| 峨眉山 | emei | 2 |
+| 丐帮 | beggar | 2 |
+| 茅山道院 | maoshan | 2 |
+| 昆仑山 | kunlun | 2 |
+| 青城山 | qingcheng | 2 |
+| 唐家堡 | tangmen | 2 |
+| 逍遥谷 | xiaoyao | 2 |
+| 终南山（全真） | quanzhen | 2 |
+| 崆峒山 | kongtong | 2 |
+| 点苍山 | diancang | 2 |
+| 黑木崖（日月教） | riyue | 3 |
+| 华山 | huashan | 2 |
+
+> ⚠️ **黑月教（demon）** 位于扬州城，有 `join_sect` 行动但**无** `sect_learn_skill`，`SECT_SKILL_TABLES` 中亦无其技能表。宗门习武对黑月教成员暂不支持，是已知待填充缺口。
+
+**当前各地点标准行动**：
+
+| 地点 | 行动 | 经验 | 铜钱 | 解锁条件 |
+|------|------|------|------|----------|
+| 武当山 | 🪓 砍柴 | +20 | +5 | chapter≥2 |
+| 武当山 | 💧 挑水 | +15 | +3 | chapter≥2 |
+| 武当山 | 🧹 打扫大殿 | +18 | +4 | chapter≥2 |
+| 武当山 | 📜 抄写道经 | +35 | +8 | chapter≥2 |
+| 武当山 | 🌙 后山修炼 | +45 | 0 | chapter≥2, level≥2 |
+| 武当山 | ⚔️ 演武切磋 | +55 | 0 | chapter≥2, level≥6 |
+| 各大城市 | 🧘 城中静修 | +30 | 0 | chapter≥2 |
+
+`doDailyTask(action)` 执行任务：增加经验/铜钱 → `checkLevelUp()` → 保存 → 15% 概率触发小概率事件。`renderDailyTasks()` 从当前地点的 `actions` 过滤可用/锁定任务并渲染，标题显示 `📋 日常修行 · {地点名}`。
+
+**与旧版的关键区别**：
+- 旧版：硬编码 `DAILY_TASKS` + `wudangOnlyTasks` 硬编码地点检查
+- 新版：`WORLD_MAP[locId].actions` 动态读取，自然按地点过滤，无需额外检查
+
+#### `sectSkillTables.ts` — 各宗门技能表（🆕 0510 新增）
+
+从 `NpcBehavior.ts` 中独立出来的宗门技能表，供 `SkillLearnOverlay.ts` 和 `NpcBehavior.ts` 共用。
+
+```typescript
+// 每条记录：[所需等级, SkillId]（等级≥该值可学/可使用）
+export const WUDANG_SKILL_TABLE: Array<[number, SkillId]> = [
+  [1, 'wudang_changquan'], [1, 'yangqi_jue'], [1, 'wudang_jianfa_basic'], [1, 'wudang_qinggong'],
+  [11, 'mianzhang'], [11, 'wudang_sword'], [11, 'zixiao'], [11, 'wudang_huti'], [11, 'wudang_lianjian'],
+  // ... 结丹/元婴/化神/渡劫各4技
+];
+
+export const SHAOLIN_SKILL_TABLE: Array<[number, SkillId]>;
+export const RIYUE_SKILL_TABLE: Array<[number, SkillId]>;  // 日月教（黑木崖）
+
+// 按宗门 ID 索引，供 SkillLearnOverlay 查表
+export const SECT_SKILL_TABLES: Partial<Record<SectId, Array<[number, SkillId]>>> = {
+  wudang: WUDANG_SKILL_TABLE,
+  shaolin: SHAOLIN_SKILL_TABLE,
+  riyue: RIYUE_SKILL_TABLE,
+  // emei/beggar/maoshan/... 待填充
+};
+
+// 根据等级返回境界信息（用于分层渲染）
+export function getSkillRealm(level: number): {
+  name: string;    // '炼气期'|'筑基期'|'结丹期'|'元婴期'|'化神期'|'渡劫期'
+  cost: number;    // 贡献值消耗：20/50/100/200/400/800
+  color: string;   // CSS 颜色变量
+  range: [number, number];  // 等级范围
+}
+```
+
+**境界贡献值消耗**：炼气 20 / 筑基 50 / 结丹 100 / 元婴 200 / 化神 400 / 渡劫 800。
 
 #### `StatusEffects.ts`
 
@@ -681,6 +781,41 @@ interface LocationAction {
 - 旧版：硬编码 `DAILY_TASKS` + `wudangOnlyTasks` 硬编码地点检查
 - 新版：`WORLD_MAP[locId].actions` 动态读取，自然按地点过滤，无需额外检查
 
+**🆕 宗门习武入口（0510 新增）**：
+
+`doDailyTask()` 处理 `sect_learn_skill` action：
+```typescript
+} else if (action.id === 'sect_learn_skill') {
+  import('./SkillLearnOverlay').then(m => m.showSkillLearnOverlay());
+  return;
+}
+```
+
+`renderDailyTasks()` 中 `sect_learn_skill` 过滤：
+```typescript
+if (t.id === 'sect_learn_skill' && t.sectTarget && p.sect !== t.sectTarget) return false;
+```
+
+`sect_learn_skill` 被纳入 `isShop` 检查，渲染"进入 →"按钮，不显示"+0 EXP"字样。
+
+**🆕 任务战斗按钮（0510 新增）**：
+
+`renderDailyTasks()` 在日常行动区域末尾，若当前地点有 active 的 combat/escort 任务，追加"⚔️ 进行中任务"区块：
+- 每个 combat 任务渲染一张 `.mission-fight-card` 卡片（橙色描边）
+- 卡片上有"⚔️ 执行战斗"按钮，携带 `data-mission-fight=enemyId` 和 `data-mission-index`
+- `bindDailyTaskButtons()` 注册点击事件：调用 `initBattle(enemyId)`，监听 `battle:end` → 胜利后 `updateMissionProgress('combat', locId)`
+
+**已绑定的 combat 任务 enemyId 对照（`MissionSystem.ts`）**：
+
+| 任务 ID | 地点 | enemyId |
+|--------|------|---------|
+| m_bandit_xyr | xiangyang_city | bandit_elite |
+| m_bandit_jlr | jiangling_city | bandit_elite |
+| m_hunt_fugitive | luoyang_city | one_eye_leopard |
+| m_beggar_thugs | beggar_hq | rogue_thug |
+| m_demon_scout | kaifeng_city | demon_vanguard |
+| m_sword_rival | huashan_base | huashan_swordsman |
+
 当前已有事件处理：
 
 | eventId | 行为 |
@@ -735,7 +870,7 @@ const rankLabel = rankLabels[p.discipleRank] || '外门弟子';
 
 **🆕 NPC 状态弹窗**：点击已解锁角色的立绘卡片，弹出该角色的详细状态面板，显示修为、修为进度（经验条）、天赋、HP/MP/ATK/DEF/AGI/暴击、装备法宝等信息。支持关闭按钮、点击背景、ESC 键三种关闭方式。修为进度条在满层时显示红色"已满（等待突破契机）"。`showNpcStatsOverlay()` 已导出为 public API，供 `Camp.ts` 的 sidebar 复用。
 
-#### `Camp.ts` — 营地主容器（🆕 0507 更新）
+#### `Camp.ts` — 营地主容器（🆕 0507 更新，0510 地图行为更新）
 
 **🆕 旧存档兼容初始化**：
 ```typescript
@@ -755,6 +890,48 @@ export function enterCamp(): void {
 ```
 旧存档进入营地时自动补全 `realmBreakUnlocked`（空数组）和 `discipleRank`（`'outer'`），确保新系统字段存在。
 
+**🆕 地图弹窗 — 点击不关闭（0510 更新）**：
+
+点击地图节点移动后，地图**不自动关闭**，而是刷新重建（保持打开状态）。适合连续规划路线。
+
+```typescript
+// 点击节点前往（不自动关闭，旅行后刷新地图）
+overlay.querySelectorAll<HTMLElement>('.s2m-node[data-dest]').forEach(node => {
+  node.addEventListener('click', () => {
+    const destId = node.dataset['dest'] as LocationId;
+    if (!destId || destId === currentId) return;
+    if (!WORLD_MAP[currentId]?.connections.includes(destId)) {
+      showToast('需要从相邻地点逐步前往。');
+      return;
+    }
+    travelToLocation(destId);
+    showMapOverlay(); // 刷新地图（含新位置高亮和可达连线）
+  });
+});
+```
+
+`showMapOverlay()` 内部调用 `document.getElementById('map-overlay')?.remove()` 再重建，所以调用后地图以新位置重新渲染，不会看到旧地图残留。关闭按钮仍可手动关闭。
+
+**🆕 地图 POS 坐标表（35地点）**：
+
+```typescript
+const POS: Record<string, { x: number; y: number }> = {
+  kunlun_mountain: {x:2,y:8}, kongtong_mountain: {x:10,y:12}, liangzhou_city: {x:6,y:16},
+  changan_city: {x:18,y:12}, huashan_base: {x:28,y:15}, zhongnan_mountain: {x:18,y:24},
+  taiyuan_city: {x:44,y:10}, heimu_cliff: {x:51,y:5}, yanjing_city: {x:62,y:4},
+  luoyang_city: {x:38,y:18}, kaifeng_city: {x:52,y:16}, shaolin_temple: {x:44,y:28},
+  xiangyang_city: {x:32,y:42}, beggar_hq: {x:22,y:38}, wudang_mountain: {x:22,y:52},
+  jiangling_city: {x:14,y:62}, wuchang_city: {x:30,y:58},
+  yangzhou_city: {x:62,y:34}, jinling_city: {x:60,y:40}, maoshan_daoyuan: {x:67,y:36},
+  jiangzhou_city: {x:50,y:54}, suzhou_city: {x:72,y:44}, hangzhou_city: {x:72,y:56},
+  mingzhou_city: {x:82,y:57}, xiaoyao_valley: {x:76,y:50},
+  chengdu_city: {x:4,y:72}, tangmen_estate: {x:8,y:64}, chongqing_city: {x:14,y:74},
+  emei_mountain: {x:2,y:82}, qingcheng_mountain: {x:2,y:78},
+  tanzhou_city: {x:32,y:74}, dali_city: {x:2,y:92}, diancang_mountain: {x:2,y:96},
+  fuzhou_city: {x:76,y:74}, guangzhou_city: {x:55,y:88},
+};
+```
+
 **🆕 右侧 sidebar「附近的人」**：
 
 `renderSidebar()` 不再是显示剧情 NPC 大立绘，而是显示**当前地点所有 NPC 的小立绘卡片**（一行两个，56×84px，与人物关系面板风格一致）：
@@ -770,6 +947,32 @@ NPC 立绘路径通过 `getNpcImageMap()` 维护，与 `RelationPanel.ts` 中的
 #### `camp/FabaoPanel.ts` — 法宝装备面板（🆕 0430 独立）
 
 法宝从人物关系中独立出来，作为左侧导航的独立 Tab（🔮 法宝装备）。提供三槽（武器/衣服/饰品）装备界面，点击槽位弹出法宝选择器，支持装备/卸下操作。法宝数据来自 `src/data/fabao.ts`（54件，6境×3类×3件）。
+
+#### `camp/SkillLearnOverlay.ts` — 宗门习武弹窗（🆕 0510 新增）
+
+```typescript
+export function showSkillLearnOverlay(): void
+```
+
+**功能**：
+- 检查 `p.sect`，从 `SECT_SKILL_TABLES[sect]` 获取本派技能表
+- 按6境界分层渲染技能列表（炼气/筑基/结丹/元婴/化神/渡劫）
+- 每个技能显示：icon / 名字 / 境界色标 / 贡献值消耗 / 已学/可学/条件未满足 状态
+- 学习条件：境界等级达到 + 贡献值足够 + 未已学习
+- 点击"学习"按钮：`sectContribution -= cost` → `p.skills.push(skId)` → `saveGame()` → 重新打开弹窗
+- 宗门为 `'none'` 或 `SECT_SKILL_TABLES` 无此宗门时：Toast 提示（黑月教 demon 属此情况）
+
+**CSS 类（`style.css` 中 `slp-*` 前缀）**：
+
+| 类名 | 用途 |
+|------|------|
+| `.slp-tier` | 境界分组容器 |
+| `.slp-tier-header` | 境界标题（颜色对应境界） |
+| `.slp-skill-card` | 单个技能卡片（状态变体：`.available`/`.learned`/`.locked`/`.poor`） |
+| `.slp-skill-icon` | 技能图标 |
+| `.slp-skill-info` | 技能名称+描述 |
+| `.slp-badge` | 状态徽章（状态变体：`.learned`/`.locked`/`.poor`） |
+| `.slp-learn-btn` | 学习按钮（金色描边，hover 上浮效果） |
 
 #### `DialogScreen.ts` — NPC 对话树
 
@@ -787,6 +990,11 @@ export function openDialog(npcId: NpcId): void
 - 当前行动单位有金色脉冲边框高亮
 - 可选目标有红色边框 + hover 效果
 - 点击敌方单位选择目标，再点击技能释放
+
+**🆕 单敌自动选中（0510 更新）**：
+- 普通攻击和攻击/控制技能点击时，若 `getTargetableEnemies().length === 1`，自动填充 `_selectedTargetId` 并立即触发攻击/技能
+- 多敌情况仍需手动点击选目标
+- 沙盒任务战斗（单敌场景）受益最大，无需额外点击
 
 **技能栏**：
 - 动态渲染当前控制单位的可用技能
@@ -825,6 +1033,7 @@ export function openDialog(npcId: NpcId): void
 | `WorldPanel.ts` | 🌏 江湖态势 | 势力排行+详情卡片+个人日志+宗门加入+推演按钮 |
 | `CourtPanel.ts` | 🏛️ 朝廷 | 品阶显示+政务行动+影响力进度+文武双线选择 |
 | `FabaoShopUI.ts` | 覆盖层弹窗 | 法器商店 UI（宗门店/城市店，按境界分组浏览购买） |
+| `SkillLearnOverlay.ts` | 🆕 覆盖层弹窗 | 宗门习武 UI：按6境界分层显示本派技能，消耗贡献值学习 |
 
 #### 沙盒数据流
 
@@ -1227,7 +1436,7 @@ second_meet: {
 
 13. **境界数值系统（🆕 0430）**：`realmConfig.ts` 提供统一的属性计算系统。`calculateBaseStats(level)` 根据等级自动计算基础属性（基准值 + 每层 10% 线性增长），`calculateFinalStats(level, talents)` 叠加天赋乘数。大境界跨越自动体现 100%~150% 断层增幅。**主角天赋 `dragon_vein` 已融入属性计算**（全属性+10%），但不在面板展示。大境界第十层满后经验条卡满，需完成剧情突破。
 
-14. **世界地图系统（🆕 0430）**：`worldMap.ts` 定义 10 个门派/大城市级别地点节点，基于宋朝真实地理。玩家通过营地顶部地图栏或地图弹窗在相邻地点间移动。NPC 位置存储在 `npcDatabase[].currentLocationId` 中，随回合自动变化。
+14. **世界地图系统（🆕 0430，0510 扩展至35地点）**：`worldMap.ts` 定义 ~35 个门派/大城市级别地点节点，基于宋朝真实地理。玩家通过营地顶部地图栏或地图弹窗在相邻地点间移动。`Camp.ts` 的 `POS` 坐标表已覆盖全部35地点（x/y 百分比坐标）。**点击地图节点移动后地图不自动关闭**，而是刷新重建，便于连续规划路线。NPC 位置存储在 `npcDatabase[].currentLocationId` 中，随回合自动变化。
 
 15. **🆕 日常任务地点化（0501 重构）**：日常任务不再使用硬编码的 `DAILY_TASKS` 数组 + `wudangOnlyTasks` 检查，改为从 `WORLD_MAP[currentLocationId].actions` 动态读取。每个地点的 `actions` 字段定义该地点可执行的日常任务。玩家移动到不同地点时，日常任务列表自动切换。新增城市「城中静修」行动（+30经验）。`renderDailyTasks()` 标题显示 `📋 日常修行 · {地点名}`。
 
@@ -1251,62 +1460,60 @@ second_meet: {
 
 20. **🆕 0509 沙盒地基论**：**沙盒模式是整个游戏的底层框架（地基），剧情模式是叠加在地基上的"作弊层"**。这不是两个平行模式，而是同一套系统的两种使用方式：沙盒路径是真实成长（贡献+试炼），剧情节点相当于作弊指令直接改数值。所有开发应以沙盒为基础进行，剧情在此基础上扩展。
 
+21. **🆕 宗门习武 UI（0510 新增）**：玩家在本门派据点（宗门地图节点）可见"📖 习武学功"日常行动。点击后弹出 `SkillLearnOverlay`，按6境界展示本派技能，消耗贡献值学习。技能表数据由 `sectSkillTables.ts` 统一管理（武当/少林/日月教已实装，其余待填充）。`SECT_SKILL_TABLES` 是宗门 ID → 技能等级表的映射，`NpcBehavior.ts` 和 `SkillLearnOverlay.ts` 共用此表。
+
+22. **🆕 任务地图战斗联动（0510 新增）**：接取 combat/escort 类任务后，前往对应地点，日常行动区会出现"⚔️ 进行中任务"卡片（`.mission-fight-card` CSS 类，橙色描边）。点击"执行战斗"按钮直接触发战斗，胜利后自动推进任务进度。`MissionDef` 接口新增 `enemyId?: string` 字段，6个 combat 任务均已设置对应敌人 ID。
+
+23. **🆕 单敌自动选中（0510 新增）**：战斗中若场上只有1个存活敌人，点击普通攻击或攻击/控制技能时自动选中该敌人并立即触发攻击，无需额外点击。多敌情况仍需手动点击选目标。实现位于 `BattleScreen.ts` 的 `basicBtn` 和装备技能按钮 click handler 中。
+
+24. **黑月教（demon）宗门习武缺口（已知问题）**：`worldMap.ts` 中扬州城（`yangzhou_city`）的黑月教只有 `join_sect` 行动，**无** `sect_learn_skill`。`SECT_SKILL_TABLES` 中也无 `demon` 键。日月教（`riyue`，黑木崖）已完整实装，但黑月教技能学习是已知待填充缺口，后续补充需同时：① 在 `sectSkillTables.ts` 添加技能表 ② 在 `worldMap.ts` 的 `yangzhou_city` 添加 `sect_learn_skill` 行动。
+
 ---
 
-## 十、待扩展模块 🆕 0509
+## 十、待扩展模块 🆕 0510
 
 > 以下是下一步开发的核心任务，按优先级排列。所有扩展都是**在现有代码基础上叠加**，不重写已有系统。
 
-### 10.1 P6：宗门技能树扩展（最高优先级）
+### 10.1 P6：宗门技能树扩展（🔄 进行中）
 
-**当前问题**：`src/data/skills.ts` 中仅有武当派拥有完整技能树（25个技能，炼气~渡劫六境）。其余 16 个宗门全部 fallback 到武当技能表（`src/data/skills.ts` 底部逻辑），导致**所有 NPC 战斗中使用相同技能，零差异化**。
+**当前状态**：武当/少林/日月教技能表已在 `sectSkillTables.ts` 中实装，`SkillLearnOverlay.ts` 已可用。其余14个宗门的技能表尚未填充（`SECT_SKILL_TABLES` 中无对应键），NPC 战斗仍 fallback 到武当技能表。
 
-**目标**：17 个宗门各拥有独立技能树，总计 ~259 个技能。
+**当前问题**：`src/data/skills.ts` 中仅有武当派拥有完整技能树（25个技能，炼气~渡劫六境）。其余 14 个宗门全部 fallback 到武当技能表（`src/data/skills.ts` 底部逻辑），导致**所有 NPC 战斗中使用相同技能，零差异化**。
+
+**目标**：17 个宗门各拥有独立技能树，总计 ~259 个技能。同时补全各宗门 `sectSkillTables.ts` 中的技能表条目，使 `SkillLearnOverlay` 对所有门派可用。
 
 **涉及文件**：
 
 | 文件 | 改动说明 |
 |------|---------|
-| `src/data/skills.ts` | **核心改动**：为 16 个宗门新增 ~234 个技能定义（含 type II SkillId） |
+| `src/data/skills.ts` | **核心改动**：为 14 个宗门新增 ~184 个技能定义（武当/少林/日月已完成） |
 | `src/data/types.ts` | 新增 ~234 个 `SkillId` 到联合类型 |
 | `src/systems/BattleEngine.ts` | 无需改动（已支持按 `unit.skills` 动态读取） |
 | `src/systems/NpcBehavior.ts` | 更新 NPC 技能分配逻辑，按宗门+层级分配 |
 
 **实施批次**（推荐 AI 按此顺序实现）：
-1. **Batch 1**：少林（25技，6境）+ 日月教（25技，6境）—— 50技能
-2. **Batch 2**：峨眉 + 丐帮 + 全真 + 昆仑 + 唐门（各16技，4境）—— 80技能
+1. ~~**Batch 1**：少林（25技，6境）+ 日月教（25技，6境）—— 50技能~~ **✅ 已完成**（已在 sectSkillTables.ts）
+2. **Batch 2**：峨眉 + 丐帮 + 全真 + 昆仑 + 唐门（各16技，4境）—— 80技能（待补）
 3. **Batch 3**：华山 + 崆峒 + 青城 + 点苍 + 铁掌帮（各12技，3境）—— 60技能
 4. **Batch 4**：茅山 + 五毒 + 血刀 + 海沙（各8技，1-2境）—— 32技能
 
 **设计参考**：武当现有 25 技按境界分层结构（外门→内门→真传→长老→掌门→入圣），新增技能树可复制此模板，替换技能名和效果。
 
-### 10.2 P7：地图扩展（14→~40地点）
+### 10.2 P7：地图扩展（✅ 已完成）
 
-**当前状态**：`src/data/worldMap.ts` 定义 14 个地点（6门派 + 8城市）。
+**当前状态（0510）**：`src/data/worldMap.ts` 已扩展至 ~35 个地点，`Camp.ts` 的 POS 坐标表覆盖全部35地点。所有宗门据点已添加 `sect_learn_skill` 行动（日月教已添加并标记 unlockChapter: 3，黑月教扬州城无此行动）。
 
-**目标**：扩展至 ~40 个地点，覆盖完整宋朝地理。
+**已完成内容**：
 
-**新增内容**：
-
-| 类别 | 新增数量 | 详情 |
+| 类别 | 数量 | 详情 |
 |------|---------|------|
-| 大城市 | 9 | 燕京、太原、金陵、武昌、重庆、明州、广州、凉州、福州 |
-| 宗门据点 | 8 | 黑木崖（日月教）、终南山（全真）、昆仑山（昆仑）、唐家堡（唐门）、崆峒山、青城山、点苍山、华山 |
-| 旧地点调整 | — | 长安连接华山（华山派从长安独立）；开封添加朝廷专属行动 |
+| 大城市新增 | 9 | 燕京、太原、金陵、武昌、重庆、明州、广州、凉州、福州 |
+| 宗门据点新增 | 8 | 黑木崖（日月教）、终南山（全真）、昆仑山（昆仑）、唐家堡（唐门）、崆峒山、青城山、点苍山、华山 |
+| 其他 | — | 地图点击不关闭（旅行后刷新）；地图节点图标按类型显示 |
 
-**涉及文件**：
+**残余工作（未来可选）**：WorldPanel.ts / FactionSystem.ts / WorldState.ts 的势力排行尚未从6扩展到17宗门；NPCGenerator.ts 的随机 NPC 生成地点尚未指向新据点。
 
-| 文件 | 改动说明 |
-|------|---------|
-| `src/data/worldMap.ts` | **核心改动**：新增 ~26 个 `MapLocation` 节点 + 更新 `connections` 拓扑 |
-| `src/data/types.ts` | 同步新增 `LocationId` |
-| `src/data/npcStats.ts` | 掌门/传功长老初始位置指向新据点 |
-| `src/systems/NPCGenerator.ts` | 随机 NPC 生成地点指向新据点 |
-| `src/systems/WorldState.ts` | 势力资源从 6 门派扩展到 17 宗门 |
-| `src/systems/FactionSystem.ts` | 外交关系从 6 势力扩展到 17 宗门 |
-| `src/screens/camp/WorldPanel.ts` | 势力排行 UI 适配 17 宗门 |
-
-> **⚠️ 旁门左道（茅山/五毒/血刀/海沙/铁掌帮）不设独立地图节点**，通过世界事件和剧情触发访问。减少地图复杂度。
+> **⚠️ 旁门左道（茅山/五毒/血刀/海沙/铁掌帮）不设独立地图节点**，通过世界事件和剧情触发访问。
 
 ### 10.3 P8：NPC 三角金字塔 + 天赋池 + 天骄系统
 
