@@ -17,4 +17,5 @@ export const SECTS: Record<SectId, SectData> = {
   quanzhen: { name: '全真教', color: '#5b8c5a', icon: '⛰️', bonus: { mp: 35, def: 5 },  intro: '终南山下，全真祖庭。天罡北斗阵冠绝天下，道武双修以静制动。', alignment: 'righteous', culture: ['taoist', 'sword', 'formation', 'inner-alchemy'] },
   kongtong: { name: '崆峒派', color: '#c0392b', icon: '👊', bonus: { atk: 8, hp: 30 },  intro: '崆峒山上，裂石拳威震江湖。拳出如雷碎石如泥，非大毅力者不可修。', alignment: 'neutral',   culture: ['fist', 'mountain', 'diverse', 'stone-breaking'] },
   diancang: { name: '点苍派', color: '#2980b9', icon: '🗡️', bonus: { atk: 7, agi: 7 },  intro: '点苍山下，洱海之滨。剑法轻灵飘逸如苍山云雪，南疆第一剑派。', alignment: 'neutral',   culture: ['sword', 'mountain', 'remote', 'southern'] },
+  none:     { name: '散修',   color: '#888888', icon: '⬜', bonus: {},                    intro: '无门无派，自由江湖。',                                                              alignment: 'neutral',   culture: [] },
 };

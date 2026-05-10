@@ -134,6 +134,7 @@ const BASE_TRUST: Record<string, Record<string, number>> = {
 export const ALL_FACTIONS: SectId[] = [
   'wudang', 'shaolin', 'emei', 'beggar', 'huashan', 'demon',
   'maoshan', 'kunlun', 'qingcheng', 'tangmen', 'xiaoyao',
+  'quanzhen', 'kongtong', 'diancang',
 ];
 
 // ──── 内部工具函数 ────
@@ -148,6 +149,8 @@ function factionName(id: SectId): string {
     huashan: '华山派', demon: '魔教',
     maoshan: '茅山派', kunlun: '昆仑派', qingcheng: '青城派',
     tangmen: '唐门', xiaoyao: '逍遥派',
+    quanzhen: '全真教', kongtong: '崆峒派', diancang: '点苍派',
+    none: '散修',
   };
   return names[id] ?? id;
 }
@@ -252,12 +255,14 @@ export function tickFactionDiplomacy(): DiplomacyEvent[] {
       const newTrustAB = clamp(trust + event.trustDelta, 1, 100);
       const newTrustBA = clamp((relations[b]?.[a]?.trust ?? trust) + event.trustDelta, 1, 100);
 
+      relations[a] ??= {};
       relations[a][b] = {
         relation: trustToRelation(newTrustAB),
         trust: newTrustAB,
         lastEvent: event.title,
         lastEventTurn: ticks,
       };
+      relations[b] ??= {};
       relations[b][a] = {
         relation: trustToRelation(newTrustBA),
         trust: newTrustBA,
@@ -335,7 +340,7 @@ export function getFactionRelation(
   factionB: SectId,
 ): FactionRelationData | null {
   const p = getPlayer();
-  return p.factionRelations?.[factionA]?.[factionB] ?? null;
+  return (p.factionRelations?.[factionA]?.[factionB] ?? null) as FactionRelationData | null;
 }
 
 /**
@@ -377,9 +382,9 @@ export function getFactionDiplomacyList(factionId: SectId): Array<{
     .map(id => ({
       targetId: id,
       name: factionName(id),
-      relation: relations[id].relation,
-      trust: relations[id].trust,
-      lastEvent: relations[id].lastEvent,
+      relation: relations[id]!.relation as FactionRelation,
+      trust: relations[id]!.trust,
+      lastEvent: relations[id]!.lastEvent,
     }))
     .sort((a, b) => b.trust - a.trust);
 }

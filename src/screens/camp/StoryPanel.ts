@@ -377,7 +377,7 @@ function showCourtPathChoice(): void {
     setPlayer(updated);
     saveGame(updated);
     addChronicleEntry({
-      category: 'court_join',
+      category: 'court_affair',
       title: '出仕求官',
       description: `从秀才起步，选择了${path === 'wen' ? '文官' : '武官'}之路。`,
       locationId: 'kaifeng_city',

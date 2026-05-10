@@ -132,7 +132,7 @@ export function getAvailablePills(): PillDef[] {
   // 找到当前已解锁的最高境界
   let currentMaxIdx = -1; // 默认未解锁任何（凡人/炼气）
   for (let i = realmOrder.length - 1; i >= 0; i--) {
-    if (unlocked.has(realmOrder[i])) {
+    if (unlocked.has(realmOrder[i]!)) {
       currentMaxIdx = i;
       break;
     }

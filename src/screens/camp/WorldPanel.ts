@@ -131,7 +131,7 @@ function renderSectDetailCards(): string {
 
         const npcList = npcs.length > 0
           ? npcs.map(n => {
-            const rankLabel = { outer:'外门', inner:'内门', true:'真传', elder:'长老', leader:'掌门' }[n.discipleRank] ?? n.discipleRank;
+            const rankLabel = { outer:'外门', inner:'内门', true:'真传', elder:'长老', leader:'掌门' }[n.discipleRank as string] ?? n.discipleRank;
             return `<div class="wp-npc-row">
               <span class="wp-npc-name">${n.name}</span>
               <span class="wp-npc-lv">Lv${n.level}</span>
@@ -141,15 +141,21 @@ function renderSectDetailCards(): string {
           : `<div class="wp-npc-empty">暂无弟子</div>`;
 
         // 外交关系
-        const relations = ['wudang','shaolin','emei','beggar','huashan','demon'] as SectId[];
+        const relations = ['wudang','shaolin','emei','beggar','huashan','demon',
+          'maoshan','kunlun','qingcheng','tangmen','xiaoyao',
+          'quanzhen','kongtong','diancang'] as SectId[];
         const relationTags = relations
           .filter(other => other !== r.factionId)
           .map(other => {
             const trust = getFactionTrust(r.factionId, other);
             const label = getFactionRelationLabel(r.factionId, other);
             const color = trust >= 60 ? 'var(--text-gold)' : trust >= 30 ? '#888' : '#ef5350';
-            const shortName = { wudang:'武当',shaolin:'少林',emei:'峨眉',beggar:'丐帮',huashan:'华山',demon:'魔教' }[other] ?? other;
-            return `<span class="wp-rel-tag" style="color:${color}" title="${label}(${trust})">${shortName}:${trust}</span>`;
+            const shortName: Record<SectId, string> = {
+              wudang:'武当', shaolin:'少林', emei:'峨眉', beggar:'丐帮', huashan:'华山', demon:'魔教',
+              maoshan:'茅山', kunlun:'昆仑', qingcheng:'青城', tangmen:'唐门', xiaoyao:'逍遥',
+              quanzhen:'全真', kongtong:'崆峒', diancang:'点苍', none:'散修',
+            };
+            return `<span class="wp-rel-tag" style="color:${color}" title="${label}(${trust})">${shortName[other] ?? other}:${trust}</span>`;
           }).join(' ');
 
         // 加入按钮

@@ -1,6 +1,6 @@
 import type { NpcId, NpcDialogData } from './types';
 
-export const NPC_DIALOGS: Record<NpcId, NpcDialogData> = {
+export const NPC_DIALOGS: Partial<Record<NpcId, NpcDialogData>> = {
   wudang_zhangsan: {
     name: '张三丰',
     img: 'picture/NPC/武当派-张三丰.png',

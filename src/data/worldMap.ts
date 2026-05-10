@@ -26,6 +26,8 @@
 //   洛阳 ─ 开封 ─ 扬州 ─ 苏州 ─ 杭州
 //
 
+import type { CourtRank } from './sandboxTypes';
+
 // ──── 地点节点定义 ────
 
 export type LocationId =
@@ -73,7 +75,7 @@ export interface LocationAction {
   /** 朝廷影响力奖励（沙盒新增） */
   influence?: number;
   /** 朝廷品阶要求（需要达到此品阶才能执行） */
-  requireCourtRank?: string;
+  requireCourtRank?: CourtRank;
   unlockChapter?: number;
   unlockLevel?: number;
   /** 最高等级限制（超过此等级后不再可用，如砍柴/挑水在成为内门弟子后不可用） */
@@ -428,7 +430,6 @@ export const WORLD_MAP: Record<LocationId, MapLocation> = {
       { id: 'buddha_pilgrimage', icon: '🛕', name: '佛国朝拜', desc: '大理崇圣寺三塔之下，虔诚礼佛静心', exp: 38, gold: 0, contribution: 0, unlockChapter: 4, unlockLevel: 0 },
     ],
   },
-};
 
   // ═══════════════════════════════════════════
   // 🆕 三大新门派
@@ -538,6 +539,7 @@ export const WORLD_MAP: Record<LocationId, MapLocation> = {
       { id: 'overseas_trade', icon: '🏴‍☠️', name: '海商贸易', desc: '与海外商贾交易，稀有宝物概率更高', exp: 30, gold: 35, contribution: 0, unlockChapter: 5, unlockLevel: 0 },
     ],
   },
+};
 
 // ──── 辅助函数 ────
 

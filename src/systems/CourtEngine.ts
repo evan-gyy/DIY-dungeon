@@ -391,7 +391,7 @@ function generateFlavorText(
   // 天赋触发的额外描述
   if (outcome !== 'failure' && _talentsApplied.length > 0) {
     const talentNames = _talentsApplied
-      .map(tid => TALENTS[tid]?.name)
+      .map(tid => (TALENTS as Record<string, { name?: string }>)[tid]?.name)
       .filter(Boolean);
     if (talentNames.length > 0) {
       text += `（天赋：${talentNames.join('、')}）`;

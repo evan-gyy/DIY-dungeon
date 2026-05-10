@@ -86,6 +86,7 @@ export function getSectShopCatalog(playerRealm: FabaoRealm | null): SectShopEntr
   const entries: SectShopEntry[] = [];
   for (let i = 0; i <= maxIdx; i++) {
     const realm = realmOrder[i];
+    if (!realm) continue;
     const fabaos = getFabaoByRealm(realm);
     for (const f of fabaos) {
       entries.push({
@@ -126,7 +127,9 @@ export function generateCityShop(
   // 收集所有可用法宝（≤ playerRealm+1）
   const pool: FabaoData[] = [];
   for (let i = 0; i <= maxIdx; i++) {
-    pool.push(...getFabaoByRealm(realmOrder[i]));
+    const realm = realmOrder[i];
+    if (!realm) continue;
+    pool.push(...getFabaoByRealm(realm));
   }
 
   // 随机抽取
@@ -143,7 +146,9 @@ export function generateCityShop(
 function shuffleArray<T>(arr: T[]): T[] {
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
+    const tmp = arr[i] as T;
+    arr[i] = arr[j] as T;
+    arr[j] = tmp;
   }
   return arr;
 }

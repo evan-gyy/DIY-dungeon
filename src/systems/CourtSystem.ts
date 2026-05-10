@@ -74,7 +74,7 @@ export function canPromoteCourt(player: PlayerState): CourtPromotionCheck {
   }
 
   const nextRank = COURT_RANK_ORDER[currentIdx + 1];
-  const requirement = COURT_PROMOTION_REQUIREMENTS[nextRank];
+  const requirement = nextRank ? COURT_PROMOTION_REQUIREMENTS[nextRank] : undefined;
 
   // 没有晋升条件定义 = 不可晋升（最高）
   if (!requirement) {
@@ -97,7 +97,7 @@ export function canPromoteCourt(player: PlayerState): CourtPromotionCheck {
     canPromote,
     reason: canPromote ? undefined : `影响力不足（${influence}/${minInf}）`,
     currentRank,
-    nextRank,
+    nextRank: nextRank ?? null,
     minInfluence: minInf,
     currentInfluence: influence,
     progress,
