@@ -4,7 +4,19 @@
 
 // ──── ID 联合类型（所有 ID 都在这里集中定义）────
 
-export type SectId = 'wudang' | 'emei' | 'shaolin' | 'beggar' | 'huashan' | 'demon' | 'maoshan' | 'kunlun' | 'qingcheng' | 'tangmen' | 'xiaoyao' | 'quanzhen' | 'kongtong' | 'diancang' | 'none';
+export type SectId =
+  // 正道四大派
+  | 'wudang' | 'emei' | 'shaolin' | 'beggar'
+  // 中立/一流
+  | 'huashan' | 'quanzhen' | 'kunlun' | 'tangmen' | 'qingcheng'
+  // 中立/二流
+  | 'kongtong' | 'diancang' | 'maoshan' | 'tiezhang'
+  // 邪道/旁门
+  | 'demon' | 'riyue' | 'wudu' | 'xuedao' | 'haisha'
+  // 逍遥/特殊
+  | 'xiaoyao'
+  // 无门派
+  | 'none';
 
 export type CharId = 'male_good' | 'male_evil' | 'female_good' | 'female_evil';
 
@@ -31,6 +43,32 @@ export type SkillId =
   | 'beggar_fist' | 'stick_art' | 'mud_walk' | 'dragon_palm'
   // 第三章：武当真传剑法
   | 'wudang_yunkai' | 'wudang_songtao' | 'wudang_guiyuan'
+  // ── 少林派扩展（P6 Batch 1）──
+  // 炼气
+  | 'shaolin_chan_yi' | 'shaolin_tie_sha'
+  // 筑基
+  | 'shaolin_luohan_18' | 'shaolin_long_zhua' | 'shaolin_bei_ye'
+  // 结丹
+  | 'shaolin_hu_he' | 'shaolin_shi_zi_hou' | 'shaolin_prajna_zhang' | 'shaolin_bodhi_xin'
+  // 元婴
+  | 'shaolin_72_true' | 'shaolin_jinggang_shen' | 'shaolin_long_xiang' | 'shaolin_rulai_zhang'
+  // 化神
+  | 'shaolin_tianren' | 'shaolin_wushang_bodhi' | 'shaolin_prajna_great' | 'shaolin_six_pulse'
+  // 渡劫
+  | 'shaolin_nirvana' | 'shaolin_datura' | 'shaolin_tathagata' | 'shaolin_vajra_true'
+  // ── 日月教（P6 Batch 1）──
+  // 炼气
+  | 'riyue_moon_palm' | 'riyue_shadow_step' | 'riyue_sun_qi' | 'riyue_dark_fist'
+  // 筑基
+  | 'riyue_lunar_palm' | 'riyue_shadow_guard' | 'riyue_sun_cultivation' | 'riyue_poison_fog' | 'riyue_moon_storm'
+  // 结丹
+  | 'riyue_eclipse' | 'riyue_shadow_clone' | 'riyue_dual_cultivate' | 'riyue_sun_moon_combo'
+  // 元婴
+  | 'riyue_qiankun_shift' | 'riyue_moon_goddess' | 'riyue_shadow_realm' | 'riyue_full_moon'
+  // 化神
+  | 'riyue_qiankun_true' | 'riyue_sacred_sun' | 'riyue_tianren' | 'riyue_sun_moon_divine'
+  // 渡劫
+  | 'riyue_nirvana' | 'riyue_void_moon' | 'riyue_dark_sun' | 'riyue_ultimate'
   ;
 
 export type EnemyId =

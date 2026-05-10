@@ -190,6 +190,7 @@ export function getAllRequiredPortraits(): PortraitGenerationTask[] {
     huashan: '华山', demon: '黑月教', maoshan: '茅山', kunlun: '昆仑',
     qingcheng: '青城', tangmen: '唐门', xiaoyao: '逍遥',
     quanzhen: '全真', kongtong: '崆峒', diancang: '点苍',
+    riyue: '日月教', tiezhang: '铁掌帮', wudu: '五毒教', xuedao: '血刀门', haisha: '海沙派',
     none: '散修',
   };
 
