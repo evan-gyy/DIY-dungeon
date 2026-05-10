@@ -4,6 +4,7 @@ import tailwindcss from '@tailwindcss/vite';
 export default defineConfig({
   plugins: [tailwindcss()],
   root: '.',
+  base: '/DIY-dungeon/',
   publicDir: 'public',
   build: {
     outDir: 'dist',
