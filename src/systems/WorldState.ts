@@ -286,6 +286,7 @@ export function tickWorldState(): {
   if (Math.random() < 0.10) {
     const eventIdx = Math.floor(Math.random() * WORLD_EVENT_POOL.length);
     worldEvent = WORLD_EVENT_POOL[eventIdx];
+    if (!worldEvent) return { worldEvent: undefined };
 
     // 应用事件对玩家的影响
     if (worldEvent.playerEffect) {
@@ -303,7 +304,7 @@ export function tickWorldState(): {
           if (existing) {
             existing.count += 1;
           } else {
-            inv.push({ id: itemId, name: itemId, icon: '', desc: '', effect: {}, count: 1 });
+            inv.push({ id: itemId as import('../data/types').ItemId, name: itemId, icon: '', desc: '', effect: {}, count: 1 });
           }
         }
         p = { ...p, inventory: inv };

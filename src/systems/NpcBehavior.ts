@@ -204,7 +204,7 @@ export function tickNpcBehaviors(): NpcTickResult[] {
     // ── 行为 1-3：购买法器 / 学习技能 / 修炼 ──
     // 基础概率 + 势力倾向修正（正道更爱学习，混乱更爱追逐法器）
     const alignment = (SECTS[n.sect]?.alignment ?? 'neutral') as string;
-    const alignMod = ALIGNMENT_BEHAVIOR_MOD[alignment] ?? ALIGNMENT_BEHAVIOR_MOD.neutral;
+    const alignMod = (ALIGNMENT_BEHAVIOR_MOD[alignment] ?? ALIGNMENT_BEHAVIOR_MOD['neutral'])!;
     let pBuyFabao   = missingSlots.length    > 0 ? Math.max(0, 0.40 + alignMod.buyFabao)   : 0;
     let pLearnSkill = learnableSkills.length  > 0 ? Math.max(0, 0.30 + alignMod.learnSkill) : 0;
     // 归一化：确保总和不超过 1.0
