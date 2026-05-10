@@ -135,6 +135,7 @@ export const ALL_FACTIONS: SectId[] = [
   'wudang', 'shaolin', 'emei', 'beggar', 'huashan', 'demon',
   'maoshan', 'kunlun', 'qingcheng', 'tangmen', 'xiaoyao',
   'quanzhen', 'kongtong', 'diancang',
+  'riyue', 'tiezhang', 'wudu', 'xuedao', 'haisha',
 ];
 
 // ──── 内部工具函数 ────
@@ -150,6 +151,7 @@ function factionName(id: SectId): string {
     maoshan: '茅山派', kunlun: '昆仑派', qingcheng: '青城派',
     tangmen: '唐门', xiaoyao: '逍遥派',
     quanzhen: '全真教', kongtong: '崆峒派', diancang: '点苍派',
+    riyue: '日月教', tiezhang: '铁掌帮', wudu: '五毒教', xuedao: '血刀门', haisha: '海沙派',
     none: '散修',
   };
   return names[id] ?? id;

@@ -786,6 +786,109 @@ body {
   margin-top: 4px;
 }
 
+/* ── 任务战斗卡片 ── */
+.mission-fight-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: rgba(255,100,0,0.05);
+  border: 1px solid rgba(255,100,0,0.25);
+  border-radius: 8px;
+  width: 100%;
+}
+.mission-fight-card:hover {
+  border-color: rgba(255,100,0,0.5);
+  background: rgba(255,100,0,0.08);
+}
+
+/* ── 习武学功弹窗 (slp-*) ── */
+.slp-panel { }
+.slp-tier {
+  margin-bottom: 16px;
+}
+.slp-tier-header {
+  font-size: 12px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  padding: 4px 0 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  margin-bottom: 8px;
+}
+.slp-tier-skills {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.slp-skill-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid var(--border-dim);
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+.slp-skill-card.available {
+  border-color: rgba(201,168,76,0.35);
+  background: rgba(201,168,76,0.04);
+}
+.slp-skill-card.available:hover {
+  border-color: var(--border-gold);
+  background: rgba(201,168,76,0.08);
+}
+.slp-skill-card.learned { opacity: 0.55; }
+.slp-skill-card.locked  { opacity: 0.4; }
+.slp-skill-card.poor    { border-color: rgba(255,80,80,0.3); }
+.slp-skill-icon {
+  font-size: 22px;
+  width: 36px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.slp-skill-info { flex: 1; min-width: 0; }
+.slp-skill-name {
+  font-size: 13px;
+  color: var(--text-light);
+  margin-bottom: 2px;
+}
+.slp-skill-desc {
+  font-size: 11px;
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.slp-badge {
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.slp-badge.learned { color: #4caf50; border: 1px solid rgba(76,175,80,0.4); background: rgba(76,175,80,0.08); }
+.slp-badge.locked  { color: var(--text-dim); border: 1px solid var(--border-dim); }
+.slp-badge.poor    { color: #ff7043; border: 1px solid rgba(255,112,67,0.4); background: rgba(255,112,67,0.06); }
+.slp-learn-btn {
+  padding: 4px 12px;
+  font-size: 12px;
+  font-family: var(--font-cn);
+  background: rgba(201,168,76,0.12);
+  border: 1px solid rgba(201,168,76,0.5);
+  border-radius: 6px;
+  color: var(--text-gold);
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+.slp-learn-btn:hover {
+  background: rgba(201,168,76,0.25);
+  border-color: var(--border-gold);
+  transform: translateY(-1px);
+}
+
 /* ── 主线剧情分隔线 ── */
 .story-section-divider {
   text-align: center;

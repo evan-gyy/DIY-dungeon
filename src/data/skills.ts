@@ -420,8 +420,465 @@ export const SKILLS: Record<SkillId, SkillData> = {
   },
 
   // ═══════════════════════════════════════════════════════════
-  //  第三章 · 武当真传剑法（筑基期）
+  //  少林派 · 外门弟子（炼气期）
+  //  定位：刚猛基础拳法 + 内功培元
   // ═══════════════════════════════════════════════════════════
+
+  shaolin_chan_yi: {
+    id: 'shaolin_chan_yi', name: '禅意功法', icon: '🕉️', type: 'passive', target: 'self',
+    mp: 0, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 0, effect: { type: 'regen_mp', value: 3, duration: 99 },
+    healPct: 0,
+    desc: '【被动】少林基础内功，每回合自动恢复3点内力，以禅入武之基础。',
+    cost: { exp: 0 }, sect: 'shaolin',
+    battleTip: '被动·稳定内力回复',
+  },
+  shaolin_tie_sha: {
+    id: 'shaolin_tie_sha', name: '铁砂掌', icon: '🖐️', type: 'attack', target: 'enemy',
+    mp: 20, hit: 1, powerMul: 1.2, defPen: 0.7,
+    cooldown: 1, effect: { type: 'weaken_def', value: 5, duration: 2 },
+    healPct: 0,
+    desc: '铁砂淬掌，刚硬无匹。造成120%攻击伤害，削弱敌方防御5点持续2回合。',
+    cost: { exp: 0 }, sect: 'shaolin',
+    battleTip: '爆发·附带减防',
+  },
+
+  // ═══════════════════════════════════════════════════════════
+  //  少林派 · 内门弟子（筑基期）
+  //  定位：进阶连击 + 龙爪控制 + 护体真气
+  // ═══════════════════════════════════════════════════════════
+
+  shaolin_luohan_18: {
+    id: 'shaolin_luohan_18', name: '罗汉十八手', icon: '🥊', type: 'attack', target: 'enemy',
+    mp: 22, hit: 2, powerMul: 0.65, defPen: 0.65,
+    cooldown: 1, effect: null, healPct: 0,
+    desc: '罗汉十八手精华，双掌连推，各造成65%攻击伤害。刚中有柔，柔中带刚。',
+    cost: { exp: 200 }, sect: 'shaolin',
+    battleTip: '连击·内力适中',
+  },
+  shaolin_long_zhua: {
+    id: 'shaolin_long_zhua', name: '龙爪手', icon: '🐉', type: 'control', target: 'enemy',
+    mp: 28, hit: 1, powerMul: 0.6, defPen: 0.6,
+    cooldown: 2, effect: { type: 'stun', value: 1, duration: 1 },
+    healPct: 0,
+    desc: '模仿苍龙抓扑之势，造成60%攻击伤害，70%概率眩晕敌方跳过下1回合。',
+    cost: { exp: 300 }, sect: 'shaolin',
+    battleTip: '控制·中等概率眩晕',
+  },
+  shaolin_bei_ye: {
+    id: 'shaolin_bei_ye', name: '贝叶掌', icon: '🌿', type: 'attack', target: 'enemy',
+    mp: 30, hit: 1, powerMul: 1.8, defPen: 0.55,
+    cooldown: 2, effect: null, healPct: 0,
+    desc: '取贝叶之坚韧，汇掌力于一点，造成180%攻击伤害。',
+    cost: { exp: 350 }, sect: 'shaolin',
+    battleTip: '中等爆发·2回合冷却',
+  },
+
+  // ═══════════════════════════════════════════════════════════
+  //  少林派 · 真传弟子（结丹期）
+  //  定位：虎鹤双形连击 + 狮子吼控场 + 般若掌爆发
+  // ═══════════════════════════════════════════════════════════
+
+  shaolin_hu_he: {
+    id: 'shaolin_hu_he', name: '虎鹤双形拳', icon: '🐯', type: 'attack', target: 'enemy',
+    mp: 36, hit: 2, powerMul: 0.9, defPen: 0.7,
+    cooldown: 2, effect: null, healPct: 0,
+    desc: '虎形刚猛、鹤形灵动，二形合一。两击各造成90%攻击伤害，穿透适中。',
+    cost: { exp: 500 }, sect: 'shaolin',
+    battleTip: '双击·综合性强',
+  },
+  shaolin_shi_zi_hou: {
+    id: 'shaolin_shi_zi_hou', name: '狮子吼', icon: '🦁', type: 'control', target: 'enemy',
+    mp: 35, hit: 1, powerMul: 0.8, defPen: 0.5,
+    cooldown: 3, effect: { type: 'stun', value: 1, duration: 1 },
+    healPct: 0,
+    desc: '狮吼功震动丹田，声如天雷。造成80%攻击伤害，必定眩晕敌方1回合。',
+    cost: { exp: 550 }, sect: 'shaolin',
+    battleTip: '强控·必晕1回合',
+  },
+  shaolin_prajna_zhang: {
+    id: 'shaolin_prajna_zhang', name: '般若掌', icon: '🙏', type: 'attack', target: 'enemy',
+    mp: 40, hit: 1, powerMul: 2.4, defPen: 0.8,
+    cooldown: 2, effect: null, healPct: 0,
+    desc: '般若波罗蜜掌法精华，高穿透一掌造成240%攻击伤害。',
+    cost: { exp: 600 }, sect: 'shaolin',
+    battleTip: '高爆发·高穿透',
+  },
+  shaolin_bodhi_xin: {
+    id: 'shaolin_bodhi_xin', name: '菩提心经', icon: '📿', type: 'passive', target: 'self',
+    mp: 0, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 0, effect: { type: 'regen_mp', value: 8, duration: 99 },
+    healPct: 0,
+    desc: '【被动】菩提本无树，明镜亦非台。修炼此经，每回合恢复8点内力，心性清明。',
+    cost: { exp: 650 }, sect: 'shaolin',
+    battleTip: '被动·强化内力引擎',
+  },
+
+  // ═══════════════════════════════════════════════════════════
+  //  少林派 · 长老（元婴期）
+  //  定位：七十二绝技 + 金刚神功 + 龙象双修 + 如来神掌
+  // ═══════════════════════════════════════════════════════════
+
+  shaolin_72_true: {
+    id: 'shaolin_72_true', name: '七十二绝技', icon: '🔱', type: 'attack', target: 'enemy',
+    mp: 55, hit: 1, powerMul: 3.0, defPen: 0.75,
+    cooldown: 3, effect: null, healPct: 0,
+    desc: '少林七十二绝技精华凝于一击，造成300%攻击伤害，威力冠绝江湖。',
+    cost: { exp: 1200 }, sect: 'shaolin',
+    battleTip: '终极爆发·高穿透',
+  },
+  shaolin_jinggang_shen: {
+    id: 'shaolin_jinggang_shen', name: '金刚神功', icon: '⚡', type: 'passive', target: 'self',
+    mp: 0, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 0, effect: { type: 'regen_mp_pct', value: 15, duration: 99 },
+    healPct: 0,
+    desc: '【被动】金刚神功大成，每回合恢复15%最大内力，且气血上限提升20%（效果在属性面板显示）。',
+    cost: { exp: 1500 }, sect: 'shaolin',
+    battleTip: '被动·终极内力循环',
+  },
+  shaolin_long_xiang: {
+    id: 'shaolin_long_xiang', name: '龙象般若功', icon: '🐘', type: 'support', target: 'self',
+    mp: 50, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 4, effect: { type: 'buff_atk', value: 30, duration: 3 },
+    healPct: 0.35,
+    desc: '龙之刚与象之勇，双重力量融合。攻击力提升30点持续3回合，恢复35%最大气血。',
+    cost: { exp: 1800 }, sect: 'shaolin',
+    battleTip: '终极增益·大量回血',
+  },
+  shaolin_rulai_zhang: {
+    id: 'shaolin_rulai_zhang', name: '如来神掌', icon: '☀️', type: 'attack', target: 'enemy',
+    mp: 65, hit: 1, powerMul: 3.5, defPen: 0.6,
+    cooldown: 4, effect: { type: 'stun', value: 1, duration: 1 },
+    healPct: 0,
+    desc: '如来神掌降世，威能无与伦比。造成350%攻击伤害，必定眩晕敌方1回合。',
+    cost: { exp: 2500 }, sect: 'shaolin',
+    battleTip: '终极一击·必晕',
+  },
+
+  // ═══════════════════════════════════════════════════════════
+  //  少林派 · 掌门级（化神期）
+  //  定位：天人合一 + 无上菩提 + 般若波罗蜜 + 六脉神剑
+  // ═══════════════════════════════════════════════════════════
+
+  shaolin_tianren: {
+    id: 'shaolin_tianren', name: '天人合一·禅', icon: '🌌', type: 'passive', target: 'self',
+    mp: 0, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 0, effect: { type: 'regen_mp_pct', value: 20, duration: 99 },
+    healPct: 0,
+    desc: '【被动】禅武合一，天人交感。每回合恢复20%最大内力，心无旁骛，万法皆空。',
+    cost: { exp: 3000 }, sect: 'shaolin',
+    battleTip: '被动·化神内力循环',
+  },
+  shaolin_wushang_bodhi: {
+    id: 'shaolin_wushang_bodhi', name: '无上菩提', icon: '🪷', type: 'support', target: 'self',
+    mp: 55, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 4, effect: { type: 'buff_atk', value: 35, duration: 3 },
+    healPct: 0.4,
+    desc: '无上菩提心，慈悲化杀意。攻击力提升35点持续3回合，恢复40%最大气血，获得15%闪避1回合。',
+    cost: { exp: 3500 }, sect: 'shaolin',
+    battleTip: '终极增益·大量回血+闪避',
+  },
+  shaolin_prajna_great: {
+    id: 'shaolin_prajna_great', name: '般若波罗蜜', icon: '🔱', type: 'attack', target: 'enemy',
+    mp: 70, hit: 1, powerMul: 4.5, defPen: 0.75,
+    cooldown: 4, effect: { type: 'weaken_def', value: 20, duration: 3 },
+    healPct: 0,
+    desc: '般若大法，到彼岸之力。造成450%攻击伤害，削弱敌方防御20点持续3回合。',
+    cost: { exp: 4000 }, sect: 'shaolin',
+    battleTip: '化神终极攻击·破甲',
+  },
+  shaolin_six_pulse: {
+    id: 'shaolin_six_pulse', name: '六脉神剑', icon: '💫', type: 'attack', target: 'enemy',
+    mp: 75, hit: 6, powerMul: 0.55, defPen: 0.8,
+    cooldown: 3, effect: { type: 'weaken_def', value: 15, duration: 3 },
+    healPct: 0,
+    desc: '以气御剑，六脉剑气同出。六连击各造成55%攻击伤害，削弱敌方防御15点持续3回合。',
+    cost: { exp: 4500 }, sect: 'shaolin',
+    battleTip: '化神六连击·高破甲',
+  },
+
+  // ═══════════════════════════════════════════════════════════
+  //  少林派 · 入圣（渡劫期）
+  //  定位：涅槃重生 + 大威天龙 + 如来神掌·真 + 金刚般若波罗蜜
+  // ═══════════════════════════════════════════════════════════
+
+  shaolin_nirvana: {
+    id: 'shaolin_nirvana', name: '涅槃心经', icon: '🌟', type: 'passive', target: 'self',
+    mp: 0, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 0, effect: { type: 'regen_mp_pct', value: 25, duration: 99 },
+    healPct: 0,
+    desc: '【被动】涅槃之法，浴火重生。每回合恢复25%最大内力，气血恢复效果+30%，免疫中毒。',
+    cost: { exp: 6000 }, sect: 'shaolin',
+    battleTip: '被动·渡劫内力+免疫毒',
+  },
+  shaolin_datura: {
+    id: 'shaolin_datura', name: '大威天龙', icon: '☁️', type: 'support', target: 'self',
+    mp: 70, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 5, effect: { type: 'def_boost', value: 40, duration: 3 },
+    healPct: 0.5,
+    desc: '大威天龙法力加身，防御提升40点持续3回合，恢复50%最大气血，获得50%闪避1回合。',
+    cost: { exp: 5500 }, sect: 'shaolin',
+    battleTip: '渡劫防御·大量回血+高闪避',
+  },
+  shaolin_tathagata: {
+    id: 'shaolin_tathagata', name: '如来神掌·真', icon: '🌞', type: 'attack', target: 'enemy',
+    mp: 100, hit: 1, powerMul: 6.0, defPen: 0.7,
+    cooldown: 6, effect: { type: 'stun', value: 1, duration: 2 },
+    healPct: 0,
+    desc: '如来神掌真谛降世。倾尽毕生佛力，造成600%攻击伤害，必定眩晕敌方2回合。',
+    cost: { exp: 8000 }, sect: 'shaolin',
+    battleTip: '渡劫终极·毁天灭地',
+  },
+  shaolin_vajra_true: {
+    id: 'shaolin_vajra_true', name: '金刚般若波罗蜜', icon: '📜', type: 'passive', target: 'self',
+    mp: 0, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 0, effect: { type: 'regen_mp_pct', value: 20, duration: 99 },
+    healPct: 0,
+    desc: '【被动】金刚般若波罗蜜经入心，每回合恢复20%最大内力，且免疫眩晕。',
+    cost: { exp: 7000 }, sect: 'shaolin',
+    battleTip: '被动·渡劫内力+免疫眩晕',
+  },
+
+  // ═══════════════════════════════════════════════════════════
+  //  日月教（P6 Batch 1 · 顶尖大派）
+  //  设计定位：日月神功 + 乾坤大挪移 + 阴阳双修
+  // ═══════════════════════════════════════════════════════════
+
+  // ── 日月教 · 外门（炼气期）
+  riyue_moon_palm: {
+    id: 'riyue_moon_palm', name: '月魄掌', icon: '🌙', type: 'attack', target: 'enemy',
+    mp: 10, hit: 1, powerMul: 1.4, defPen: 0.7,
+    cooldown: 0, effect: null, healPct: 0,
+    desc: '以月华凝力，暗劲袭来。造成140%攻击伤害，内力消耗极省。',
+    cost: { exp: 0 }, sect: 'riyue',
+    battleTip: '基础攻击·低消耗',
+  },
+  riyue_sun_qi: {
+    id: 'riyue_sun_qi', name: '日精内功', icon: '☀️', type: 'passive', target: 'self',
+    mp: 0, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 0, effect: { type: 'regen_mp', value: 5, duration: 99 },
+    healPct: 0,
+    desc: '【被动】汲取日精，每回合自动恢复5点内力，日月神功基础心法。',
+    cost: { exp: 0 }, sect: 'riyue',
+    battleTip: '被动·稳定内力回复',
+  },
+  riyue_dark_fist: {
+    id: 'riyue_dark_fist', name: '暗劲拳', icon: '👊', type: 'attack', target: 'enemy',
+    mp: 14, hit: 2, powerMul: 0.55, defPen: 0.75,
+    cooldown: 0, effect: null, healPct: 0,
+    desc: '以阴暗内力连击，双拳各造成55%攻击伤害，穿透较高。',
+    cost: { exp: 0 }, sect: 'riyue',
+    battleTip: '连击·高穿透',
+  },
+  riyue_shadow_step: {
+    id: 'riyue_shadow_step', name: '影步', icon: '👤', type: 'support', target: 'self',
+    mp: 15, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 2, effect: { type: 'evade', value: 0.4, duration: 1 },
+    healPct: 0,
+    desc: '化身月影，提升40%闪避率1回合。',
+    cost: { exp: 100 }, sect: 'riyue',
+    battleTip: '闪避·规避伤害',
+  },
+
+  // ── 日月教 · 内门（筑基期）
+  riyue_lunar_palm: {
+    id: 'riyue_lunar_palm', name: '月华掌', icon: '🌙', type: 'attack', target: 'enemy',
+    mp: 26, hit: 1, powerMul: 1.6, defPen: 0.65,
+    cooldown: 1, effect: { type: 'weaken_def', value: 8, duration: 2 },
+    healPct: 0,
+    desc: '月华掌法，轻灵中藏杀意。造成160%攻击伤害，削弱敌方防御8点持续2回合。',
+    cost: { exp: 200 }, sect: 'riyue',
+    battleTip: '爆发·减防连招',
+  },
+  riyue_sun_cultivation: {
+    id: 'riyue_sun_cultivation', name: '日轮内功', icon: '🌅', type: 'passive', target: 'self',
+    mp: 0, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 0, effect: { type: 'regen_mp', value: 8, duration: 99 },
+    healPct: 0,
+    desc: '【被动】日轮运行，每回合自动恢复8点内力，日月双修内功核心。',
+    cost: { exp: 400 }, sect: 'riyue',
+    battleTip: '被动·内力引擎',
+  },
+  riyue_moon_storm: {
+    id: 'riyue_moon_storm', name: '月风乱舞', icon: '🌀', type: 'attack', target: 'enemy',
+    mp: 22, hit: 3, powerMul: 0.45, defPen: 0.7,
+    cooldown: 1, effect: null, healPct: 0,
+    desc: '月影凌乱，三连击各造成45%攻击伤害。如月光散落，令敌难以应对。',
+    cost: { exp: 300 }, sect: 'riyue',
+    battleTip: '三连击·压制型',
+  },
+  riyue_poison_fog: {
+    id: 'riyue_poison_fog', name: '毒雾暗香', icon: '☠️', type: 'control', target: 'enemy',
+    mp: 30, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 3, effect: { type: 'poison', value: 15, duration: 3 },
+    healPct: 0,
+    desc: '魔教秘制毒雾，不造成直接伤害，施毒3回合，每回合损失15HP。',
+    cost: { exp: 350 }, sect: 'riyue',
+    battleTip: '中毒·持续消耗',
+  },
+  riyue_shadow_guard: {
+    id: 'riyue_shadow_guard', name: '魅影护体', icon: '🌑', type: 'support', target: 'self',
+    mp: 28, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 3, effect: { type: 'def_boost', value: 18, duration: 3 },
+    healPct: 0,
+    desc: '月影化为护体暗甲，防御提升18点持续3回合。',
+    cost: { exp: 320 }, sect: 'riyue',
+    battleTip: '防御增益·硬扛期',
+  },
+
+  // ── 日月教 · 真传（结丹期）
+  riyue_eclipse: {
+    id: 'riyue_eclipse', name: '日月蚀', icon: '🌘', type: 'attack', target: 'enemy',
+    mp: 38, hit: 1, powerMul: 2.0, defPen: 0.6,
+    cooldown: 3, effect: { type: 'stun', value: 1, duration: 1 },
+    healPct: 0,
+    desc: '日月同辉，交蚀之力。造成200%攻击伤害，60%概率使敌方眩晕1回合。',
+    cost: { exp: 500 }, sect: 'riyue',
+    battleTip: '爆发+控制',
+  },
+  riyue_shadow_clone: {
+    id: 'riyue_shadow_clone', name: '虚影替身', icon: '👥', type: 'support', target: 'self',
+    mp: 35, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 3, effect: { type: 'evade', value: 0.6, duration: 1 },
+    healPct: 0,
+    desc: '以阴影分身迷惑敌人，闪避率提升60%1回合。',
+    cost: { exp: 600 }, sect: 'riyue',
+    battleTip: '高闪避·应对爆发',
+  },
+  riyue_dual_cultivate: {
+    id: 'riyue_dual_cultivate', name: '日月双修', icon: '☯️', type: 'support', target: 'self',
+    mp: 32, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 3, effect: { type: 'buff_atk', value: 20, duration: 3 },
+    healPct: 0.15,
+    desc: '日月双修法门，攻击力提升20点持续3回合，同时恢复15%最大气血。',
+    cost: { exp: 550 }, sect: 'riyue',
+    battleTip: '攻击增益·小量回血',
+  },
+  riyue_sun_moon_combo: {
+    id: 'riyue_sun_moon_combo', name: '日月连环', icon: '⚡', type: 'attack', target: 'enemy',
+    mp: 40, hit: 4, powerMul: 0.45, defPen: 0.7,
+    cooldown: 2, effect: null, healPct: 0,
+    desc: '日月交替连击，四式各造成45%攻击伤害。快如风驰电掣，令敌目不暇接。',
+    cost: { exp: 700 }, sect: 'riyue',
+    battleTip: '四连击·压制型',
+  },
+
+  // ── 日月教 · 长老（元婴期）
+  riyue_qiankun_shift: {
+    id: 'riyue_qiankun_shift', name: '乾坤大挪移·初', icon: '🔄', type: 'control', target: 'enemy',
+    mp: 45, hit: 1, powerMul: 0.8, defPen: 0.5,
+    cooldown: 3, effect: { type: 'knockback', value: 1, duration: 1 },
+    healPct: 0,
+    desc: '乾坤大挪移初境，借力打力。造成80%攻击伤害，必定击飞敌方跳过1回合。',
+    cost: { exp: 1200 }, sect: 'riyue',
+    battleTip: '强控·必击飞',
+  },
+  riyue_moon_goddess: {
+    id: 'riyue_moon_goddess', name: '圣女经', icon: '🌸', type: 'passive', target: 'self',
+    mp: 0, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 0, effect: { type: 'regen_mp_pct', value: 15, duration: 99 },
+    healPct: 0,
+    desc: '【被动】日月神功之女性专属修炼，每回合恢复15%最大内力，功力事半功倍。',
+    cost: { exp: 1500 }, sect: 'riyue',
+    battleTip: '被动·终极内力循环',
+  },
+  riyue_shadow_realm: {
+    id: 'riyue_shadow_realm', name: '暗域', icon: '🌑', type: 'support', target: 'self',
+    mp: 50, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 4, effect: { type: 'buff_atk', value: 30, duration: 3 },
+    healPct: 0,
+    desc: '进入暗域修炼状态，攻击力提升30点持续3回合，并获得30%闪避率。',
+    cost: { exp: 1800 }, sect: 'riyue',
+    battleTip: '终极攻击增益·附带闪避',
+  },
+  riyue_full_moon: {
+    id: 'riyue_full_moon', name: '满月斩', icon: '🌕', type: 'attack', target: 'enemy',
+    mp: 60, hit: 1, powerMul: 3.0, defPen: 0.65,
+    cooldown: 3, effect: null, healPct: 0,
+    desc: '满月之力凝于掌中，一掌造成300%攻击伤害，日月神功极致爆发。',
+    cost: { exp: 2500 }, sect: 'riyue',
+    battleTip: '终极一击·高爆发',
+  },
+
+  // ── 日月教 · 掌门级（化神期）
+  riyue_qiankun_true: {
+    id: 'riyue_qiankun_true', name: '乾坤大挪移·真', icon: '🔮', type: 'control', target: 'enemy',
+    mp: 65, hit: 1, powerMul: 1.5, defPen: 0.7,
+    cooldown: 4, effect: { type: 'stun', value: 1, duration: 2 },
+    healPct: 0,
+    desc: '乾坤大挪移第七境，万法皆可挪移。造成150%攻击伤害，必定眩晕敌方2回合。',
+    cost: { exp: 3000 }, sect: 'riyue',
+    battleTip: '化神强控·必晕2回合',
+  },
+  riyue_sacred_sun: {
+    id: 'riyue_sacred_sun', name: '神圣日轮', icon: '🌞', type: 'attack', target: 'enemy',
+    mp: 70, hit: 5, powerMul: 0.5, defPen: 0.8,
+    cooldown: 3, effect: { type: 'weaken_def', value: 20, duration: 3 },
+    healPct: 0,
+    desc: '日轮神威，五连击各造成50%攻击伤害，削弱敌方防御20点持续3回合。',
+    cost: { exp: 4000 }, sect: 'riyue',
+    battleTip: '化神连击·大幅破甲',
+  },
+  riyue_tianren: {
+    id: 'riyue_tianren', name: '日月归一', icon: '☀️', type: 'passive', target: 'self',
+    mp: 0, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 0, effect: { type: 'regen_mp_pct', value: 20, duration: 99 },
+    healPct: 0,
+    desc: '【被动】日月归一，阴阳调和。每回合恢复20%最大内力，且所有技能威力提升10%。',
+    cost: { exp: 3500 }, sect: 'riyue',
+    battleTip: '被动·化神内力循环',
+  },
+  riyue_sun_moon_divine: {
+    id: 'riyue_sun_moon_divine', name: '日月神功·大成', icon: '⭐', type: 'support', target: 'self',
+    mp: 60, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 4, effect: { type: 'buff_atk', value: 40, duration: 3 },
+    healPct: 0.4,
+    desc: '日月神功大成，攻击力提升40点持续3回合，恢复40%最大气血，获得20%闪避1回合。',
+    cost: { exp: 4500 }, sect: 'riyue',
+    battleTip: '化神终极增益',
+  },
+
+  // ── 日月教 · 入圣（渡劫期）
+  riyue_nirvana: {
+    id: 'riyue_nirvana', name: '魔道涅槃', icon: '🌟', type: 'passive', target: 'self',
+    mp: 0, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 0, effect: { type: 'regen_mp_pct', value: 25, duration: 99 },
+    healPct: 0,
+    desc: '【被动】以魔道证道，涅槃重生。每回合恢复25%最大内力，气血恢复效果+30%，免疫眩晕。',
+    cost: { exp: 6000 }, sect: 'riyue',
+    battleTip: '被动·渡劫内力+免疫眩晕',
+  },
+  riyue_void_moon: {
+    id: 'riyue_void_moon', name: '虚空月魄', icon: '🌑', type: 'attack', target: 'enemy',
+    mp: 85, hit: 1, powerMul: 5.0, defPen: 0.75,
+    cooldown: 5, effect: { type: 'stun', value: 1, duration: 1 },
+    healPct: 0,
+    desc: '虚空月魄，阴极之力化为一击。造成500%攻击伤害，必定眩晕敌方1回合。',
+    cost: { exp: 5500 }, sect: 'riyue',
+    battleTip: '渡劫单击·必晕',
+  },
+  riyue_dark_sun: {
+    id: 'riyue_dark_sun', name: '暗日灭法', icon: '💥', type: 'support', target: 'self',
+    mp: 75, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 5, effect: { type: 'buff_atk', value: 50, duration: 3 },
+    healPct: 0.5,
+    desc: '暗日之力护体，攻击力提升50点持续3回合，恢复50%最大气血，获得50%闪避1回合。',
+    cost: { exp: 5000 }, sect: 'riyue',
+    battleTip: '渡劫全能·攻防双升+大回血',
+  },
+  riyue_ultimate: {
+    id: 'riyue_ultimate', name: '日月乾坤剑', icon: '⚔️', type: 'attack', target: 'enemy',
+    mp: 100, hit: 1, powerMul: 6.0, defPen: 0.8,
+    cooldown: 6, effect: { type: 'stun', value: 1, duration: 2 },
+    healPct: 0,
+    desc: '乾坤大挪移至境，日月两仪化为剑意。造成600%攻击伤害，必定眩晕敌方2回合，无视50%防御。',
+    cost: { exp: 8000 }, sect: 'riyue',
+    battleTip: '渡劫终极·毁天灭地',
+  },
+
+  // ═══════════════════════════════════════════
+  //  第三章 · 武当真传剑法（筑基期）
+  // ═══════════════════════════════════════════
 
   wudang_yunkai: {
     id: 'wudang_yunkai', name: '武当剑法·云开', icon: '☁️', type: 'attack', target: 'enemy',

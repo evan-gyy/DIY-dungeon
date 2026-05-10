@@ -269,6 +269,12 @@ export const FACTION_DEFS: Record<SectId, { alignment: FactionAlignment; culture
   diancang: { alignment: 'neutral',   culture: ['sword', 'mountain', 'remote', 'southern'] },
   // 无门派（散修/朝堂纯文官）
   none:     { alignment: 'neutral',   culture: [] },
+  // 🆕 P9 五大新势力
+  riyue:    { alignment: 'chaotic',     culture: ['moon', 'sun', 'forbidden', 'power', 'shadow'] },
+  tiezhang: { alignment: 'unorthodox', culture: ['fist', 'clan', 'water', 'brute-force'] },
+  wudu:     { alignment: 'chaotic',    culture: ['poison', 'snake', 'ritual', 'gu-magic'] },
+  xuedao:   { alignment: 'chaotic',    culture: ['blood', 'blade', 'chaos', 'slaughter'] },
+  haisha:   { alignment: 'unorthodox', culture: ['sea', 'pirate', 'southern', 'mercenary'] },
 };
 
 // ──── P1-3: 双身份系统（庙堂之上 + 武林之中）────

@@ -140,24 +140,49 @@ export function showMapOverlay(): void {
 
   // ── 地点坐标（上北下南，基于宋朝真实地理）──
   const POS: Record<string, { x: number; y: number }> = {
-    // 中原线（北）
-    changan_city:    { x: 18,  y: 12 },
-    luoyang_city:    { x: 38,  y: 18 },
-    kaifeng_city:    { x: 52,  y: 16 },
-    shaolin_temple:  { x: 44,  y: 28 },
-    // 荆湖线（中）
-    xiangyang_city:  { x: 32,  y: 42 },
-    beggar_hq:       { x: 22,  y: 38 },
-    wudang_mountain: { x: 22,  y: 52 },
-    jiangling_city:  { x: 14,  y: 62 },
-    // 江南线（东南）
-    yangzhou_city:   { x: 62,  y: 34 },
-    suzhou_city:     { x: 72,  y: 44 },
-    hangzhou_city:   { x: 72,  y: 56 },
-    // 蜀中线（西南）
-    chengdu_city:    { x: 4,   y: 72 },
-    emei_mountain:   { x: 2,   y: 82 },
-    dali_city:       { x: 2,   y: 92 },
+    // 西北
+    kunlun_mountain:    { x: 2,  y: 8  },
+    kongtong_mountain:  { x: 10, y: 12 },
+    liangzhou_city:     { x: 6,  y: 16 },
+    // 关中
+    changan_city:       { x: 18, y: 12 },
+    huashan_base:       { x: 28, y: 15 },
+    zhongnan_mountain:  { x: 18, y: 24 },
+    // 北方
+    taiyuan_city:       { x: 44, y: 10 },
+    heimu_cliff:        { x: 51, y: 5  },
+    yanjing_city:       { x: 62, y: 4  },
+    // 中原
+    luoyang_city:       { x: 38, y: 18 },
+    kaifeng_city:       { x: 52, y: 16 },
+    shaolin_temple:     { x: 44, y: 28 },
+    // 荆湖线
+    xiangyang_city:     { x: 32, y: 42 },
+    beggar_hq:          { x: 22, y: 38 },
+    wudang_mountain:    { x: 22, y: 52 },
+    jiangling_city:     { x: 14, y: 62 },
+    wuchang_city:       { x: 30, y: 58 },
+    // 江南线
+    yangzhou_city:      { x: 62, y: 34 },
+    jinling_city:       { x: 60, y: 40 },
+    maoshan_daoyuan:    { x: 67, y: 36 },
+    jiangzhou_city:     { x: 50, y: 54 },
+    suzhou_city:        { x: 72, y: 44 },
+    hangzhou_city:      { x: 72, y: 56 },
+    mingzhou_city:      { x: 82, y: 57 },
+    xiaoyao_valley:     { x: 76, y: 50 },
+    // 蜀中
+    chengdu_city:       { x: 4,  y: 72 },
+    tangmen_estate:     { x: 8,  y: 64 },
+    chongqing_city:     { x: 14, y: 74 },
+    emei_mountain:      { x: 2,  y: 82 },
+    qingcheng_mountain: { x: 2,  y: 78 },
+    // 南方
+    tanzhou_city:       { x: 32, y: 74 },
+    dali_city:          { x: 2,  y: 92 },
+    diancang_mountain:  { x: 2,  y: 96 },
+    fuzhou_city:        { x: 76, y: 74 },
+    guangzhou_city:     { x: 55, y: 88 },
   };
 
   // ── 生成连线 SVG ──
@@ -188,7 +213,7 @@ export function showMapOverlay(): void {
     return `<div class="${cls}" data-dest="${loc.id}"
       style="left:${pos.x}%;top:${pos.y}%;"
       title="${loc.description}">
-      <div class="s2m-icon">${loc.region === 'wudang' || loc.id.includes('temple') || loc.id.includes('mountain') || loc.id.includes('hq') ? '🏯' : '🏘️'}</div>
+      <div class="s2m-icon">${/mountain|temple|hq|daoyuan|estate|base/.test(loc.id) ? '⛩️' : /valley|cliff/.test(loc.id) ? '🌲' : '🏘️'}</div>
       <div class="s2m-name">${isCurrent ? '📍' : ''}${loc.name}</div>
       ${canTravel ? '<div class="s2m-go">前往 →</div>' : ''}
       ${isCurrent ? '<div class="s2m-here">当前</div>' : ''}
@@ -288,7 +313,7 @@ export function showMapOverlay(): void {
   overlay.querySelector('#map-overlay-close')?.addEventListener('click', () => overlay.remove());
   overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
 
-  // 点击节点前往
+  // 点击节点前往（不自动关闭，旅行后刷新地图）
   overlay.querySelectorAll<HTMLElement>('.s2m-node[data-dest]').forEach(node => {
     node.addEventListener('click', () => {
       const destId = node.dataset['dest'] as LocationId;
@@ -297,8 +322,8 @@ export function showMapOverlay(): void {
         showToast('需要从相邻地点逐步前往。');
         return;
       }
-      overlay.remove();
       travelToLocation(destId);
+      showMapOverlay(); // 刷新地图（含新位置高亮和可达连线）
     });
   });
 }

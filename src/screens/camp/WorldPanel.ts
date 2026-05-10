@@ -143,7 +143,8 @@ function renderSectDetailCards(): string {
         // 外交关系
         const relations = ['wudang','shaolin','emei','beggar','huashan','demon',
           'maoshan','kunlun','qingcheng','tangmen','xiaoyao',
-          'quanzhen','kongtong','diancang'] as SectId[];
+          'quanzhen','kongtong','diancang',
+          'riyue','tiezhang','wudu','xuedao','haisha'] as SectId[];
         const relationTags = relations
           .filter(other => other !== r.factionId)
           .map(other => {
@@ -154,6 +155,7 @@ function renderSectDetailCards(): string {
               wudang:'武当', shaolin:'少林', emei:'峨眉', beggar:'丐帮', huashan:'华山', demon:'魔教',
               maoshan:'茅山', kunlun:'昆仑', qingcheng:'青城', tangmen:'唐门', xiaoyao:'逍遥',
               quanzhen:'全真', kongtong:'崆峒', diancang:'点苍', none:'散修',
+              riyue:'日月', tiezhang:'铁掌', wudu:'五毒', xuedao:'血刀', haisha:'海沙',
             };
             return `<span class="wp-rel-tag" style="color:${color}" title="${label}(${trust})">${shortName[other] ?? other}:${trust}</span>`;
           }).join(' ');

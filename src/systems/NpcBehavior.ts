@@ -12,13 +12,7 @@ import { FACTION_DEFS, type FactionAlignment } from '../data/sandboxTypes';
 import { SECTS } from '../data/sects';
 import { changeNpcAffection, getNpcAffection } from '../screens/camp/RelationPanel';
 import { generateAllNpcs } from './NPCGenerator';
-
-// ── 武当派技能学习表（等级 → SkillId） ──
-const WUDANG_SKILL_TABLE: Array<[number, SkillId]> = [
-  [1,  'wudang_changquan'], [2, 'yangqi_jue'], [3, 'wudang_jianfa_basic'], [4, 'wudang_qinggong'],
-  [11, 'mianzhang'], [12, 'wudang_sword'], [13, 'zixiao'], [14, 'wudang_huti'], [15, 'wudang_lianjian'],
-  [21, 'taiji'], [22, 'taiji_jian'], [23, 'liangyi_sword'], [24, 'chunyang_gong'], [25, 'wudang_zhenfa'],
-];
+import { SECT_SKILL_TABLES } from '../data/sectSkillTables';
 
 // ── NPC 初始位置映射 ──
 const NPC_INITIAL_LOCATION: Record<string, LocationId> = {
@@ -46,8 +40,8 @@ const NPC_INITIAL_LOCATION: Record<string, LocationId> = {
   'beggar_hong':       'beggar_hq',
   'beggar_lu':         'beggar_hq',
   // 🆕 沙盒：华山派
-  'huashan_master':    'changan_city',
-  'huashan_feng':      'changan_city',
+  'huashan_master':    'huashan_base',
+  'huashan_feng':      'huashan_base',
   // 🆕 沙盒：魔教
   'demon_master':      'yangzhou_city',
   'demon_yang':        'yangzhou_city',
@@ -97,8 +91,9 @@ const RIGHTEOUS_FRIENDLY_MOVE_WEIGHT = 3.0;
 const CHAOTIC_DANGER_WEIGHT_MULT = 0.8;
 
 function getLearnableSkills(npc: NpcStats): SkillId[] {
-  if (npc.sect !== 'wudang') return [];
-  return WUDANG_SKILL_TABLE
+  const table = SECT_SKILL_TABLES[npc.sect];
+  if (!table) return [];
+  return table
     .filter(([lv, sid]) => lv <= npc.level && !npc.skills.includes(sid))
     .map(([, sid]) => sid);
 }
