@@ -219,8 +219,10 @@ function renderSkillBar(): void {
   basicBtn.addEventListener('click', () => {
     _basicAttackMode = true;
     _selectedSkillId = null;
-    if (_selectedTargetId) {
-      playerBasicAttack(_selectedTargetId);
+    const targets = getTargetableEnemies();
+    const autoTarget = targets.length === 1 ? targets[0]!.id : _selectedTargetId;
+    if (autoTarget) {
+      playerBasicAttack(autoTarget);
       _basicAttackMode = false;
       _selectedTargetId = null;
     }
@@ -265,8 +267,10 @@ function renderSkillBar(): void {
           // 攻击/控制技能：先选中技能，等待点击目标
           _selectedSkillId = skId as SkillId;
           _basicAttackMode = false;
-          if (_selectedTargetId) {
-            playerUseSkill(skId as SkillId, _selectedTargetId);
+          const targets = getTargetableEnemies();
+          const autoTarget = targets.length === 1 ? targets[0]!.id : _selectedTargetId;
+          if (autoTarget) {
+            playerUseSkill(skId as SkillId, autoTarget);
             _selectedSkillId = null;
             _selectedTargetId = null;
           }
