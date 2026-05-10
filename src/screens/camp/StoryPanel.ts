@@ -10,7 +10,7 @@ import { calculateFinalStats } from '../../data/realmConfig';
 import { WORLD_MAP, type LocationAction } from '../../data/worldMap';
 import { changeNpcAffection } from './RelationPanel';
 import { syncSlotsOnPromotion } from '../../systems/NPCManager';
-import { updateMissionProgress } from '../../systems/MissionSystem';
+import { updateMissionProgress, getMissionDef } from '../../systems/MissionSystem';
 import { tickFactionDiplomacy } from '../../systems/FactionSystem';
 import { tickWorldState, contributeToFaction, addChronicleEntry, joinSect } from '../../systems/WorldState';
 import type { DiscipleRank } from '../../data/sandboxTypes';
@@ -36,6 +36,12 @@ function doDailyTask(action: LocationAction): void {
   }
   if (action.id === 'city_fabao_shop') {
     import('./FabaoShopUI').then(m => m.showCityShopOverlay());
+    return;
+  }
+
+  // 🆕 习武学功 action：打开技能学习弹窗
+  if (action.id === 'sect_learn_skill') {
+    import('./SkillLearnOverlay').then(m => m.showSkillLearnOverlay());
     return;
   }
 
@@ -159,6 +165,8 @@ function renderDailyTasks(): string {
     if (t.requireNoSect && p.sect !== 'none') return false;
     // 沙盒专属：仅无官身时显示出仕
     if (t.requireNoCourt && p.courtRank !== 'commoner') return false;
+    // 习武学功：仅本派弟子可见
+    if (t.id === 'sect_learn_skill' && t.sectTarget && p.sect !== t.sectTarget) return false;
     return true;
   });
   // 锁定任务：不满足解锁条件，或已超过 maxLevel，或朝廷品阶不足
@@ -191,7 +199,7 @@ function renderDailyTasks(): string {
   }
 
   const availableHtml = availableTasks.map(t => {
-    const isShop = t.id === 'sect_fabao_shop' || t.id === 'city_fabao_shop';
+    const isShop = t.id === 'sect_fabao_shop' || t.id === 'city_fabao_shop' || t.id === 'sect_learn_skill';
     const goldHtml = t.gold > 0 ? '<span>+' + t.gold + ' 💰</span>' : '';
     const contribHtml = (t.contribution ?? 0) > 0 ? '<span>+' + t.contribution + ' 🏅</span>' : '';
     const influenceHtml = (t.influence ?? 0) > 0 ? '<span>+' + t.influence + ' 📜</span>' : '';
@@ -255,10 +263,43 @@ function renderDailyTasks(): string {
     lockedHtml = label + cards;
   }
 
+  // ── 进行中战斗任务区域 ──
+  const activeMissions = (p.activeMissions ?? []).filter(m => m.status === 'accepted');
+  const combatHere = activeMissions.filter(m => {
+    const def = getMissionDef(m.defId);
+    return def && (def.type === 'combat' || def.type === 'escort') && def.targetLocation === locId;
+  });
+
+  let missionFightSection = '';
+  if (combatHere.length > 0) {
+    const cards = combatHere.map(m => {
+      const def = getMissionDef(m.defId)!;
+      const done = m.progress >= m.progressMax;
+      const hasEnemy = !!def.enemyId;
+      return '<div class="mission-fight-card">' +
+        '<span class="daily-task-icon">⚔️</span>' +
+        '<div class="daily-task-info">' +
+        '<div class="daily-task-name">' + def.title + '</div>' +
+        '<div class="daily-task-desc">进度：' + m.progress + '/' + m.progressMax + '</div>' +
+        '</div>' +
+        (done
+          ? '<div class="daily-task-reward" style="color:#4caf50;">✓ 可提交</div>'
+          : hasEnemy
+            ? '<button class="btn" data-mission-fight="' + def.id + '" data-enemy="' + def.enemyId + '" style="padding:5px 12px;font-size:12px;">执行战斗</button>'
+            : '<div class="daily-task-reward" style="color:var(--text-dim);">前往任务点</div>'
+        ) +
+        '</div>';
+    }).join('');
+    missionFightSection = '<div class="daily-tasks-section" style="margin-top:8px;">' +
+      '<div class="daily-tasks-header">⚔️ 进行中任务</div>' +
+      '<div class="daily-tasks-grid">' + cards + '</div>' +
+      '</div>';
+  }
+
   return `<div class="daily-tasks-section">
     <div class="daily-tasks-header">📋 日常修行 · ${location?.name ?? '未知'}</div>
     <div class="daily-tasks-grid">${availableHtml}${lockedHtml}</div>
-  </div>`;
+  </div>${missionFightSection}`;
 }
 
 export function renderStoryPanel(content: HTMLElement): void {
@@ -326,6 +367,35 @@ function bindDailyTaskButtons(content: HTMLElement): void {
       const location = WORLD_MAP[locId];
       const task = location?.actions?.find(t => t.id === taskId);
       if (task) doDailyTask(task);
+    });
+  });
+
+  // 🆕 绑定任务战斗按钮
+  content.querySelectorAll<HTMLElement>('[data-mission-fight]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const missionDefId = btn.dataset['missionFight'];
+      const enemyId = btn.dataset['enemy'];
+      if (!missionDefId || !enemyId) return;
+
+      Promise.all([
+        import('../../systems/BattleEngine'),
+        import('../../ui/events'),
+      ]).then(([battleMod, eventsMod]) => {
+        const handleEnd = ({ result }: { result: string; expGain: number; goldGain: number; loot: string[] }) => {
+          eventsMod.bus.off('battle:end', handleEnd as any);
+          if (result === 'win') {
+            const cur = getPlayer();
+            updateMissionProgress('combat', cur.currentLocationId);
+            showToast('⚔️ 战斗胜利！任务进度已更新。');
+          } else {
+            showToast('战斗失败，再接再厉！');
+          }
+          const campContent = document.getElementById('camp-content');
+          if (campContent) renderStoryPanel(campContent);
+        };
+        eventsMod.bus.on('battle:end', handleEnd as any);
+        battleMod.initBattle(enemyId as any);
+      });
     });
   });
 }

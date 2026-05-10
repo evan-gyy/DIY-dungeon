@@ -131,6 +131,7 @@ export const WORLD_MAP: Record<LocationId, MapLocation> = {
     connections: ['xiangyang_city', 'jiangling_city'],
     actions: [
       { id: 'join_sect', icon: '🏯', name: '拜入师门', desc: '叩拜真武大帝，正式成为武当弟子', exp: 0, gold: 0, sectTarget: 'wudang', requireNoSect: true, unlockChapter: 2 },
+      { id: 'sect_learn_skill', icon: '📖', name: '习武学功', desc: '在武当宗门修习技能，消耗贡献值', exp: 0, gold: 0, contribution: 0, sectTarget: 'wudang', unlockChapter: 2 },
       { id: 'chop_wood',      icon: '🪓', name: '砍柴',       desc: '山门外劈柴，练臂力也练心性', exp: 20, gold: 5,  contribution: 2, unlockChapter: 2, unlockLevel: 0, maxLevel: 10 },
       { id: 'carry_water',    icon: '💧', name: '挑水',       desc: '去最远的山泉挑水，腿能废三天', exp: 15, gold: 3,  contribution: 2, unlockChapter: 2, unlockLevel: 0, maxLevel: 10 },
       { id: 'clean_hall',     icon: '🧹', name: '打扫大殿',   desc: '真武大殿除尘，心静则尘净',     exp: 18, gold: 4,  contribution: 3, unlockChapter: 2, unlockLevel: 0 },
@@ -152,6 +153,7 @@ export const WORLD_MAP: Record<LocationId, MapLocation> = {
     connections: ['luoyang_city'],
     actions: [
       { id: 'join_sect', icon: '🏯', name: '拜入师门', desc: '在少林寺剃度受戒，成为少林俗家弟子', exp: 0, gold: 0, sectTarget: 'shaolin', requireNoSect: true, unlockChapter: 2 },
+      { id: 'sect_learn_skill', icon: '📖', name: '习武学功', desc: '在少林寺修习七十二绝技，消耗贡献值', exp: 0, gold: 0, contribution: 0, sectTarget: 'shaolin', unlockChapter: 2 },
       { id: 'shaolin_meditate', icon: '🧘', name: '参禅打坐', desc: '在少林禅堂静心打坐，佛光入体', exp: 35, gold: 0, contribution: 0, unlockChapter: 2, unlockLevel: 0 },
       { id: 'sect_fabao_shop', icon: '🏪', name: '法器兑换',   desc: '以宗门贡献兑换法宝，藏经阁内佛宝无数', exp: 0, gold: 0, contribution: 0, unlockChapter: 2, unlockLevel: 0 },
     ],
@@ -168,6 +170,7 @@ export const WORLD_MAP: Record<LocationId, MapLocation> = {
     connections: ['chengdu_city'],
     actions: [
       { id: 'join_sect', icon: '🏯', name: '拜入师门', desc: '金顶之上叩拜入派，成为峨眉女修弟子', exp: 0, gold: 0, sectTarget: 'emei', requireNoSect: true, unlockChapter: 2 },
+      { id: 'sect_learn_skill', icon: '📖', name: '习武学功', desc: '在峨眉金顶修习峨眉秘学，消耗贡献值', exp: 0, gold: 0, contribution: 0, sectTarget: 'emei', unlockChapter: 2 },
       { id: 'emei_meditate', icon: '🧘', name: '金顶观日', desc: '在金顶打坐，感悟天地造化', exp: 35, gold: 0, contribution: 0, unlockChapter: 2, unlockLevel: 0 },
       { id: 'sect_fabao_shop', icon: '🏪', name: '法器兑换',   desc: '以宗门贡献兑换法宝，金顶阁中奇珍荟萃', exp: 0, gold: 0, contribution: 0, unlockChapter: 2, unlockLevel: 0 },
     ],
@@ -184,6 +187,7 @@ export const WORLD_MAP: Record<LocationId, MapLocation> = {
     connections: ['xiangyang_city'],
     actions: [
       { id: 'join_sect', icon: '🏯', name: '拜入师门', desc: '在丐帮总舵行拜师之礼，成为天下第一大帮弟子', exp: 0, gold: 0, sectTarget: 'beggar', requireNoSect: true, unlockChapter: 2 },
+      { id: 'sect_learn_skill', icon: '📖', name: '习武学功', desc: '在丐帮修习降龙十八掌、打狗棒法，消耗贡献值', exp: 0, gold: 0, contribution: 0, sectTarget: 'beggar', unlockChapter: 2 },
       { id: 'beggar_spar', icon: '⚔️', name: '街头切磋', desc: '与丐帮弟子切磋武艺，增长见识', exp: 40, gold: 0, contribution: 0, unlockChapter: 2, unlockLevel: 0 },
       { id: 'sect_fabao_shop', icon: '🏪', name: '法器兑换',   desc: '以宗门贡献兑换法宝，帮中密库暗藏珍宝', exp: 0, gold: 0, contribution: 0, unlockChapter: 2, unlockLevel: 0 },
     ],
@@ -200,6 +204,7 @@ export const WORLD_MAP: Record<LocationId, MapLocation> = {
     connections: ['suzhou_city', 'hangzhou_city'],
     actions: [
       { id: 'join_sect', icon: '🏯', name: '拜入师门', desc: '叩拜三茅真君，成为茅山弟子，修习符箓道法', exp: 0, gold: 0, sectTarget: 'maoshan', requireNoSect: true, unlockChapter: 2 },
+      { id: 'sect_learn_skill', icon: '📖', name: '习武学功', desc: '在茅山道院修习符箓秘术，消耗贡献值', exp: 0, gold: 0, contribution: 0, sectTarget: 'maoshan', unlockChapter: 2 },
       { id: 'maoshan_talisman', icon: '🔮', name: '画符修炼', desc: '于道院中研磨朱砂画符，心神合一', exp: 35, gold: 0, contribution: 0, unlockChapter: 2, unlockLevel: 0 },
       { id: 'sect_fabao_shop', icon: '🏪', name: '法器兑换', desc: '以宗门贡献兑换法宝，符箓阁中灵符法器琳琅满目', exp: 0, gold: 0, contribution: 0, unlockChapter: 2, unlockLevel: 0 },
     ],
@@ -216,6 +221,8 @@ export const WORLD_MAP: Record<LocationId, MapLocation> = {
     connections: ['liangzhou_city'],
     actions: [
       { id: 'kunlun_meditate', icon: '🧘', name: '雪山静修', desc: '在昆仑绝顶打坐，寒冰淬体', exp: 40, gold: 0, contribution: 0, unlockChapter: 2, unlockLevel: 0 },
+      { id: 'join_sect', icon: '🏔️', name: '拜入师门', desc: '在昆仑雪峰叩拜入派，修习昆仑剑法', exp: 0, gold: 0, sectTarget: 'kunlun', requireNoSect: true, unlockChapter: 2 },
+      { id: 'sect_learn_skill', icon: '📖', name: '习武学功', desc: '在昆仑冰窟修习剑术，消耗贡献值', exp: 0, gold: 0, contribution: 0, sectTarget: 'kunlun', unlockChapter: 2 },
       { id: 'sect_fabao_shop', icon: '🏪', name: '法器兑换', desc: '以宗门贡献兑换法宝，冰窟中藏有寒玉奇珍', exp: 0, gold: 0, contribution: 0, unlockChapter: 2, unlockLevel: 0 },
     ],
   },
@@ -231,6 +238,7 @@ export const WORLD_MAP: Record<LocationId, MapLocation> = {
     connections: ['chengdu_city'],
     actions: [
       { id: 'join_sect', icon: '🏯', name: '拜入师门', desc: '在青城山上叩拜入派，成为青城弟子', exp: 0, gold: 0, sectTarget: 'qingcheng', requireNoSect: true, unlockChapter: 2 },
+      { id: 'sect_learn_skill', icon: '📖', name: '习武学功', desc: '在青城幽洞修习拳剑功法，消耗贡献值', exp: 0, gold: 0, contribution: 0, sectTarget: 'qingcheng', unlockChapter: 2 },
       { id: 'qingcheng_spar', icon: '⚔️', name: '青城试剑', desc: '与青城弟子切磋拳剑，精进武艺', exp: 38, gold: 0, contribution: 0, unlockChapter: 2, unlockLevel: 0 },
       { id: 'sect_fabao_shop', icon: '🏪', name: '法器兑换', desc: '以宗门贡献兑换法宝，幽洞中藏有蜀中奇珍', exp: 0, gold: 0, contribution: 0, unlockChapter: 2, unlockLevel: 0 },
     ],
@@ -247,6 +255,7 @@ export const WORLD_MAP: Record<LocationId, MapLocation> = {
     connections: ['chengdu_city'],
     actions: [
       { id: 'join_sect', icon: '🏯', name: '拜入师门', desc: '递上投名状，入唐家堡修习暗器毒术', exp: 0, gold: 0, sectTarget: 'tangmen', requireNoSect: true, unlockChapter: 2 },
+      { id: 'sect_learn_skill', icon: '📖', name: '习武学功', desc: '在唐家堡暗室修习暗器毒术，消耗贡献值', exp: 0, gold: 0, contribution: 0, sectTarget: 'tangmen', unlockChapter: 2 },
       { id: 'tangmen_poison', icon: '🧪', name: '炼制毒药', desc: '在暗室中调配唐门秘毒，暗器淬毒', exp: 35, gold: 10, contribution: 0, unlockChapter: 2, unlockLevel: 0 },
       { id: 'sect_fabao_shop', icon: '🏪', name: '法器兑换', desc: '以宗门贡献兑换法宝，暗库中机关暗器琳琅', exp: 0, gold: 0, contribution: 0, unlockChapter: 2, unlockLevel: 0 },
     ],
@@ -264,6 +273,7 @@ export const WORLD_MAP: Record<LocationId, MapLocation> = {
     unlockChapter: 4,
     actions: [
       { id: 'join_sect', icon: '🏯', name: '拜入师门', desc: '闯入逍遥谷，叩问逍遥真意，拜入逍遥派', exp: 0, gold: 0, sectTarget: 'xiaoyao', requireNoSect: true, unlockChapter: 4 },
+      { id: 'sect_learn_skill', icon: '📖', name: '习武学功', desc: '在逍遥谷藏书洞修习逍遥奇功，消耗贡献值', exp: 0, gold: 0, contribution: 0, sectTarget: 'xiaoyao', unlockChapter: 4 },
       { id: 'xiaoyao_meditate', icon: '🦅', name: '御气逍遥', desc: '在逍遥谷中感悟天地，凌虚御风', exp: 50, gold: 0, contribution: 0, unlockChapter: 4, unlockLevel: 0 },
       { id: 'sect_fabao_shop', icon: '🏪', name: '法器兑换', desc: '以宗门贡献兑换法宝，藏书洞中奇功异宝无数', exp: 0, gold: 0, contribution: 0, unlockChapter: 4, unlockLevel: 0 },
     ],
@@ -456,6 +466,7 @@ export const WORLD_MAP: Record<LocationId, MapLocation> = {
     connections: ['changan_city'],
     actions: [
       { id: 'join_sect', icon: '🏯', name: '拜入师门', desc: '叩拜重阳真人画像，入全真教修习道武', exp: 0, gold: 0, sectTarget: 'quanzhen', requireNoSect: true, unlockChapter: 2 },
+      { id: 'sect_learn_skill', icon: '📖', name: '习武学功', desc: '在重阳宫修习全真功法，消耗贡献值', exp: 0, gold: 0, contribution: 0, sectTarget: 'quanzhen', unlockChapter: 2 },
       { id: 'quanzhen_meditate', icon: '🧘', name: '坐圜守静', desc: '于重阳宫静室打坐，抱元守一', exp: 38, gold: 0, contribution: 0, unlockChapter: 2, unlockLevel: 0 },
       { id: 'quanzhen_sword', icon: '⚔️', name: '北斗演剑', desc: '踏天罡步，演北斗七星剑阵', exp: 45, gold: 0, contribution: 4, unlockChapter: 2, unlockLevel: 4 },
       { id: 'sect_fabao_shop', icon: '🏪', name: '法器兑换', desc: '以宗门贡献兑换法宝，藏经阁道藏浩瀚', exp: 0, gold: 0, contribution: 0, unlockChapter: 2, unlockLevel: 0 },
@@ -473,6 +484,7 @@ export const WORLD_MAP: Record<LocationId, MapLocation> = {
     connections: ['liangzhou_city'],
     actions: [
       { id: 'join_sect', icon: '🏯', name: '拜入师门', desc: '在崆峒山洞前叩拜入派，修习裂石拳奥义', exp: 0, gold: 0, sectTarget: 'kongtong', requireNoSect: true, unlockChapter: 2 },
+      { id: 'sect_learn_skill', icon: '📖', name: '习武学功', desc: '在崆峒山洞修习裂石拳术，消耗贡献值', exp: 0, gold: 0, contribution: 0, sectTarget: 'kongtong', unlockChapter: 2 },
       { id: 'kongtong_spar', icon: '👊', name: '裂石练拳', desc: '以裂石拳谱磨砺拳劲，碎石如泥方得精进', exp: 42, gold: 0, contribution: 4, unlockChapter: 2, unlockLevel: 0 },
       { id: 'kongtong_meditate', icon: '🧘', name: '洞中养伤', desc: '裂石拳刚猛霸道，需于洞中静养调理筋骨', exp: 25, gold: 0, contribution: 2, unlockChapter: 2, unlockLevel: 0 },
       { id: 'sect_fabao_shop', icon: '🏪', name: '法器兑换', desc: '以宗门贡献兑换法宝，山洞秘库藏有疗伤奇珍', exp: 0, gold: 0, contribution: 0, unlockChapter: 2, unlockLevel: 0 },
@@ -491,6 +503,7 @@ export const WORLD_MAP: Record<LocationId, MapLocation> = {
     unlockChapter: 5,
     actions: [
       { id: 'join_sect', icon: '🏯', name: '拜入师门', desc: '在点苍山巅叩拜入派，修习南疆第一剑', exp: 0, gold: 0, sectTarget: 'diancang', requireNoSect: true, unlockChapter: 5 },
+      { id: 'sect_learn_skill', icon: '📖', name: '习武学功', desc: '在点苍石室修习苍山剑法，消耗贡献值', exp: 0, gold: 0, contribution: 0, sectTarget: 'diancang', unlockChapter: 5 },
       { id: 'diancang_sword', icon: '🗡️', name: '点苍试剑', desc: '在苍山绝壁练剑，云雾缭绕间剑意自生', exp: 48, gold: 0, contribution: 5, unlockChapter: 5, unlockLevel: 0 },
       { id: 'diancang_cloud', icon: '☁️', name: '观云悟剑', desc: '静观苍山云海变幻，剑法意境随之提升', exp: 42, gold: 0, contribution: 3, unlockChapter: 5, unlockLevel: 0 },
       { id: 'sect_fabao_shop', icon: '🏪', name: '法器兑换', desc: '以宗门贡献兑换法宝，苍山石室中藏有南疆奇珍', exp: 0, gold: 0, contribution: 0, unlockChapter: 5, unlockLevel: 0 },
@@ -706,6 +719,7 @@ export const WORLD_MAP: Record<LocationId, MapLocation> = {
     unlockChapter: 3,
     actions: [
       { id: 'join_sect', icon: '🌑', name: '投身日月教', desc: '叩拜日月旗，成为日月教门下，修习乾坤大挪移', exp: 0, gold: 0, sectTarget: 'riyue', requireNoSect: true, unlockChapter: 3 },
+      { id: 'sect_learn_skill', icon: '📖', name: '习武学功', desc: '在黑木崖密室修习日月神功，消耗贡献值', exp: 0, gold: 0, contribution: 0, sectTarget: 'riyue', unlockChapter: 3 },
       { id: 'riyue_meditate', icon: '☯️', name: '日月双修', desc: '在黑木崖上修炼日月神功，吸收天地日月精华', exp: 50, gold: 0, contribution: 5, unlockChapter: 3, unlockLevel: 0 },
       { id: 'riyue_spar', icon: '⚔️', name: '崖上切磋', desc: '与教中高手切磋，以实战磨砺剑意', exp: 60, gold: 0, contribution: 6, unlockChapter: 3, unlockLevel: 10 },
       { id: 'sect_fabao_shop', icon: '🏪', name: '法器兑换', desc: '以宗门贡献兑换法宝，悬崖密室中珍藏法器无数', exp: 0, gold: 0, contribution: 0, unlockChapter: 3 },
@@ -724,6 +738,7 @@ export const WORLD_MAP: Record<LocationId, MapLocation> = {
     unlockChapter: 2,
     actions: [
       { id: 'join_sect', icon: '⚔️', name: '拜入华山', desc: '递上拜帖，入华山派修习华山剑法', exp: 0, gold: 0, sectTarget: 'huashan', requireNoSect: true, unlockChapter: 2 },
+      { id: 'sect_learn_skill', icon: '📖', name: '习武学功', desc: '在华山剑冢修习华山剑法，消耗贡献值', exp: 0, gold: 0, contribution: 0, sectTarget: 'huashan', unlockChapter: 2 },
       { id: 'huashan_spar', icon: '⚔️', name: '论剑切磋', desc: '参与华山论剑，剑宗气宗各显其长', exp: 45, gold: 0, contribution: 4, unlockChapter: 2, unlockLevel: 5 },
       { id: 'huashan_climb', icon: '🏔️', name: '绝顶独修', desc: '攀上华山绝顶，在云海之上修炼剑意', exp: 40, gold: 0, contribution: 3, unlockChapter: 2, unlockLevel: 0 },
       { id: 'sect_fabao_shop', icon: '🏪', name: '法器兑换', desc: '以宗门贡献兑换法宝，华山剑冢藏有历代高手遗物', exp: 0, gold: 0, contribution: 0, unlockChapter: 2 },

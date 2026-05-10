@@ -219,6 +219,11 @@ function renderSkillBar(): void {
   basicBtn.addEventListener('click', () => {
     _basicAttackMode = true;
     _selectedSkillId = null;
+    // 单敌自动选中
+    if (!_selectedTargetId) {
+      const alive = getTargetableEnemies();
+      if (alive.length === 1) _selectedTargetId = alive[0]!.id;
+    }
     if (_selectedTargetId) {
       playerBasicAttack(_selectedTargetId);
       _basicAttackMode = false;
@@ -262,9 +267,14 @@ function renderSkillBar(): void {
             renderBattleHUD();
             return;
           }
-          // 攻击/控制技能：先选中技能，等待点击目标
+          // 攻击/控制技能：选中技能；单敌时直接触发，多敌时等待点击目标
           _selectedSkillId = skId as SkillId;
           _basicAttackMode = false;
+          // 单敌自动选中
+          if (!_selectedTargetId) {
+            const alive = getTargetableEnemies();
+            if (alive.length === 1) _selectedTargetId = alive[0]!.id;
+          }
           if (_selectedTargetId) {
             playerUseSkill(skId as SkillId, _selectedTargetId);
             _selectedSkillId = null;
