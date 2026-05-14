@@ -59,6 +59,56 @@ export const TANGMEN_SKILL_TABLE: Array<[number, SkillId]> = [
   [31, 'tang_blade_master'], [32, 'tang_pear_flower'], [33, 'tang_poison_secret'], [34, 'tang_night_walker'],
 ];
 
+export const HUASHAN_SKILL_TABLE: Array<[number, SkillId]> = [
+  [1,  'huashan_sword_basic'], [2, 'huashan_mountain_qi'], [3, 'huashan_wind_step'], [4, 'huashan_sword_flash'],
+  [11, 'huashan_wind_sword'], [12, 'huashan_sword_shield'], [13, 'huashan_storm_sword'], [14, 'huashan_sword_heart'],
+  [21, 'huashan_lonely_sword'], [22, 'huashan_sword_soul'], [23, 'huashan_mountain_guard'], [24, 'huashan_sword_9'],
+];
+
+export const KONGTONG_SKILL_TABLE: Array<[number, SkillId]> = [
+  [1,  'kongtong_fist_basic'], [2, 'kongtong_inner_qi'], [3, 'kongtong_iron_arm'], [4, 'kongtong_rock_fist'],
+  [11, 'kongtong_storm_fist'], [12, 'kongtong_body_guard'], [13, 'kongtong_crush_palm'], [14, 'kongtong_mountain_roar'],
+  [21, 'kongtong_7_hurt'], [22, 'kongtong_qi_shield'], [23, 'kongtong_thunder_fist'], [24, 'kongtong_titan_palm'],
+];
+
+export const QINGCHENG_SKILL_TABLE: Array<[number, SkillId]> = [
+  [1,  'qingcheng_sword_basic'], [2, 'qingcheng_dao_qi'], [3, 'qingcheng_crane_step'], [4, 'qingcheng_wind_sword'],
+  [11, 'qingcheng_cloud_sword'], [12, 'qingcheng_mist_body'], [13, 'qingcheng_sword_qi'], [14, 'qingcheng_dao_heart'],
+  [21, 'qingcheng_luofu_sword'], [22, 'qingcheng_immortal_guard'], [23, 'qingcheng_sword_storm'], [24, 'qingcheng_taiji_sword'],
+];
+
+export const DIANCANG_SKILL_TABLE: Array<[number, SkillId]> = [
+  [1,  'diancang_sword_basic'], [2, 'diancang_snake_qi'], [3, 'diancang_mist_step'], [4, 'diancang_viper_sword'],
+  [11, 'diancang_double_sword'], [12, 'diancang_snake_skin'], [13, 'diancang_circling_sword'], [14, 'diancang_southern_qi'],
+  [21, 'diancang_sword_storm'], [22, 'diancang_poison_soul'], [23, 'diancang_shadow_sword'], [24, 'diancang_king_cobra'],
+];
+
+export const TIEZHANG_SKILL_TABLE: Array<[number, SkillId]> = [
+  [1,  'tiezhang_palm_basic'], [2, 'tiezhang_iron_qi'], [3, 'tiezhang_sand_palm'], [4, 'tiezhang_hard_body'],
+  [11, 'tiezhang_iron_palm'], [12, 'tiezhang_water_step'], [13, 'tiezhang_fire_palm'], [14, 'tiezhang_steel_skin'],
+  [21, 'tiezhang_crushing_palm'], [22, 'tiezhang_mountain_body'], [23, 'tiezhang_thunder_palm'], [24, 'tiezhang_supreme_palm'],
+];
+
+export const MAOSHAN_SKILL_TABLE: Array<[number, SkillId]> = [
+  [1, 'maoshan_talisman'], [2, 'maoshan_ghost_qi'], [3, 'maoshan_bind_ghost'], [4, 'maoshan_tao_step'],
+  [11, 'maoshan_5_thunder'], [12, 'maoshan_exorcism'], [13, 'maoshan_spirit_cage'], [14, 'maoshan_taoist_heart'],
+];
+
+export const WUDU_SKILL_TABLE: Array<[number, SkillId]> = [
+  [1, 'wudu_poison_palm'], [2, 'wudu_insect_qi'], [3, 'wudu_scorpion_tail'], [4, 'wudu_poison_skin'],
+  [11, 'wudu_centipede_bite'], [12, 'wudu_toad_breath'], [13, 'wudu_spider_web'], [14, 'wudu_5_poison_array'],
+];
+
+export const XUEDAO_SKILL_TABLE: Array<[number, SkillId]> = [
+  [1, 'xuedao_blade_basic'], [2, 'xuedao_blood_qi'], [3, 'xuedao_blood_slash'], [4, 'xuedao_blood_thirst'],
+  [11, 'xuedao_blood_rain'], [12, 'xuedao_blood_armor'], [13, 'xuedao_blood_craze'], [14, 'xuedao_blood_sea'],
+];
+
+export const HAISHA_SKILL_TABLE: Array<[number, SkillId]> = [
+  [1, 'haisha_palm_basic'], [2, 'haisha_tide_qi'], [3, 'haisha_sand_palm'], [4, 'haisha_water_step'],
+  [11, 'haisha_wave_palm'], [12, 'haisha_sea_guard'], [13, 'haisha_tsunami'], [14, 'haisha_whirlpool'],
+];
+
 export const SECT_SKILL_TABLES: Partial<Record<SectId, Array<[number, SkillId]>>> = {
   wudang:   WUDANG_SKILL_TABLE,
   shaolin:  SHAOLIN_SKILL_TABLE,
@@ -68,6 +118,15 @@ export const SECT_SKILL_TABLES: Partial<Record<SectId, Array<[number, SkillId]>>
   quanzhen: QUANZHEN_SKILL_TABLE,
   kunlun:   KUNLUN_SKILL_TABLE,
   tangmen:  TANGMEN_SKILL_TABLE,
+  huashan:  HUASHAN_SKILL_TABLE,
+  kongtong: KONGTONG_SKILL_TABLE,
+  qingcheng: QINGCHENG_SKILL_TABLE,
+  diancang: DIANCANG_SKILL_TABLE,
+  tiezhang: TIEZHANG_SKILL_TABLE,
+  maoshan:  MAOSHAN_SKILL_TABLE,
+  wudu:     WUDU_SKILL_TABLE,
+  xuedao:   XUEDAO_SKILL_TABLE,
+  haisha:   HAISHA_SKILL_TABLE,
 };
 
 /** 获取技能所在的境界层（用于学习费用计算） */

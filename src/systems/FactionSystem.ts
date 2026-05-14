@@ -403,7 +403,7 @@ export function getFactionAlignment(id: SectId): FactionAlignment {
  */
 export function getAlignmentLabel(alignment: FactionAlignment): string {
   const labels: Record<FactionAlignment, string> = {
-    righteous: '正道', neutral: '中立', unorthodox: '邪道', chaotic: '混乱',
+    righteous: '正道', neutral: '中立', chaotic: '邪道',
   };
   return labels[alignment] ?? alignment;
 }

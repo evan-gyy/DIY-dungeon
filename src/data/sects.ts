@@ -20,8 +20,8 @@ export const SECTS: Record<SectId, SectData> = {
   none:     { name: '散修',   color: '#888888', icon: '⬜', bonus: {},                    intro: '无门无派，自由江湖。',                                                              alignment: 'neutral',   culture: [] },
   // 🆕 P9 五大新势力
   riyue:    { name: '日月教', color: '#9b59b6', icon: '🌑', bonus: { atk: 12, agi: 8 },   intro: '日月神教，乾坤大挪移威震天下。正邪之外，唯我独尊。',                                   alignment: 'chaotic',   culture: ['moon', 'sun', 'forbidden', 'power', 'shadow'] },
-  tiezhang: { name: '铁掌帮', color: '#7f8c8d', icon: '✊', bonus: { atk: 10, def: 5 },   intro: '铁掌水上漂，裂石功冠绝江湖。称雄一方，行事霸道不留情面。',                              alignment: 'unorthodox', culture: ['fist', 'clan', 'water', 'brute-force'] },
+  tiezhang: { name: '铁掌帮', color: '#7f8c8d', icon: '✊', bonus: { atk: 10, def: 5 },   intro: '铁掌水上漂，裂石功冠绝江湖。称雄一方，行事霸道不留情面。',                              alignment: 'neutral', culture: ['fist', 'clan', 'water', 'brute-force'] },
   wudu:     { name: '五毒教', color: '#27ae60', icon: '🐍', bonus: { atk: 8, crit: 10 },  intro: '五毒俱全，以毒制毒。百草解药不入，无解奇毒令江湖闻之色变。',                            alignment: 'chaotic',   culture: ['poison', 'snake', 'ritual', 'gu-magic'] },
   xuedao:   { name: '血刀门', color: '#c0392b', icon: '🩸', bonus: { atk: 15, hp: -30 }, intro: '嗜血杀戮，以血祭刀。血刀老祖一刀江湖，令正道为之变色。',                                alignment: 'chaotic',   culture: ['blood', 'blade', 'chaos', 'slaughter'] },
-  haisha:   { name: '海沙派', color: '#e67e22', icon: '🏴‍☠️', bonus: { atk: 8, agi: 5 }, intro: '南海海盗起家，海沙功路数刁钻。掌控南海航路，行商劫掠两不误。',                          alignment: 'unorthodox', culture: ['sea', 'pirate', 'southern', 'mercenary'] },
+  haisha:   { name: '海沙派', color: '#e67e22', icon: '🏴‍☠️', bonus: { atk: 8, agi: 5 }, intro: '南海海盗起家，海沙功路数刁钻。掌控南海航路，行商劫掠两不误。',                          alignment: 'chaotic', culture: ['sea', 'pirate', 'southern', 'mercenary'] },
 };

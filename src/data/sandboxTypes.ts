@@ -183,10 +183,9 @@ export interface ActiveMission {
  * 当前覆盖现有 6 个 SectId，后续扩展新势力时补充。
  */
 export type FactionAlignment =
-  | 'righteous'    // 正道：崇尚侠义，锄强扶弱（武当/少林/峨眉/丐帮）
-  | 'neutral'      // 中立：明哲保身，不偏不倚（华山）
-  | 'unorthodox'   // 邪道：行事诡异，不择手段（预留）
-  | 'chaotic';     // 混乱：随心所欲，不可预测（魔教）
+  | 'righteous'    // 正道：崇尚侠义，锄强扶弱
+  | 'neutral'      // 中立：明哲保身，不偏不倚
+  | 'chaotic';     // 邪道：行事不择手段，随心所欲
 
 /** 势力间关系状态 */
 export type FactionRelation = 'allied' | 'friendly' | 'neutral' | 'tense' | 'hostile' | 'at_war';
@@ -217,26 +216,17 @@ export const ALIGNMENT_AFFINITY: Record<string, Record<string, { affinity: numbe
   righteous: {
     righteous:   { affinity: +30, desc: '志同道合，共行侠义' },
     neutral:     { affinity: +10, desc: '敬其正道，略有往来' },
-    unorthodox:  { affinity: -30, desc: '正邪不两立' },
-    chaotic:     { affinity: -20, desc: '行事诡异，难以信任' },
+    chaotic:     { affinity: -25, desc: '正邪不两立' },
   },
   neutral: {
     righteous:   { affinity: +10, desc: '敬其正道' },
     neutral:     { affinity: +15, desc: '井水不犯河水' },
-    unorthodox:  { affinity: -5,  desc: '略有提防' },
     chaotic:     { affinity: -10, desc: '保持距离' },
   },
-  unorthodox: {
-    righteous:   { affinity: -30, desc: '正邪不两立' },
-    neutral:     { affinity: -5,  desc: '井水不犯河水' },
-    unorthodox:  { affinity: +20, desc: '臭味相投' },
-    chaotic:     { affinity: +10, desc: '各行其道' },
-  },
   chaotic: {
-    righteous:   { affinity: -20, desc: '难以理解' },
+    righteous:   { affinity: -25, desc: '正邪不两立' },
     neutral:     { affinity: -10, desc: '不可预测' },
-    unorthodox:  { affinity: +10, desc: '各行其道' },
-    chaotic:     { affinity: +5,  desc: '混乱中的默契' },
+    chaotic:     { affinity: +10, desc: '混乱中的默契' },
   },
 };
 
@@ -271,10 +261,10 @@ export const FACTION_DEFS: Record<SectId, { alignment: FactionAlignment; culture
   none:     { alignment: 'neutral',   culture: [] },
   // 🆕 P9 五大新势力
   riyue:    { alignment: 'chaotic',     culture: ['moon', 'sun', 'forbidden', 'power', 'shadow'] },
-  tiezhang: { alignment: 'unorthodox', culture: ['fist', 'clan', 'water', 'brute-force'] },
+  tiezhang: { alignment: 'neutral', culture: ['fist', 'clan', 'water', 'brute-force'] },
   wudu:     { alignment: 'chaotic',    culture: ['poison', 'snake', 'ritual', 'gu-magic'] },
   xuedao:   { alignment: 'chaotic',    culture: ['blood', 'blade', 'chaos', 'slaughter'] },
-  haisha:   { alignment: 'unorthodox', culture: ['sea', 'pirate', 'southern', 'mercenary'] },
+  haisha:   { alignment: 'chaotic', culture: ['sea', 'pirate', 'southern', 'mercenary'] },
 };
 
 // ──── P1-3: 双身份系统（庙堂之上 + 武林之中）────

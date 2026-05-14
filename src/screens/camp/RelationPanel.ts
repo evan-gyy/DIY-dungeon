@@ -24,6 +24,11 @@ import {
   getInteractionInfo, GIFT_TIERS,
   type TalkResult, type GiftResult, type SparResult,
 } from '../../systems/NPCInteraction';
+import {
+  getPlayerNpcRelations, addPlayerNpcRelation, removePlayerNpcRelation,
+  canBecomeLover, canSwornBrother, canBecomeMaster, canBecomeStudent,
+} from '../../systems/NpcRelationship';
+import { PLAYER_NPC_RELATION_LABEL, type PlayerNpcRelation } from '../../data/types';
 
 interface RelationChar {
   id: string;
@@ -381,6 +386,16 @@ export function showNpcStatsOverlay(npcDbId: string, npcName: string, npcImg: st
           <span class="npc-stats-personality">${persCfg.icon} ${persCfg.name}</span>
         </div>
         <div style="font-size:11px;color:var(--text-dim);margin-top:3px;">${persCfg.desc}</div>
+        ${renderRelationTags(npcDbId)}
+        ${renderRelationButtons(npcDbId, affection, stats)}
+      </div>
+
+      <!-- 近日经历 -->
+      <div class="npc-stats-section">
+        <div class="npc-stats-section-title"><span class="icon">📜</span>近日经历</div>
+        <div class="npc-recent-log">
+          ${renderRecentLog(stats)}
+        </div>
       </div>
 
       ${isRecruited ? renderRecruitedActions(npcDbId, p) : ''}
@@ -449,6 +464,151 @@ export function showNpcStatsOverlay(npcDbId: string, npcName: string, npcImg: st
 
   // 绑定操作按钮事件
   bindActionEvents(overlay, npcDbId, npcName, stats);
+  bindRelationEvents(overlay, npcDbId, stats);
+}
+
+// ──── 关系标签与操作渲染 ────
+
+function renderRelationTags(npcDbId: string): string {
+  const relations = getPlayerNpcRelations(npcDbId);
+  if (relations.length === 0) return '';
+
+  const tags = relations.map(r => {
+    const cfg = PLAYER_NPC_RELATION_LABEL[r];
+    return `<span class="npc-relation-tag" style="background:${cfg.color}22;border:1px solid ${cfg.color}44;color:${cfg.color};">${cfg.icon} ${cfg.label}</span>`;
+  }).join(' ');
+
+  return `<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px;">${tags}</div>`;
+}
+
+function renderRelationButtons(npcDbId: string, affection: number, stats: NpcStats | null): string {
+  if (!stats) return '';
+
+  const relations = getPlayerNpcRelations(npcDbId);
+  const buttons: string[] = [];
+
+  // 结为道侣
+  if (!relations.includes('lover')) {
+    const loverCheck = canBecomeLover(npcDbId);
+    if (loverCheck.allowed) {
+      buttons.push(`<button class="npc-relation-btn lover-btn" data-rel-action="add_lover" data-npc-id="${npcDbId}">💕 结为道侣</button>`);
+    } else if (affection >= 85 && !loverCheck.allowed) {
+      // 显示灰色按钮并说明原因
+    }
+  } else {
+    buttons.push(`<button class="npc-relation-btn danger" data-rel-action="remove_lover" data-npc-id="${npcDbId}">💔 解除道侣</button>`);
+  }
+
+  // 结义兄弟（不限性别）
+  if (!relations.includes('sworn_brother')) {
+    const swornCheck = canSwornBrother(npcDbId);
+    if (swornCheck.allowed) {
+      buttons.push(`<button class="npc-relation-btn sworn-btn" data-rel-action="add_sworn" data-npc-id="${npcDbId}">🤝 义结金兰</button>`);
+    }
+  } else {
+    buttons.push(`<button class="npc-relation-btn danger" data-rel-action="remove_sworn" data-npc-id="${npcDbId}">💔 解除结义</button>`);
+  }
+
+  // 拜师（NPC 为师父）
+  if (!relations.includes('master')) {
+    const masterCheck = canBecomeMaster(npcDbId);
+    if (masterCheck.allowed) {
+      buttons.push(`<button class="npc-relation-btn master-btn" data-rel-action="add_master" data-npc-id="${npcDbId}">👨‍🏫 拜师</button>`);
+    }
+  } else {
+    buttons.push(`<button class="npc-relation-btn danger" data-rel-action="remove_master" data-npc-id="${npcDbId}">💔 解除师徒（出师）</button>`);
+  }
+
+  // 收徒
+  if (!relations.includes('student')) {
+    const studentCheck = canBecomeStudent(npcDbId);
+    if (studentCheck.allowed) {
+      buttons.push(`<button class="npc-relation-btn student-btn" data-rel-action="add_student" data-npc-id="${npcDbId}">📚 收徒</button>`);
+    }
+  } else {
+    buttons.push(`<button class="npc-relation-btn danger" data-rel-action="remove_student" data-npc-id="${npcDbId}">💔 逐出师门</button>`);
+  }
+
+  if (buttons.length === 0) return '';
+  return `<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px;">${buttons.join('')}</div>`;
+}
+
+// ──── 关系操作事件绑定 ────
+
+function bindRelationEvents(overlay: HTMLElement, npcDbId: string, stats: NpcStats | null): void {
+  overlay.addEventListener('click', (e) => {
+    const btn = (e.target as HTMLElement).closest('[data-rel-action]') as HTMLElement | null;
+    if (!btn) return;
+    const action = btn.dataset['relAction']!;
+    const id = btn.dataset['npcId']!;
+    const npcName = stats?.name ?? id;
+
+    let confirmed = true;
+    let msg = '';
+
+    switch (action) {
+      case 'add_lover':
+        confirmed = confirm(`是否与「${npcName}」结为道侣？\n（一生一世一双人，此誓不可轻许）`);
+        if (confirmed) addPlayerNpcRelation(id, 'lover');
+        msg = `与${npcName}结为道侣`;
+        break;
+      case 'remove_lover':
+        confirmed = confirm(`是否与「${npcName}」解除道侣关系？\n（此情不再，好感-30）`);
+        if (confirmed) {
+          removePlayerNpcRelation(id, 'lover');
+          changeNpcAffection(id, -30);  // 断交道侣惩罚
+        }
+        msg = `与${npcName}解除道侣`;
+        break;
+      case 'add_sworn':
+        confirmed = confirm(`是否与「${npcName}」义结金兰？\n（不求同年同月同日生，但求同年同月同日死）`);
+        if (confirmed) addPlayerNpcRelation(id, 'sworn_brother');
+        msg = `与${npcName}义结金兰`;
+        break;
+      case 'remove_sworn':
+        confirmed = confirm(`是否与「${npcName}」解除结义？\n（手足之情就此断绝，好感-30）`);
+        if (confirmed) {
+          removePlayerNpcRelation(id, 'sworn_brother');
+          changeNpcAffection(id, -30);
+        }
+        msg = `与${npcName}解除结义`;
+        break;
+      case 'add_master':
+        confirmed = confirm(`是否拜「${npcName}」为师？\n（一日为师，终身为父）`);
+        if (confirmed) addPlayerNpcRelation(id, 'master');
+        msg = `拜${npcName}为师`;
+        break;
+      case 'remove_master':
+        confirmed = confirm(`是否脱离「${npcName}」门下？\n（师徒缘分已尽，好感-30）`);
+        if (confirmed) {
+          removePlayerNpcRelation(id, 'master');
+          changeNpcAffection(id, -30);
+        }
+        msg = `脱离${npcName}门下`;
+        break;
+      case 'add_student':
+        confirmed = confirm(`是否收「${npcName}」为徒？\n（传道授业，责无旁贷）`);
+        if (confirmed) addPlayerNpcRelation(id, 'student');
+        msg = `收${npcName}为徒`;
+        break;
+      case 'remove_student':
+        confirmed = confirm(`是否将「${npcName}」逐出师门？\n（师徒情分就此了断，好感-30）`);
+        if (confirmed) {
+          removePlayerNpcRelation(id, 'student');
+          changeNpcAffection(id, -30);
+        }
+        msg = `将${npcName}逐出师门`;
+        break;
+    }
+
+    if (confirmed && msg) {
+      saveGame(getPlayer());
+      // 关闭并重新打开弹窗以刷新
+      overlay.remove();
+      const img = stats ? (stats.gender === 'female' ? 'picture/NPC/random_female.png' : 'picture/NPC/random_male.png') : '';
+      setTimeout(() => showNpcStatsOverlay(npcDbId, npcName, img), 100);
+    }
+  });
 }
 
 // ──── 操作按钮渲染 ────
@@ -581,8 +741,18 @@ function bindActionEvents(overlay: HTMLElement, npcDbId: string, npcName: string
   // 切磋
   overlay.querySelector<HTMLElement>('[data-action="spar"]')?.addEventListener('click', () => {
     const result = sparWithNpc(npcDbId);
-    showToast(result.message);
-    refreshNpcOverlay(overlay);
+    if (result.needConfirm) {
+      const confirmed = confirm(
+        `此人修为远胜于你，差距悬殊。与之切磋怕是自取其辱。\n\n是否仍要挑战？`
+      );
+      if (!confirmed) return;
+      const result2 = sparWithNpc(npcDbId, true);
+      showToast(result2.message);
+      refreshNpcOverlay(overlay);
+    } else {
+      showToast(result.message);
+      refreshNpcOverlay(overlay);
+    }
   });
 }
 
@@ -693,6 +863,22 @@ function getSectShortName(sect: string): string {
 
 function showToast(msg: string): void {
   import('../../ui/toast').then(m => m.showToast(msg));
+}
+
+/** 渲染 NPC 近期经历日志 */
+function renderRecentLog(stats: NpcStats): string {
+  const log = stats.recentLog ?? [];
+  if (log.length === 0) {
+    return '<div class="npc-recent-log-empty">暂无记录</div>';
+  }
+  // 倒序显示（最新的在前），最多 8 条
+  return log.slice().reverse().slice(0, 8).map(entry => {
+    // 恶意互动标记红色
+    const hostile = entry.includes('挑衅') || entry.includes('激斗') || entry.includes('暗算')
+      || entry.includes('谣言') || entry.includes('夺宝') || entry.includes('复仇');
+    const cls = hostile ? 'npc-recent-log-item hostile' : 'npc-recent-log-item';
+    return `<div class="${cls}">${entry}</div>`;
+  }).join('');
 }
 
 /** 强制刷新关系面板 */

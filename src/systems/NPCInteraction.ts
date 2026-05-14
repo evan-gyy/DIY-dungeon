@@ -3,17 +3,257 @@
  *
  * 六种 NPC 性格 × 势力倾向匹配 = 复合交互倍率
  * 三种互动方式：交谈 / 送礼 / 切磋
+ * 对话池按 好感度层级 × 性格 产出不同叙事文本
  * NPC 之间的自主互动逻辑在 NpcBehavior.ts 中
  */
 
 import { getPlayer, setPlayer } from '../state/GameState';
 import { saveGame } from '../state/SaveSystem';
-import { getNpcStats } from './NpcBehavior';
+import { getNpcStats, appendNpcLog } from './NpcBehavior';
 import { changeNpcAffection, getNpcAffection } from '../screens/camp/RelationPanel';
 import { SECTS } from '../data/sects';
 import type { FactionAlignment } from '../data/sandboxTypes';
 import type { NpcStats, NpcPersonality, PersonalityConfig } from '../data/npcStats';
 import { PERSONALITY } from '../data/npcStats';
+import { getPlayerNpcRelations, hasPlayerNpcRelation } from './NpcRelationship';
+import type { PlayerNpcRelation } from '../data/types';
+
+// ═════════════════════════════════════════════════════════
+//  好感度层级
+// ═════════════════════════════════════════════════════════
+
+type AffectionTierKey = 'cold' | 'neutral' | 'warm' | 'close' | 'intimate';
+
+function getAffectionTierKey(aff: number): AffectionTierKey {
+  if (aff < 10) return 'cold';
+  if (aff < 30) return 'neutral';
+  if (aff < 60) return 'warm';
+  if (aff < 80) return 'close';
+  return 'intimate';
+}
+
+// ═════════════════════════════════════════════════════════
+//  交谈对话池
+//  每性格 × 5 好感层级 × 2~3 条对话
+// ═════════════════════════════════════════════════════════
+
+type TalkPool = Record<NpcPersonality, Record<AffectionTierKey, string[]>>;
+
+const TALK_DIALOGUES: TalkPool = {
+  aloof: {
+    cold: [
+      '（冷冷扫了你一眼，并未开口）',
+      '（微微蹙眉）……有事？',
+      '（沉默良久）没什么好说的。',
+    ],
+    neutral: [
+      '（略略点头）嗯。',
+      '（目光望着远方）江湖上近来不太平。',
+      '（淡淡开口）你倒是有闲心。',
+    ],
+    warm: [
+      '（嘴角微微上扬，语气依旧清冷）你来了。',
+      '（轻哼一声）还算有点意思。',
+      '（抱着剑靠在墙边，眼神却柔和了些）说吧，什么事。',
+    ],
+    close: [
+      '（难得露出一丝笑意）也就你还会常来找我说话。',
+      '（递过一壶酒）喝吧，不醉不归。',
+      '（低声）江湖虽大，也就你懂我几分。',
+    ],
+    intimate: [
+      '（目光深邃）这些年……多谢你一直在。',
+      '（罕见地笑了）从小到大，还没有人像你这样缠着我不放。',
+      '（轻轻叹了口气，语气却是温暖的）你来了便好。',
+    ],
+  },
+  kind: {
+    cold: [
+      '（微笑）阁下有心了。江湖险恶，多保重。',
+      '（温和地看着你）初次见面，请多指教。',
+      '（点头致意）阿弥陀佛…啊不，幸会幸会。',
+    ],
+    neutral: [
+      '（温和一笑）今日风轻云淡，正是练剑的好天气。',
+      '（递过一杯茶）来，喝杯热茶暖暖身子。',
+      '（关切地问）近日修行可还顺利？',
+    ],
+    warm: [
+      '（眼中含笑）你来啦……昨日听人提起一桩趣事，说与你听。',
+      '（轻轻摇头）你这般修行，太拼命了，要注意休息。',
+      '（从袖中摸出一颗丹药）这个你拿着，以备不时之需。',
+    ],
+    close: [
+      '（轻轻拍了拍你的肩）有什么烦心事，尽管说与我听。',
+      '（微笑）我最近新悟了一式剑招，要不要过两招？',
+      '（低声道）这世上能让我牵挂的人不多，你算一个。',
+    ],
+    intimate: [
+      '（凝视着你）遇见你，是我此生最大的福分。',
+      '（眼眶微红）不管前路如何，我都会陪在你身边。',
+      '（握紧你的手）从今往后，风雨同舟。',
+    ],
+  },
+  cunning: {
+    cold: [
+      '（眼珠转了转，似在打量你）啧啧……',
+      '（笑嘻嘻地）这位少侠看着面生啊。',
+      '（凑近小声道）有什么好买卖，介绍介绍？',
+    ],
+    neutral: [
+      '（笑吟吟地）江湖上最近可热闹了，想听听吗？',
+      '（眯起眼睛）这世道……富贵险中求啊。',
+      '（把玩着手中铜钱）无事不登三宝殿，说吧。',
+    ],
+    warm: [
+      '（嘿嘿一笑）我就知道你会来找我。',
+      '（左右看了看，压低声音）上次那件事……我帮你打听清楚了。',
+      '（翘着二郎腿）来来来，我这儿有个内幕消息……',
+    ],
+    close: [
+      '（收起嬉笑）说真的，你是我见过最有趣的人。',
+      '（难得正经了一回）江湖上真能信得过的，也就你。',
+      '（递过一张密函）这是我从暗市搞来的情报，别告诉别人。',
+    ],
+    intimate: [
+      '（难得地沉默了许久）……我这样的人，也配有你做朋友？',
+      '（大笑）你这傻子，全江湖就你还信我。',
+      '（正色道）我的命是你救的，今后赴汤蹈火也在所不辞。',
+    ],
+  },
+  upright: {
+    cold: [
+      '（腰板笔直，神色严肃）来者何人？',
+      '（正色道）江湖中人，当以侠义为先。',
+      '（略一抱拳）阁下请讲。',
+    ],
+    neutral: [
+      '（抱拳还礼）少侠有礼了。',
+      '（正襟危坐）今日无事，不妨一叙。',
+      '（沉声道）习武之人，首重心性。切记切记。',
+    ],
+    warm: [
+      '（露出欣赏之色）你的剑法进步很快。',
+      '（拍案而起）痛快！与你说话，如饮烈酒！',
+      '（正色）世间有不平事，你我当携手共平之。',
+    ],
+    close: [
+      '（郑重点头）你心思纯正，我信得过你。',
+      '（难得的笑容）与你并肩战斗之时，我便知此生了无遗憾。',
+      '（低声道）将来江湖若有难，我第一个站你这边。',
+    ],
+    intimate: [
+      '（双手紧握剑柄）从今往后，我的剑就是你的剑。',
+      '（目光如炬）你我肝胆相照，生死与共！',
+      '（长叹一声）人生得一知己，死而无憾。',
+    ],
+  },
+  gentle: {
+    cold: [
+      '（轻声）初次见面，请多关照。',
+      '（微微欠身）公子/姑娘有礼了。',
+      '（温声细语）有什么我能帮忙的吗？',
+    ],
+    neutral: [
+      '（微笑）这山间的风真舒服，你也这样觉得吗？',
+      '（煮了一壶茶）来，坐下慢慢聊。',
+      '（轻声吟道）青山不墨千秋画……',
+    ],
+    warm: [
+      '（眼中闪着温柔的光）你每次来，我都觉得今日格外明亮。',
+      '（将一束野花轻轻放在桌边）路上采的，送你。',
+      '（浅笑着摇头）你还是这般冒冒失失的……',
+    ],
+    close: [
+      '（轻轻靠在你肩上，沉默良久）这样就好。',
+      '（柔声）江湖路远，你我同行便好。',
+      '（低声哼着不知名的山歌，悠扬婉转）',
+    ],
+    intimate: [
+      '（泪眼婆娑）我一直以为……我会孤独一生。',
+      '（握住你的手，指尖微微颤抖）别走太远，我会担心。',
+      '（靠在你耳边轻声道）此生愿与你共白首。',
+    ],
+  },
+  bold: {
+    cold: [
+      '（大声）嘿！新来的？来喝一杯！',
+      '（大大咧咧地）江湖儿女，不拘小节！',
+      '（拍案）好汉！报上名来！',
+    ],
+    neutral: [
+      '（哈哈大笑）痛快！今天又遇到个有意思的人！',
+      '（递过酒壶）来来来，喝了这壶，我们就是朋友！',
+      '（手舞足蹈）我刚才在城外遇到了件趣事……',
+    ],
+    warm: [
+      '（一把搂住你肩膀）好兄弟/好姐妹！今天想聊什么？',
+      '（咕咚灌了一口酒）这江湖啊，就得快意恩仇！',
+      '（拍着桌子大笑）你是不知道，上次那只老虎……',
+    ],
+    close: [
+      '（一拳锤在你胸口，力气却放得很轻）你这家伙总算来了！',
+      '（收起玩笑之色）说真的，有大事的时候我只信你。',
+      '（仰头饮尽碗中酒）人生得意须尽欢，干！',
+    ],
+    intimate: [
+      '（眼眶微红，声音沙哑）我走南闯北这么多年……就你不一样。',
+      '（重重拍案）以后谁敢欺负你，老子第一个不放过他！',
+      '（酒后吐真言）其实……我挺怕你出事的。',
+    ],
+  },
+};
+
+// ═════════════════════════════════════════════════════════
+//  送礼反应文本
+// ═════════════════════════════════════════════════════════
+
+type GiftPool = Record<NpcPersonality, Record<AffectionTierKey, string[]>>;
+
+const GIFT_REACTIONS: GiftPool = {
+  aloof: {
+    cold:    ['冷冷瞥了一眼，并未伸手去接。', '微微皱眉：「不必这样。」', '淡淡道：「……放下吧。」'],
+    neutral: ['看了礼物一眼，微微颔首。', '轻轻「嗯」了一声，算是收下。', '眼角似有一丝波动。'],
+    warm:    ['嘴角微不可察地上扬了一下。', '低声道：「……费心了。」', '抱着礼物沉默良久，转身离去。'],
+    close:   ['难得露出一丝微笑：「你倒是有心。」', '眼中闪过暖意：「记住我喜好的人不多。」', '轻声道：「多谢。」'],
+    intimate:['喉结滚动了一下：「你送的……我都会收好。」', '眼眶微红：「这么多年，你是第一个。」', '沉默许久，轻轻握住了你的手。'],
+  },
+  kind: {
+    cold:    ['微笑着双手接过：「破费了。」', '温和道：「阁下太客气了。」', '轻轻点头：「多谢美意。」'],
+    neutral: ['眼中闪着喜悦的光：「哎呀，这怎么好意思。」', '双手合十：「善哉善哉，多谢施主。」', '开心地笑了：「多谢厚爱。」'],
+    warm:    ['惊喜道：「你怎知我喜欢这个！」', '感动地握在手中：「每次见面都让你破费……」', '将礼物小心收好：「我会好好珍藏的。」'],
+    close:   ['眼眶微湿：「你待我真好……」', '轻轻拥抱了你一下：「谢谢你。」', '笑着摇头：「你呀，每次都这么用心。」'],
+    intimate:['泪水在眼眶打转：「这是我收到过最好的礼物。」', '将礼物贴在胸口：「你的心意……我都懂。」', '紧紧抱住你：「礼物不重要，你才重要。」'],
+  },
+  cunning: {
+    cold:    ['挑了挑眉：「哟，还挺大方。」', '掂了掂礼物：「还行吧。」', '似笑非笑：「……有什么目的？」'],
+    neutral: ['眼睛一亮：「好东西！哪来的？」', '嘿嘿一笑：「那我就不客气了。」', '把玩着礼物：「行啊，挺会挑。」'],
+    warm:    ['眯着眼睛笑得像只狐狸：「嘿嘿……有心了。」', '凑近道：「这么大方，是不是有求于我？」', '快速收下：「好说好说，以后有消息第一个告诉你。」'],
+    close:   ['愣了一下：「……你还真舍得啊。」', '难得认真：「我不会白收的，回头帮你搞个大情报。」', '竖起大拇指：「够意思！」'],
+    intimate:['沉默了很久：「从小到大，没人送过我东西。」', '笑得比往常更灿烂，眼角却有泪光：「傻子。」', '低声道：「我欠你的，这辈子慢慢还。」'],
+  },
+  upright: {
+    cold:    ['正色道：「无功不受禄。」', '推辞了一番才收下：「好吧，多谢。」', '抱拳：「阁下不必如此客气。」'],
+    neutral: ['郑重收下：「此情此义，必当铭记。」', '点头道：「多谢少侠。」', '拱手：「在下定不负这番心意。」'],
+    warm:    ['肃然道：「你这般费心，我却无以为报。」', '用力拍了拍你的肩：「好兄弟/好姐妹！」', '正色收下礼物，眼中却满是笑意。'],
+    close:   ['握紧拳头：「你这是……何苦破费。」', '郑重道：「此后江湖风雨，我替你挡。」', '将礼物擦拭干净妥善收好：「此物，我不会让任何人碰。」'],
+    intimate:['长叹一声：「我这一生最幸运的事，就是认识了你。」', '抱拳鞠躬：「此生不负。」', '目光灼灼：「士为知己者死。」'],
+  },
+  gentle: {
+    cold:    ['脸颊微红：「这……怎么好意思。」', '轻声细语：「多谢了。」', '双手接过，小心翼翼：「谢谢。」'],
+    neutral: ['微微一笑：「辛苦了，很美的礼物。」', '轻声道：「这份心意我收下了。」', '将礼物摆在案头：「看到它就会想起你。」'],
+    warm:    ['眼眶微红：「你总是这样体贴……」', '轻轻抚过礼物：「我能为你做些什么吗？」', '低头浅笑：「谢谢，我很欢喜。」'],
+    close:   ['双手紧握礼物，声音微颤：「你……你记得我的喜好？」', '靠在你肩头轻声道：「有你在，真好。」', '悄悄擦去眼角的泪：「这世上就你对我最好。」'],
+    intimate:['泪如雨下：「我等这一天等了多久……」', '将礼物轻放在心口：「我会一辈子带着它。」', '抬头望你，目光如水：「除了心，我没什么可回报的了。」'],
+  },
+  bold: {
+    cold:    ['朗声笑道：「哈哈哈，豪爽！我敬你一杯！」', '大手一挥：「好！收下了！」', '用力拍在桌上：「够意思！你这个朋友我认了！」'],
+    neutral: ['哈哈大笑：「不客气啦！」', '高高举起礼物：「兄弟们看看，这叫什么？仗义！」', '开怀大笑：「好说好说，今晚的酒钱我包了！」'],
+    warm:    ['一把抱住你：「好兄弟/好姐妹！我太喜欢了！」', '抹了抹眼角：「娘的……居然有人对我这粗人这么好。」', '一拍桌子：「等着，改天我送你个更大的！」'],
+    close:   ['朗声道：「这辈子能认识你，值了！」', '用力握拳：「以后有架一起打，有肉一起吃！」', '酒碗一摔：「江湖上谁找你麻烦，就是跟我过不去！」'],
+    intimate:['重重一拳捶在墙上：「娘的……我这辈子值了！」', '声音哽咽：「别人送我金山银山我也不稀罕，就稀罕你的。」', '拉着你喝酒到天亮：「千言万语……都在酒里！」'],
+  },
+};
 
 // ═════════════════════════════════════════════════════════
 //  NPC 性格系统
@@ -33,10 +273,10 @@ import { PERSONALITY } from '../data/npcStats';
  * - 中立+任意：×1.0
  */
 const ALIGNMENT_CHART: Record<FactionAlignment, Record<FactionAlignment, number>> = {
-  righteous:  { righteous: 1.2, neutral: 0.9, unorthodox: 0.5, chaotic: 0.5 },
-  neutral:    { righteous: 1.0, neutral: 1.0, unorthodox: 1.0, chaotic: 1.0 },
-  unorthodox: { righteous: 0.5, neutral: 0.9, unorthodox: 1.2, chaotic: 0.9 },
-  chaotic:    { righteous: 0.5, neutral: 1.0, unorthodox: 0.9, chaotic: 1.2 },
+  righteous:  { righteous: 1.2, neutral: 0.9, chaotic: 0.5 },
+  neutral:    { righteous: 1.0, neutral: 1.0, chaotic: 1.0 },
+  
+  chaotic:    { righteous: 0.5, neutral: 1.0, chaotic: 1.2 },
 };
 
 // ═════════════════════════════════════════════════════════
@@ -82,6 +322,46 @@ export function getInteractionInfo(npcId: string): InteractionInfo | null {
 }
 
 // ═════════════════════════════════════════════════════════
+//  关系型对话池（主角与 NPC 有特殊关系时优先使用）
+//  非道侣/结义内容保持适当距离感
+// ═════════════════════════════════════════════════════════
+
+type RelationTalkPool = Record<PlayerNpcRelation, string[]>;
+
+const RELATION_DIALOGUES: RelationTalkPool = {
+  lover: [
+    '（温柔地望着你）你来了。这几日我总在念着你。',
+    '（轻声）江湖路远，有你在身边，便不觉孤单了。',
+    '（浅笑）今日天气正好，不如陪我出去走走？',
+  ],
+  sworn_brother: [
+    '（大笑）兄弟来得正好！我这正有好酒，一起饮上几杯！',
+    '（拍着你的肩）有什么难处尽管说，做兄弟的赴汤蹈火！',
+    '（正色道）行走江湖，义字当先。你我既结金兰，便是一生的事。',
+  ],
+  master: [
+    '（正色道）徒儿来了。今日的功课可曾做完？不可懈怠。',
+    '（颔首）近来修为略有精进，但还需勤加练习，切莫骄傲。',
+    '（语重心长）修道之途，不在天赋，而在恒心。你且记住这句话。',
+  ],
+  student: [
+    '（恭敬行礼）师父！徒儿这几日苦练不辍，请您指点一二。',
+    '（眼中闪着光）师父教导的功法，徒儿终于领悟了些许！',
+    '（捧上一盏茶）师父请用茶。徒儿有些困惑，想请教您。',
+  ],
+  friend: [
+    '（微笑拱手）好久不见，正想找你聊聊天呢。',
+    '（热情地）来得正好！我听说了一个有趣的江湖传闻……',
+    '（拍拍你的肩膀）可有些日子没见了，一切都好吧？',
+  ],
+  enemy: [
+    '（冷哼一声）你还敢来见我？',
+    '（冷眼相对）不必假惺惺的，有什么话直说便是。',
+    '（目光如刀）我与你之间，没什么好说的。',
+  ],
+};
+
+// ═════════════════════════════════════════════════════════
 //  交谈（+2 基础好感 × 性格 × 势力匹配）
 // ═════════════════════════════════════════════════════════
 
@@ -96,6 +376,7 @@ export interface TalkResult {
  * 与 NPC 交谈
  * - 基础 +2 好感度
  * - 不能连续交谈同一 NPC（需经过一次行动后刷新）
+ * - 按好感度层级 × 性格产出对话
  * @param npcId NPC 的数据库 ID
  */
 export function talkWithNpc(npcId: string): TalkResult {
@@ -106,21 +387,49 @@ export function talkWithNpc(npcId: string): TalkResult {
     return { success: false, message: '好感度已达上限，无需再交谈。', gainedAffection: 0 };
   }
 
+  const npc = getNpcStats(npcId);
+  if (!npc) return { success: false, message: 'NPC 数据异常。', gainedAffection: 0 };
+
   const base = 2;
   const gained = Math.max(1, Math.round(base * info.talkTotalMult));
 
   changeNpcAffection(npcId, gained);
 
+  // 记录到 NPC 近期经历
+  appendNpcLog(npcId, `主角前来交谈`);
+
+  // ── 生成对话 ──
+  const relations = getPlayerNpcRelations(npcId);
+  let dialogue: string;
+  let relLabel = '';
+
+  if (relations.length > 0) {
+    // 按优先级取最高关系：lover > sworn_brother > master > student > friend > enemy
+    const priority: PlayerNpcRelation[] = ['lover', 'sworn_brother', 'master', 'student', 'friend', 'enemy'];
+    const primaryRel = priority.find(r => relations.includes(r));
+    if (primaryRel) {
+      const pool = RELATION_DIALOGUES[primaryRel];
+      dialogue = pool[Math.floor(Math.random() * pool.length)]!;
+      const labelMap: Record<string, string> = { lover: '💕道侣', sworn_brother: '🤝结义', master: '👨‍🏫师父', student: '📚徒弟', friend: '💚好友', enemy: '💢仇敌' };
+      relLabel = ` · ${labelMap[primaryRel] ?? ''}`;
+    } else {
+      const tier = getAffectionTierKey(info.affection);
+      const pool = TALK_DIALOGUES[info.personality]?.[tier] ?? TALK_DIALOGUES['gentle'][tier]!;
+      dialogue = pool[Math.floor(Math.random() * pool.length)]!;
+    }
+  } else {
+    const tier = getAffectionTierKey(info.affection);
+    const pool = TALK_DIALOGUES[info.personality]?.[tier] ?? TALK_DIALOGUES['gentle'][tier]!;
+    dialogue = pool[Math.floor(Math.random() * pool.length)]!;
+  }
+
   const persCfg = PERSONALITY[info.personality];
-  const alignStatus = info.alignmentMult >= 1.2 ? '同道相惜' : info.alignmentMult <= 0.5 ? '道不同不相为谋' : '';
-  const msgParts = [
-    `与${persCfg.icon}${persCfg.name}的 NPC 交谈`,
-    `好感${alignStatus ? ' · ' + alignStatus : ''}`,
-  ];
+  const npcName = npc.name;
+  const alignStatus = info.alignmentMult >= 1.2 ? ' · 同道相惜' : info.alignmentMult <= 0.5 ? ' · 话不投机' : '';
 
   return {
     success: true,
-    message: `${msgParts.join('')}\n好感 +${gained}`,
+    message: `${persCfg.icon} ${npcName}：${dialogue}${relLabel}${alignStatus}\n\n好感 +${gained}`,
     gainedAffection: gained,
   };
 }
@@ -170,6 +479,9 @@ export function giveGiftToNpc(npcId: string, tierIndex: number): GiftResult {
     };
   }
 
+  const npc = getNpcStats(npcId);
+  if (!npc) return { success: false, message: 'NPC 数据异常。', gainedAffection: 0, goldSpent: 0, newGold: 0 };
+
   // 扣钱 + 加好感
   const gained = Math.max(1, Math.round(tier.baseAffection * info.giftTotalMult));
   const newGold = p.gold - tier.cost;
@@ -180,12 +492,18 @@ export function giveGiftToNpc(npcId: string, tierIndex: number): GiftResult {
 
   changeNpcAffection(npcId, gained);
 
+  // 记录到 NPC 近期经历
+  appendNpcLog(npcId, `主角送了${tier.label}`);
+
+  // ── 生成送礼叙事 ──
+  const affTier = getAffectionTierKey(info.affection);
+  const pool = GIFT_REACTIONS[info.personality]?.[affTier] ?? GIFT_REACTIONS['gentle'][affTier]!;
+  const reaction = pool[Math.floor(Math.random() * pool.length)]!;
   const persCfg = PERSONALITY[info.personality];
-  const react = persCfg.giftMult >= 1.2 ? '欣然收下' : persCfg.giftMult <= 0.5 ? '冷冷瞥了一眼' : '点头收下';
 
   return {
     success: true,
-    message: `送出【${tier.label}】（-${tier.cost} 两）\n${persCfg.icon} ${react}… 好感 +${gained}`,
+    message: `你取出【${tier.label}】递上前去。\n${persCfg.icon} ${npc.name}${reaction}\n\n好感 +${gained}（-${tier.cost}两）`,
     gainedAffection: gained,
     goldSpent: tier.cost,
     newGold,
@@ -202,14 +520,18 @@ export interface SparResult {
   playerWon: boolean;
   affectionDelta: number;
   expGained: number;
+  /** 是否需要确认（等级差过大） */
+  needConfirm?: boolean;
 }
 
 /**
  * 与 NPC 切磋
- * 基于等级差计算胜率，胜败产生不同好感变化
+ * 基于等级差计算胜率，胜败产生不同好感变化。
+ * 若 NPC 等级远高于玩家（差>5）则需确认。
  * @param npcId NPC 数据库 ID
+ * @param confirmed 是否已确认（跳过第二次检查）
  */
-export function sparWithNpc(npcId: string): SparResult {
+export function sparWithNpc(npcId: string, confirmed: boolean = false): SparResult {
   const info = getInteractionInfo(npcId);
   if (!info) return { success: false, message: '角色数据不存在。', playerWon: false, affectionDelta: 0, expGained: 0 };
 
@@ -218,17 +540,29 @@ export function sparWithNpc(npcId: string): SparResult {
 
   const p = getPlayer();
   const persCfg = PERSONALITY[info.personality];
-  const levelDiff = p.level - npc.level;
+  const levelDiff = npc.level - p.level;
+
+  // ── 等级差警告（首次调用时检查） ──
+  if (!confirmed && levelDiff > 5) {
+    return {
+      success: false,
+      needConfirm: true,
+      playerWon: false,
+      affectionDelta: 0,
+      expGained: 0,
+      message: '',
+    };
+  }
 
   // 胜率 = 50% + 等级差×2%（上限90%，下限10%）
-  const winRate = Math.max(0.1, Math.min(0.9, 0.5 + levelDiff * 0.02));
+  const winRate = Math.max(0.1, Math.min(0.9, 0.5 - levelDiff * 0.02));
   const playerWon = Math.random() < winRate;
 
   const affectionDelta = playerWon
     ? persCfg.sparWinAffection
     : persCfg.sparLoseAffection;
 
-  const expGained = Math.floor((5 + Math.random() * 10) * (playerWon ? 1.2 : 0.6));
+  const expGained = Math.floor((5 + Math.random() * 10) * (playerWon ? 1.5 : 0.6));
 
   // 更新玩家经验
   const updatedP = { ...p, exp: p.exp + expGained };
@@ -238,17 +572,36 @@ export function sparWithNpc(npcId: string): SparResult {
   // 更新好感度
   changeNpcAffection(npcId, affectionDelta);
 
-  const resultText = playerWon ? '胜' : '惜败';
-  const reactText = playerWon
-    ? (affectionDelta > 2 ? '拱手道"好功夫"' : '微微颔首')
-    : (affectionDelta > 1 ? '伸手扶起你，眼中闪过一丝赞许' : '淡淡扫了你一眼');
+  // 记录到 NPC 近期经历
+  const resultTag = playerWon ? '胜' : '败';
+  appendNpcLog(npcId, `主角前来切磋（${resultTag}）`);
+
+  // ── 生成叙事 ──
+  const npcName = npc.name;
+  let duelNarrative: string;
+  if (playerWon) {
+    if (levelDiff > 5) {
+      duelNarrative = `${npcName}踉跄后退半步，眼中闪过不可置信之色。以弱胜强，围观者无不愕然！`;
+    } else {
+      duelNarrative = `${npcName}收剑入鞘，拱手道：「少侠好功夫，在下佩服。」`;
+    }
+  } else {
+    if (levelDiff > 5) {
+      duelNarrative = `${npcName}轻描淡写便将你逼退数步，差距悬殊。他并未追击，只淡淡道：「……还需勤修。」`;
+    } else {
+      duelNarrative = `${npcName}伸手将你扶起：「承让。你我旗鼓相当，下次再来。」`;
+    }
+  }
+
+  const deltaText = affectionDelta >= 0 ? `+${affectionDelta}` : `${affectionDelta}`;
+  const diffLabel = levelDiff > 5 ? ' ⚠️跨阶对决' : '';
 
   return {
     success: true,
     playerWon,
     affectionDelta,
     expGained,
-    message: `与${persCfg.icon}${persCfg.name}的 NPC 切磋… ${resultText}！\n${reactText}\n好感 ${affectionDelta >= 0 ? '+' : ''}${affectionDelta} · 经验 +${expGained}`,
+    message: `你向${persCfg.icon}${npcName}发起切磋！\n\n${duelNarrative}${diffLabel}\n\n好感 ${deltaText} · 经验 +${expGained}`,
   };
 }
 

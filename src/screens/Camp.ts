@@ -14,10 +14,14 @@ import { renderWorldPanel } from './camp/WorldPanel';
 import { initWorldState, initChronicle } from '../systems/WorldState';
 import { showToast } from '../ui/toast';
 import { initNpcDatabase, tickNpcBehaviors } from '../systems/NpcBehavior';
+import { tryTriggerSiege } from '../systems/FactionWarfare';
+import { initSectState, tickSectNaturalChange, isSectBase, getCouncilContext } from '../systems/SectManagement';
+import type { CouncilContext } from '../systems/SectManagement';
 import { getMaxRecruitSlots, getAssignmentLabel, getRankLabel } from '../systems/NPCManager';
 import { updateMissionProgress } from '../systems/MissionSystem';
 import { initFactionRelations, tickFactionDiplomacy } from '../systems/FactionSystem';
 import { WORLD_MAP, type LocationId } from '../data/worldMap';
+import { SECTS } from '../data/sects';
 import { getRealmName } from '../state/LevelSystem';
 import { getNpcPortrait } from '../utils/npcPortrait';
 import type { CampTabId } from '../data/types';
@@ -58,6 +62,23 @@ export function renderMapBar(): void {
   // 隐藏描述文字
   const descEl = document.getElementById('map-location-desc');
   if (descEl) descEl.style.display = 'none';
+
+  // 🆕 门派属性显示（在位置名称右侧）
+  const sectResEl = document.getElementById('map-sect-resources');
+  if (sectResEl) {
+    const sectId = isSectBase(locId);
+    if (sectId && p.sect === sectId) {
+      const state = p.sectState?.[sectId];
+      if (state) {
+        sectResEl.textContent = `💰${state.resources} 🏛️${state.stability}`;
+        sectResEl.style.display = '';
+      } else {
+        sectResEl.style.display = 'none';
+      }
+    } else {
+      sectResEl.style.display = 'none';
+    }
+  }
   
   // 清空附近地点按钮（通过地图弹窗进行移动）
   const nearbyEl = document.getElementById('map-nearby-locations');
@@ -107,7 +128,18 @@ export function travelToLocation(destId: LocationId): void {
     const moves = moveResults.map(r => r.detail).join('；');
     showToast(`🌍 ${moves}`);
   }
-  
+  showNpcInteractionToast(tickResults);
+
+  // 势力领土争夺
+  const siegeResult = tryTriggerSiege();
+  if (siegeResult.happened && siegeResult.newsText) {
+    showToast(`📰 江湖传闻：${siegeResult.newsText}`);
+  }
+  showWorldNewsToast();
+
+  // 时间推进
+  advanceTurn();
+
   // 更新UI
   renderCampTopbar();
   renderSidebar();
@@ -445,6 +477,17 @@ export function doRest(): void {
     const moves = moveResults.map(r => r.detail).join('；');
     showToast(`🌙 ${moves}`);
   }
+  showNpcInteractionToast(tickResults);
+
+  // 势力领土争夺
+  const siegeResult2 = tryTriggerSiege();
+  if (siegeResult2.happened && siegeResult2.newsText) {
+    showToast(`📰 江湖传闻：${siegeResult2.newsText}`);
+  }
+  showWorldNewsToast();
+
+  // 时间推进
+  advanceTurn();
 
   // 🆕 沙盒：休息/执行日常行动触发任务进度（gather/teach 类）
   updateMissionProgress('daily_action', updated.currentLocationId);
@@ -579,6 +622,16 @@ export function enterCamp(): void {
     p = { ...p, chronicle: initChronicle() };
     needSave = true;
   }
+  // 🆕 时间系统：旧存档兼容
+  if (p.gameMonth === undefined) {
+    p = { ...p, gameMonth: 1, turnInMonth: 0, councilCooldown: 0 };
+    needSave = true;
+  }
+  // 🆕 门派经营：旧存档兼容
+  if (!p.sectState || Object.keys(p.sectState).length === 0) {
+    p = { ...p, sectState: initSectState() };
+    needSave = true;
+  }
   // 🆕 P8: NPC 间友好度关系初始化（仅在沙盒模式，有 NPC 数据库时）
   if (p.gameMode === 'sandbox' && p.npcDatabase && Object.keys(p.npcDatabase).length > 0) {
     if (!p.npcRelationship || Object.keys(p.npcRelationship).length === 0) {
@@ -677,4 +730,117 @@ function showSkillReminder(type: 'learn_first' | 'equip_first'): void {
 
 function closeSkillReminder(): void {
   document.getElementById('skill-reminder')?.classList.add('hidden');
+}
+
+/** 时间推进：每次旅行/休息/日常任务后 +1 回合 */
+export function advanceTurn(): void {
+  const p = getPlayer();
+  let turnInMonth = (p.turnInMonth ?? 0) + 1;
+  let gameMonth = p.gameMonth ?? 1;
+  let councilCooldown = p.councilCooldown ?? 0;
+
+  const isNewMonth = turnInMonth >= 10;
+
+  if (isNewMonth) {
+    turnInMonth = 0;
+    gameMonth += 1;
+    councilCooldown = Math.max(0, councilCooldown - 1);
+
+    // 🆕 月度 CG 动画
+    showMonthTransition(gameMonth);
+
+    // 🆕 全局 NPC 批量行为更新
+    tickNpcBehaviors();
+
+    // 🆕 月初刷新 UI（延迟以配合动画）
+    setTimeout(() => {
+      renderSidebar();
+      const content = document.getElementById('camp-content');
+      if (content) {
+        const tab = getCampTab();
+        if (tab === 'world') renderWorldPanel(content);
+        if (tab === 'story') renderStoryPanel(content);
+      }
+    }, 1800);
+  }
+
+  // 每回合：门派自然增长/衰退
+  tickSectNaturalChange();
+
+  setPlayer({ ...p, turnInMonth, gameMonth, councilCooldown });
+
+  // 月初触发议事检查
+  if (isNewMonth) {
+    checkCouncilTrigger();
+  }
+}
+
+/** 月度过渡动画 */
+function showMonthTransition(month: number): void {
+  const div = document.createElement('div');
+  div.className = 'month-transition';
+  div.textContent = `—— 第 ${month} 月 ——`;
+  document.body.appendChild(div);
+  setTimeout(() => div.remove(), 2200);
+}
+
+/** 检查是否触发月度议事 */
+function checkCouncilTrigger(): void {
+  const p = getPlayer();
+  const locId = p.currentLocationId ?? 'wudang_mountain';
+
+  // 1. 玩家是否在门派据点？
+  const sectId = isSectBase(locId);
+  if (!sectId) return;
+
+  // 2. 玩家是否属于该门派？
+  if (p.sect !== sectId) return;
+
+  // 3. 冷却是否到期？
+  if ((p.councilCooldown ?? 0) > (p.gameMonth ?? 1)) return;
+
+  // 4. 门派资源是否足够？
+  const state = p.sectState?.[sectId];
+  if (!state || state.resources <= 50) {
+    showToast(`📜 ${SECTS[sectId]?.name ?? sectId}门派困顿，本月无力召开议事。`);
+    return;
+  }
+
+  // 触发议事
+  const ctx = getCouncilContext(sectId);
+  setTimeout(() => {
+    import('./camp/CouncilScreen').then(m => m.showCouncilScreen(ctx));
+  }, 300);
+}
+
+/** 回合结束后展示当前地点的 NPC 互动摘要 */
+function showNpcInteractionToast(tickResults: ReturnType<typeof tickNpcBehaviors>): void {
+  const interactResults = tickResults.filter(r => r.action === 'npc_interact');
+  if (interactResults.length === 0) return;
+  const maxShow = 3;
+  const shown = interactResults.slice(0, maxShow).map(r => r.detail).join('；');
+  const more = interactResults.length > maxShow ? `…等${interactResults.length}起事件` : '';
+  showToast(`📜 周围动向：${shown}${more}`);
+}
+
+/** 显示最近的江湖传闻（过期的自动清除） */
+function showWorldNewsToast(): void {
+  const p = getPlayer();
+  const news = p.worldNews ?? [];
+  if (news.length === 0) return;
+
+  // 清除过期新闻并显示最新一条
+  const active = news.filter(n => n.leftTime > 0);
+  if (active.length === 0) {
+    setPlayer({ ...p, worldNews: [] });
+    return;
+  }
+
+  // 显示最新一条
+  const latest = active[0]!;
+  showToast(`📰 ${latest.text}`);
+
+  // 递减 leftTime 并移除过期
+  const updated = active.map(n => ({ ...n, leftTime: n.leftTime - 1 })).filter(n => n.leftTime > 0);
+  setPlayer({ ...p, worldNews: updated });
 }

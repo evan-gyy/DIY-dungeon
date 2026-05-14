@@ -101,6 +101,8 @@ export interface NpcStats {
   gender?: 'male' | 'female';
   /** 立绘池索引（随机 NPC 预计算，保证同一 NPC 每次渲染同一张图） */
   portraitIndex?: number;
+  /** 🆕 近期经历日志（最多 20 条，最新在末尾） */
+  recentLog?: string[];
 }
 
 // 🆕 使用 realmConfig 系统计算NPC属性（替代旧的makeStats）
@@ -127,6 +129,7 @@ export const NPC_STATS_INIT: Record<string, Omit<NpcStats, 'exp'>> = {
   liu_qinghan: {
     id: 'liu_qinghan', name: '柳清寒', talent: 'sword_heart_frost', sect: 'wudang', level: 28,
     discipleRank: 'true', courtRank: 'commoner', personality: 'aloof',
+    gender: 'female',
     courtStats: { strategy: 40, eloquence: 25, charisma: 60, scholarship: 35 }, influence: 20, courtPath: null,
     ...makeNpcStats(28, 'sword_heart_frost', 5),  // 额外5%暴击
     skills: ['wudang_sword', 'zixiao', 'taiji_jian', 'liangyi_sword', 'chunyang_gong'],
@@ -138,6 +141,7 @@ export const NPC_STATS_INIT: Record<string, Omit<NpcStats, 'exp'>> = {
   shen_nishang: {
     id: 'shen_nishang', name: '沈霓裳', talent: 'normal', sect: 'maoshan', level: 13,
     discipleRank: 'outer', courtRank: 'commoner', personality: 'bold',
+    gender: 'female',
     courtStats: { strategy: 20, eloquence: 30, charisma: 50, scholarship: 15 }, influence: 10, courtPath: null,
     ...makeNpcStats(13, 'normal'),
     skills: ['wudang_changquan', 'wudang_jianfa_basic', 'wudang_qinggong', 'mianzhang'],
@@ -148,7 +152,8 @@ export const NPC_STATS_INIT: Record<string, Omit<NpcStats, 'exp'>> = {
   // 🌸 女主角 - 墨绐青（渡劫五层，散修 / 隐居村妇·前朝国师）
   mo_jiangqing: {
     id: 'mo_jiangqing', name: '墨绐青', talent: 'normal', sect: 'none', level: 55,
-    discipleRank: 'outer', courtRank: 'hanlin', personality: 'upright',  // 前朝国师 → 翰林级别
+    discipleRank: 'outer', courtRank: 'hanlin', personality: 'upright',
+    gender: 'female',  // 前朝国师 → 翰林级别
     courtStats: { strategy: 75, eloquence: 60, charisma: 55, scholarship: 85 }, influence: 900, courtPath: 'wen',
     ...makeNpcStats(55, 'normal', 10),  // 额外10%暴击
     skills: ['wudang_dao_jing', 'wudang_xuankong', 'wudang_taiyi', 'wudang_wuji_dao_jian'],
@@ -159,7 +164,8 @@ export const NPC_STATS_INIT: Record<string, Omit<NpcStats, 'exp'>> = {
   // ☯️ 武当派 - 张玄素（化神六层 · 武当掌门）
   zhang_xuansu: {
     id: 'zhang_xuansu', name: '张玄素', talent: 'normal', sect: 'wudang', level: 46,
-    discipleRank: 'leader', courtRank: 'xiucai', personality: 'gentle',  // 掌门·秀才出身
+    discipleRank: 'leader', courtRank: 'xiucai', personality: 'gentle',
+    gender: 'male',  // 掌门·秀才出身
     courtStats: { strategy: 45, eloquence: 40, charisma: 50, scholarship: 55 }, influence: 50, courtPath: 'wen',
     ...makeNpcStats(46, 'normal', 5),
     skills: ['taiji_shengong', 'wudang_jianzhen', 'chunyang_wuji', 'sanfeng_yijian', 'wudang_tianren'],
@@ -171,6 +177,7 @@ export const NPC_STATS_INIT: Record<string, Omit<NpcStats, 'exp'>> = {
   chen_jingxu: {
     id: 'chen_jingxu', name: '陈静虚', talent: 'normal', sect: 'wudang', level: 35,
     discipleRank: 'elder', courtRank: 'commoner', personality: 'gentle',
+    gender: 'male',
     courtStats: { strategy: 40, eloquence: 30, charisma: 35, scholarship: 65 }, influence: 30, courtPath: 'wen',
     ...makeNpcStats(35, 'normal'),
     skills: ['taiji', 'taiji_jian', 'liangyi_sword', 'chunyang_gong', 'taiji_shengong'],
@@ -182,6 +189,7 @@ export const NPC_STATS_INIT: Record<string, Omit<NpcStats, 'exp'>> = {
   lu_chengzhou: {
     id: 'lu_chengzhou', name: '陆沉舟', talent: 'normal', sect: 'wudang', level: 18,
     discipleRank: 'inner', courtRank: 'commoner', personality: 'bold',
+    gender: 'male',
     courtStats: { strategy: 25, eloquence: 40, charisma: 45, scholarship: 20 }, influence: 10, courtPath: null,
     ...makeNpcStats(18, 'normal'),
     skills: ['wudang_sword', 'mianzhang', 'wudang_lianjian', 'zixiao'],
@@ -193,6 +201,7 @@ export const NPC_STATS_INIT: Record<string, Omit<NpcStats, 'exp'>> = {
   gu_xiaosang: {
     id: 'gu_xiaosang', name: '顾小桑', talent: 'normal', sect: 'wudang', level: 13,
     discipleRank: 'inner', courtRank: 'commoner', personality: 'kind',
+    gender: 'female',
     courtStats: { strategy: 10, eloquence: 35, charisma: 50, scholarship: 15 }, influence: 5, courtPath: null,
     ...makeNpcStats(13, 'normal'),
     skills: ['wudang_changquan', 'wudang_jianfa_basic', 'wudang_qinggong', 'mianzhang'],
@@ -204,6 +213,7 @@ export const NPC_STATS_INIT: Record<string, Omit<NpcStats, 'exp'>> = {
   song_zhiyuan: {
     id: 'song_zhiyuan', name: '宋知远', talent: 'normal', sect: 'wudang', level: 3,
     discipleRank: 'outer', courtRank: 'commoner', personality: 'cunning',
+    gender: 'male',
     courtStats: { strategy: 25, eloquence: 35, charisma: 15, scholarship: 5 }, influence: 0, courtPath: null,
     ...makeNpcStats(3, 'normal'),
     skills: ['wudang_changquan', 'yangqi_jue'],
@@ -215,6 +225,7 @@ export const NPC_STATS_INIT: Record<string, Omit<NpcStats, 'exp'>> = {
   ji_wushuang_npc: {
     id: 'ji_wushuang_npc', name: '纪无双', talent: 'normal', sect: 'wudang', level: 17,
     discipleRank: 'inner', courtRank: 'commoner', personality: 'bold',
+    gender: 'female',
     courtStats: { strategy: 35, eloquence: 25, charisma: 55, scholarship: 30 }, influence: 15, courtPath: null,
     ...makeNpcStats(17, 'normal'),
     skills: ['wudang_sword', 'wudang_lianjian', 'zixiao', 'mianzhang'],
@@ -226,6 +237,7 @@ export const NPC_STATS_INIT: Record<string, Omit<NpcStats, 'exp'>> = {
   su_yunxiu_npc: {
     id: 'su_yunxiu_npc', name: '苏云绣', talent: 'normal', sect: 'wudang', level: 16,
     discipleRank: 'inner', courtRank: 'commoner', personality: 'kind',
+    gender: 'female',
     courtStats: { strategy: 15, eloquence: 25, charisma: 55, scholarship: 20 }, influence: 5, courtPath: null,
     ...makeNpcStats(16, 'normal'),
     skills: ['wudang_changquan', 'wudang_sword', 'mianzhang', 'wudang_qinggong'],
@@ -237,6 +249,7 @@ export const NPC_STATS_INIT: Record<string, Omit<NpcStats, 'exp'>> = {
   fang_zhonghe_npc: {
     id: 'fang_zhonghe_npc', name: '方仲和', talent: 'normal', sect: 'wudang', level: 15,
     discipleRank: 'inner', courtRank: 'commoner', personality: 'gentle',
+    gender: 'male',
     courtStats: { strategy: 20, eloquence: 20, charisma: 30, scholarship: 35 }, influence: 5, courtPath: null,
     ...makeNpcStats(15, 'normal'),
     skills: ['wudang_changquan', 'mianzhang', 'wudang_huti', 'wudang_sword'],
@@ -248,6 +261,7 @@ export const NPC_STATS_INIT: Record<string, Omit<NpcStats, 'exp'>> = {
   meng_wenyuan: {
     id: 'meng_wenyuan', name: '孟文渊', talent: 'normal', sect: 'wudang', level: 19,
     discipleRank: 'inner', courtRank: 'commoner', personality: 'upright',
+    gender: 'male',
     courtStats: { strategy: 30, eloquence: 20, charisma: 30, scholarship: 50 }, influence: 10, courtPath: null,
     ...makeNpcStats(19, 'normal', 3),
     skills: ['wudang_sword', 'taiji_jian', 'wudang_lianjian', 'zixiao'],
@@ -259,6 +273,7 @@ export const NPC_STATS_INIT: Record<string, Omit<NpcStats, 'exp'>> = {
   ye_ziyi: {
     id: 'ye_ziyi', name: '叶紫衣', talent: 'normal', sect: 'wudang', level: 14,
     discipleRank: 'inner', courtRank: 'commoner', personality: 'kind',
+    gender: 'female',
     courtStats: { strategy: 15, eloquence: 40, charisma: 45, scholarship: 25 }, influence: 5, courtPath: null,
     ...makeNpcStats(14, 'normal'),
     skills: ['wudang_jianfa_basic', 'wudang_sword', 'yangqi_jue', 'wudang_qinggong'],
@@ -274,6 +289,7 @@ export const NPC_STATS_INIT: Record<string, Omit<NpcStats, 'exp'>> = {
   shaolin_kongwen: {
     id: 'shaolin_kongwen', name: '空闻方丈', talent: 'normal', sect: 'shaolin', level: 48,
     discipleRank: 'leader', courtRank: 'commoner', personality: 'upright',
+    gender: 'male',
     courtStats: { strategy: 55, eloquence: 50, charisma: 40, scholarship: 70 }, influence: 80, courtPath: null,
     ...makeNpcStats(48, 'normal', 5),
     skills: ['luohan_fist', 'vajra_palm', 'yijin_jing', '72_arts'],
@@ -286,6 +302,7 @@ export const NPC_STATS_INIT: Record<string, Omit<NpcStats, 'exp'>> = {
   shaolin_kongjian: {
     id: 'shaolin_kongjian', name: '空见首座', talent: 'normal', sect: 'shaolin', level: 38,
     discipleRank: 'elder', courtRank: 'commoner', personality: 'gentle',
+    gender: 'male',
     courtStats: { strategy: 40, eloquence: 35, charisma: 30, scholarship: 55 }, influence: 40, courtPath: null,
     ...makeNpcStats(38, 'normal', 3),
     skills: ['luohan_fist', 'vajra_palm', 'yijin_jing', '72_arts'],
@@ -302,6 +319,7 @@ export const NPC_STATS_INIT: Record<string, Omit<NpcStats, 'exp'>> = {
   emei_miejue: {
     id: 'emei_miejue', name: '灭绝师太', talent: 'normal', sect: 'emei', level: 42,
     discipleRank: 'leader', courtRank: 'commoner', personality: 'upright',
+    gender: 'female',
     courtStats: { strategy: 50, eloquence: 30, charisma: 35, scholarship: 45 }, influence: 60, courtPath: null,
     ...makeNpcStats(42, 'normal', 5),
     skills: ['emei_sword', 'liing_palm', 'hundred_birds', 'emei_poison'],
@@ -314,6 +332,7 @@ export const NPC_STATS_INIT: Record<string, Omit<NpcStats, 'exp'>> = {
   emei_jingxuan: {
     id: 'emei_jingxuan', name: '静玄师太', talent: 'normal', sect: 'emei', level: 32,
     discipleRank: 'elder', courtRank: 'commoner', personality: 'kind',
+    gender: 'female',
     courtStats: { strategy: 30, eloquence: 35, charisma: 45, scholarship: 40 }, influence: 30, courtPath: null,
     ...makeNpcStats(32, 'normal'),
     skills: ['emei_sword', 'liing_palm', 'hundred_birds', 'emei_poison'],
@@ -330,6 +349,7 @@ export const NPC_STATS_INIT: Record<string, Omit<NpcStats, 'exp'>> = {
   beggar_hong: {
     id: 'beggar_hong', name: '洪帮主', talent: 'normal', sect: 'beggar', level: 38,
     discipleRank: 'leader', courtRank: 'commoner', personality: 'bold',
+    gender: 'male',
     courtStats: { strategy: 45, eloquence: 25, charisma: 60, scholarship: 20 }, influence: 70, courtPath: null,
     ...makeNpcStats(38, 'normal', 5),
     skills: ['beggar_fist', 'dragon_palm', 'stick_art', 'mud_walk'],
@@ -342,6 +362,7 @@ export const NPC_STATS_INIT: Record<string, Omit<NpcStats, 'exp'>> = {
   beggar_lu: {
     id: 'beggar_lu', name: '鲁有脚', talent: 'normal', sect: 'beggar', level: 28,
     discipleRank: 'elder', courtRank: 'commoner', personality: 'upright',
+    gender: 'male',
     courtStats: { strategy: 30, eloquence: 20, charisma: 40, scholarship: 15 }, influence: 25, courtPath: null,
     ...makeNpcStats(28, 'normal'),
     skills: ['beggar_fist', 'stick_art', 'mud_walk', 'dragon_palm'],
@@ -358,6 +379,7 @@ export const NPC_STATS_INIT: Record<string, Omit<NpcStats, 'exp'>> = {
   huashan_master: {
     id: 'huashan_master', name: '岳掌门', talent: 'normal', sect: 'huashan', level: 40,
     discipleRank: 'leader', courtRank: 'commoner', personality: 'cunning',
+    gender: 'male',
     courtStats: { strategy: 40, eloquence: 45, charisma: 50, scholarship: 35 }, influence: 50, courtPath: null,
     ...makeNpcStats(40, 'normal', 5),
     skills: ['wudang_sword', 'zixiao', 'taiji_jian', 'liangyi_sword'], // 华山以剑法闻名
@@ -370,6 +392,7 @@ export const NPC_STATS_INIT: Record<string, Omit<NpcStats, 'exp'>> = {
   huashan_feng: {
     id: 'huashan_feng', name: '封不平', talent: 'normal', sect: 'huashan', level: 30,
     discipleRank: 'elder', courtRank: 'commoner', personality: 'bold',
+    gender: 'male',
     courtStats: { strategy: 25, eloquence: 20, charisma: 35, scholarship: 30 }, influence: 20, courtPath: null,
     ...makeNpcStats(30, 'normal', 3),
     skills: ['wudang_sword', 'wudang_lianjian', 'zixiao', 'taiji_jian'],
@@ -386,6 +409,7 @@ export const NPC_STATS_INIT: Record<string, Omit<NpcStats, 'exp'>> = {
   demon_master: {
     id: 'demon_master', name: '教主', talent: 'normal', sect: 'demon', level: 45,
     discipleRank: 'leader', courtRank: 'commoner', personality: 'aloof',
+    gender: 'male',
     courtStats: { strategy: 60, eloquence: 55, charisma: 65, scholarship: 30 }, influence: 100, courtPath: null,
     ...makeNpcStats(45, 'normal', 10), // 魔教功法暴击率更高
     skills: ['wudang_tianren', 'wudang_jianzhen', 'chunyang_wuji', 'sanfeng_yijian'], // 借用顶级武学
@@ -398,6 +422,7 @@ export const NPC_STATS_INIT: Record<string, Omit<NpcStats, 'exp'>> = {
   demon_yang: {
     id: 'demon_yang', name: '杨左使', talent: 'normal', sect: 'demon', level: 33,
     discipleRank: 'elder', courtRank: 'commoner', personality: 'cunning',
+    gender: 'male',
     courtStats: { strategy: 45, eloquence: 50, charisma: 40, scholarship: 25 }, influence: 50, courtPath: null,
     ...makeNpcStats(33, 'normal', 5),
     skills: ['taiji_shengong', 'wudang_jianzhen', 'liangyi_sword', 'chunyang_gong'],
@@ -414,6 +439,7 @@ export const NPC_STATS_INIT: Record<string, Omit<NpcStats, 'exp'>> = {
   kaifeng_fuyin: {
     id: 'kaifeng_fuyin', name: '包拯', talent: 'normal', sect: 'none', level: 7,
     discipleRank: 'outer', courtRank: 'shangshu', personality: 'upright',
+    gender: 'male',
     courtStats: { strategy: 60, eloquence: 70, charisma: 50, scholarship: 85 }, influence: 200, courtPath: 'wen',
     ...makeNpcStats(7, 'normal'),
     skills: ['wudang_changquan', 'yangqi_jue'],
@@ -426,6 +452,7 @@ export const NPC_STATS_INIT: Record<string, Omit<NpcStats, 'exp'>> = {
   luoyang_zhifu: {
     id: 'luoyang_zhifu', name: '赵汝成', talent: 'normal', sect: 'none', level: 6,
     discipleRank: 'outer', courtRank: 'jinshi', personality: 'gentle',
+    gender: 'male',
     courtStats: { strategy: 40, eloquence: 50, charisma: 45, scholarship: 60 }, influence: 100, courtPath: 'wen',
     ...makeNpcStats(6, 'normal'),
     skills: ['wudang_changquan', 'yangqi_jue'],
@@ -438,6 +465,7 @@ export const NPC_STATS_INIT: Record<string, Omit<NpcStats, 'exp'>> = {
   changan_zhifu: {
     id: 'changan_zhifu', name: '韩维庸', talent: 'normal', sect: 'none', level: 6,
     discipleRank: 'outer', courtRank: 'jinshi', personality: 'upright',
+    gender: 'male',
     courtStats: { strategy: 50, eloquence: 40, charisma: 35, scholarship: 55 }, influence: 90, courtPath: 'wen',
     ...makeNpcStats(6, 'normal'),
     skills: ['wudang_changquan', 'yangqi_jue'],
@@ -450,6 +478,7 @@ export const NPC_STATS_INIT: Record<string, Omit<NpcStats, 'exp'>> = {
   xiangyang_zhifu: {
     id: 'xiangyang_zhifu', name: '郭铁山', talent: 'normal', sect: 'none', level: 5,
     discipleRank: 'outer', courtRank: 'juren', personality: 'upright',
+    gender: 'male',
     courtStats: { strategy: 55, eloquence: 30, charisma: 40, scholarship: 35 }, influence: 70, courtPath: 'wu',
     ...makeNpcStats(5, 'normal'),
     skills: ['wudang_changquan'],
@@ -462,6 +491,7 @@ export const NPC_STATS_INIT: Record<string, Omit<NpcStats, 'exp'>> = {
   jiangling_zhifu: {
     id: 'jiangling_zhifu', name: '刘守安', talent: 'normal', sect: 'none', level: 5,
     discipleRank: 'outer', courtRank: 'juren', personality: 'kind',
+    gender: 'male',
     courtStats: { strategy: 40, eloquence: 45, charisma: 40, scholarship: 45 }, influence: 60, courtPath: 'wen',
     ...makeNpcStats(5, 'normal'),
     skills: ['wudang_changquan'],
@@ -474,6 +504,7 @@ export const NPC_STATS_INIT: Record<string, Omit<NpcStats, 'exp'>> = {
   chengdu_zhifu: {
     id: 'chengdu_zhifu', name: '王仲良', talent: 'normal', sect: 'none', level: 5,
     discipleRank: 'outer', courtRank: 'juren', personality: 'gentle',
+    gender: 'male',
     courtStats: { strategy: 35, eloquence: 40, charisma: 45, scholarship: 50 }, influence: 60, courtPath: 'wen',
     ...makeNpcStats(5, 'normal'),
     skills: ['wudang_changquan'],
@@ -486,6 +517,7 @@ export const NPC_STATS_INIT: Record<string, Omit<NpcStats, 'exp'>> = {
   yangzhou_zhizhou: {
     id: 'yangzhou_zhizhou', name: '杜文清', talent: 'normal', sect: 'none', level: 4,
     discipleRank: 'outer', courtRank: 'juren', personality: 'cunning',
+    gender: 'male',
     courtStats: { strategy: 30, eloquence: 55, charisma: 50, scholarship: 40 }, influence: 55, courtPath: 'wen',
     ...makeNpcStats(4, 'normal'),
     skills: ['wudang_changquan'],
@@ -498,6 +530,7 @@ export const NPC_STATS_INIT: Record<string, Omit<NpcStats, 'exp'>> = {
   suzhou_zhizhou: {
     id: 'suzhou_zhizhou', name: '白修文', talent: 'normal', sect: 'none', level: 4,
     discipleRank: 'outer', courtRank: 'juren', personality: 'kind',
+    gender: 'male',
     courtStats: { strategy: 25, eloquence: 50, charisma: 55, scholarship: 45 }, influence: 50, courtPath: 'wen',
     ...makeNpcStats(4, 'normal'),
     skills: ['wudang_changquan'],
@@ -510,6 +543,7 @@ export const NPC_STATS_INIT: Record<string, Omit<NpcStats, 'exp'>> = {
   hangzhou_zhifu: {
     id: 'hangzhou_zhifu', name: '林观潮', talent: 'normal', sect: 'none', level: 5,
     discipleRank: 'outer', courtRank: 'juren', personality: 'gentle',
+    gender: 'male',
     courtStats: { strategy: 35, eloquence: 45, charisma: 50, scholarship: 50 }, influence: 65, courtPath: 'wen',
     ...makeNpcStats(5, 'normal'),
     skills: ['wudang_changquan'],
@@ -522,6 +556,7 @@ export const NPC_STATS_INIT: Record<string, Omit<NpcStats, 'exp'>> = {
   dali_guoxiang: {
     id: 'dali_guoxiang', name: '高檀让', talent: 'normal', sect: 'none', level: 5,
     discipleRank: 'outer', courtRank: 'jinshi', personality: 'cunning',
+    gender: 'male',
     courtStats: { strategy: 45, eloquence: 40, charisma: 35, scholarship: 50 }, influence: 80, courtPath: 'wen',
     ...makeNpcStats(5, 'normal'),
     skills: ['wudang_changquan'],
@@ -538,6 +573,7 @@ export const NPC_STATS_INIT: Record<string, Omit<NpcStats, 'exp'>> = {
   maoshan_zhangmen: {
     id: 'maoshan_zhangmen', name: '陶天师', talent: 'normal', sect: 'maoshan', level: 42,
     discipleRank: 'leader', courtRank: 'commoner', personality: 'gentle',
+    gender: 'male',
     courtStats: { strategy: 45, eloquence: 35, charisma: 40, scholarship: 70 }, influence: 60, courtPath: 'wen',
     ...makeNpcStats(42, 'normal', 5),
     skills: ['taiji', 'taiji_jian', 'chunyang_gong', 'zixiao', 'wudang_zhenfa'],
@@ -550,6 +586,7 @@ export const NPC_STATS_INIT: Record<string, Omit<NpcStats, 'exp'>> = {
   maoshan_elder: {
     id: 'maoshan_elder', name: '葛玄清', talent: 'normal', sect: 'maoshan', level: 32,
     discipleRank: 'elder', courtRank: 'commoner', personality: 'upright',
+    gender: 'male',
     courtStats: { strategy: 35, eloquence: 25, charisma: 30, scholarship: 55 }, influence: 30, courtPath: null,
     ...makeNpcStats(32, 'normal'),
     skills: ['taiji_jian', 'liangyi_sword', 'chunyang_gong', 'wudang_zhenfa'],
@@ -566,6 +603,7 @@ export const NPC_STATS_INIT: Record<string, Omit<NpcStats, 'exp'>> = {
   kunlun_zhangmen: {
     id: 'kunlun_zhangmen', name: '何太虚', talent: 'normal', sect: 'kunlun', level: 43,
     discipleRank: 'leader', courtRank: 'commoner', personality: 'aloof',
+    gender: 'male',
     courtStats: { strategy: 50, eloquence: 25, charisma: 35, scholarship: 40 }, influence: 55, courtPath: null,
     ...makeNpcStats(43, 'normal', 5),
     skills: ['taiji_shengong', 'wudang_jianzhen', 'chunyang_wuji', 'sanfeng_yijian'],
@@ -578,6 +616,7 @@ export const NPC_STATS_INIT: Record<string, Omit<NpcStats, 'exp'>> = {
   kunlun_elder: {
     id: 'kunlun_elder', name: '寒松子', talent: 'normal', sect: 'kunlun', level: 33,
     discipleRank: 'elder', courtRank: 'commoner', personality: 'gentle',
+    gender: 'male',
     courtStats: { strategy: 30, eloquence: 20, charisma: 30, scholarship: 40 }, influence: 25, courtPath: null,
     ...makeNpcStats(33, 'normal'),
     skills: ['taiji_jian', 'liangyi_sword', 'chunyang_wuji', 'wudang_jianzhen'],
@@ -594,6 +633,7 @@ export const NPC_STATS_INIT: Record<string, Omit<NpcStats, 'exp'>> = {
   qingcheng_zhangmen: {
     id: 'qingcheng_zhangmen', name: '余掌门', talent: 'normal', sect: 'qingcheng', level: 40,
     discipleRank: 'leader', courtRank: 'commoner', personality: 'kind',
+    gender: 'male',
     courtStats: { strategy: 40, eloquence: 30, charisma: 45, scholarship: 35 }, influence: 45, courtPath: null,
     ...makeNpcStats(40, 'normal', 5),
     skills: ['taiji_shengong', 'wudang_jianzhen', 'liangyi_sword', 'chunyang_gong'],
@@ -606,6 +646,7 @@ export const NPC_STATS_INIT: Record<string, Omit<NpcStats, 'exp'>> = {
   qingcheng_elder: {
     id: 'qingcheng_elder', name: '常鹤鸣', talent: 'normal', sect: 'qingcheng', level: 30,
     discipleRank: 'elder', courtRank: 'commoner', personality: 'bold',
+    gender: 'male',
     courtStats: { strategy: 25, eloquence: 25, charisma: 40, scholarship: 25 }, influence: 20, courtPath: null,
     ...makeNpcStats(30, 'normal'),
     skills: ['taiji_jian', 'wudang_lianjian', 'zixiao', 'liangyi_sword'],
@@ -622,6 +663,7 @@ export const NPC_STATS_INIT: Record<string, Omit<NpcStats, 'exp'>> = {
   tangmen_zhangmen: {
     id: 'tangmen_zhangmen', name: '唐老太太', talent: 'normal', sect: 'tangmen', level: 41,
     discipleRank: 'leader', courtRank: 'commoner', personality: 'cunning',
+    gender: 'female',
     courtStats: { strategy: 50, eloquence: 40, charisma: 35, scholarship: 30 }, influence: 50, courtPath: null,
     ...makeNpcStats(41, 'normal', 8),
     skills: ['taiji_shengong', 'wudang_jianzhen', 'chunyang_wuji', 'sanfeng_yijian'],
@@ -634,6 +676,7 @@ export const NPC_STATS_INIT: Record<string, Omit<NpcStats, 'exp'>> = {
   tangmen_elder: {
     id: 'tangmen_elder', name: '唐无影', talent: 'normal', sect: 'tangmen', level: 31,
     discipleRank: 'elder', courtRank: 'commoner', personality: 'aloof',
+    gender: 'male',
     courtStats: { strategy: 35, eloquence: 20, charisma: 25, scholarship: 25 }, influence: 20, courtPath: null,
     ...makeNpcStats(31, 'normal', 5),
     skills: ['taiji_jian', 'liangyi_sword', 'chunyang_wuji', 'wudang_zhenfa'],
@@ -650,6 +693,7 @@ export const NPC_STATS_INIT: Record<string, Omit<NpcStats, 'exp'>> = {
   xiaoyao_zhangmen: {
     id: 'xiaoyao_zhangmen', name: '逍遥子', talent: 'genius', sect: 'xiaoyao', level: 50,
     discipleRank: 'leader', courtRank: 'commoner', personality: 'aloof',
+    gender: 'male',
     courtStats: { strategy: 60, eloquence: 55, charisma: 50, scholarship: 80 }, influence: 100, courtPath: null,
     ...makeNpcStats(50, 'genius', 10),
     skills: ['wudang_tianren', 'wudang_hunypic', 'wudang_taiqing', 'wudang_zhenwu_jianyi', 'wudang_dao_jing'],
@@ -662,6 +706,7 @@ export const NPC_STATS_INIT: Record<string, Omit<NpcStats, 'exp'>> = {
   xiaoyao_elder: {
     id: 'xiaoyao_elder', name: '苏星河', talent: 'normal', sect: 'xiaoyao', level: 36,
     discipleRank: 'elder', courtRank: 'commoner', personality: 'gentle',
+    gender: 'male',
     courtStats: { strategy: 45, eloquence: 40, charisma: 50, scholarship: 60 }, influence: 40, courtPath: 'wen',
     ...makeNpcStats(36, 'normal', 3),
     skills: ['taiji_shengong', 'wudang_jianzhen', 'chunyang_wuji', 'sanfeng_yijian'],
@@ -678,6 +723,7 @@ export const NPC_STATS_INIT: Record<string, Omit<NpcStats, 'exp'>> = {
   quanzhen_zhangmen: {
     id: 'quanzhen_zhangmen', name: '陈道玄', talent: 'genius', sect: 'quanzhen', level: 43,
     discipleRank: 'leader', courtRank: 'commoner', personality: 'gentle',
+    gender: 'male',
     courtStats: { strategy: 50, eloquence: 45, charisma: 55, scholarship: 75 }, influence: 70, courtPath: 'wen',
     ...makeNpcStats(43, 'genius', 5),
     skills: ['taiji_shengong', 'wudang_jianzhen', 'chunyang_wuji', 'sanfeng_yijian'],
@@ -690,6 +736,7 @@ export const NPC_STATS_INIT: Record<string, Omit<NpcStats, 'exp'>> = {
   quanzhen_elder: {
     id: 'quanzhen_elder', name: '李清元', talent: 'normal', sect: 'quanzhen', level: 35,
     discipleRank: 'elder', courtRank: 'commoner', personality: 'kind',
+    gender: 'female',
     courtStats: { strategy: 40, eloquence: 35, charisma: 45, scholarship: 65 }, influence: 35, courtPath: 'wen',
     ...makeNpcStats(35, 'normal'),
     skills: ['taiji_jian', 'liangyi_sword', 'chunyang_gong', 'wudang_zhenfa'],
@@ -702,6 +749,7 @@ export const NPC_STATS_INIT: Record<string, Omit<NpcStats, 'exp'>> = {
   quanzhen_qiuchuji: {
     id: 'quanzhen_qiuchuji', name: '周抱朴', talent: 'normal', sect: 'quanzhen', level: 36,
     discipleRank: 'elder', courtRank: 'xiucai', personality: 'upright',
+    gender: 'male',
     courtStats: { strategy: 55, eloquence: 40, charisma: 45, scholarship: 60 }, influence: 40, courtPath: 'wu',
     ...makeNpcStats(36, 'normal', 3),
     skills: ['taiji_jian', 'liangyi_sword', 'chunyang_wuji', 'wudang_jianzhen'],
@@ -718,6 +766,7 @@ export const NPC_STATS_INIT: Record<string, Omit<NpcStats, 'exp'>> = {
   kongtong_zhangmen: {
     id: 'kongtong_zhangmen', name: '铁昆仑', talent: 'normal', sect: 'kongtong', level: 38,
     discipleRank: 'leader', courtRank: 'commoner', personality: 'bold',
+    gender: 'male',
     courtStats: { strategy: 40, eloquence: 30, charisma: 40, scholarship: 30 }, influence: 45, courtPath: null,
     ...makeNpcStats(38, 'normal', 5),
     skills: ['luohan_fist', 'vajra_palm', 'yijin_jing', '72_arts'],
@@ -730,6 +779,7 @@ export const NPC_STATS_INIT: Record<string, Omit<NpcStats, 'exp'>> = {
   kongtong_elder: {
     id: 'kongtong_elder', name: '霍震岳', talent: 'normal', sect: 'kongtong', level: 28,
     discipleRank: 'elder', courtRank: 'commoner', personality: 'upright',
+    gender: 'male',
     courtStats: { strategy: 25, eloquence: 20, charisma: 30, scholarship: 20 }, influence: 20, courtPath: null,
     ...makeNpcStats(28, 'normal', 3),
     skills: ['luohan_fist', 'vajra_palm', 'yijin_jing', '72_arts'],
@@ -746,6 +796,7 @@ export const NPC_STATS_INIT: Record<string, Omit<NpcStats, 'exp'>> = {
   diancang_zhangmen: {
     id: 'diancang_zhangmen', name: '柳沧溟', talent: 'normal', sect: 'diancang', level: 37,
     discipleRank: 'leader', courtRank: 'commoner', personality: 'aloof',
+    gender: 'male',
     courtStats: { strategy: 45, eloquence: 25, charisma: 35, scholarship: 35 }, influence: 40, courtPath: null,
     ...makeNpcStats(37, 'normal', 5),
     skills: ['wudang_sword', 'zixiao', 'taiji_jian', 'liangyi_sword'],
@@ -758,6 +809,7 @@ export const NPC_STATS_INIT: Record<string, Omit<NpcStats, 'exp'>> = {
   diancang_elder: {
     id: 'diancang_elder', name: '谢云帆', talent: 'normal', sect: 'diancang', level: 27,
     discipleRank: 'elder', courtRank: 'commoner', personality: 'gentle',
+    gender: 'male',
     courtStats: { strategy: 25, eloquence: 30, charisma: 40, scholarship: 30 }, influence: 15, courtPath: null,
     ...makeNpcStats(27, 'normal', 3),
     skills: ['wudang_sword', 'wudang_lianjian', 'zixiao', 'taiji_jian'],
@@ -774,6 +826,7 @@ export const NPC_STATS_INIT: Record<string, Omit<NpcStats, 'exp'>> = {
   jiangzhou_zhizhou: {
     id: 'jiangzhou_zhizhou', name: '司马秋客', talent: 'normal', sect: 'none', level: 4,
     discipleRank: 'outer', courtRank: 'juren', personality: 'gentle',
+    gender: 'male',
     courtStats: { strategy: 30, eloquence: 45, charisma: 45, scholarship: 50 }, influence: 50, courtPath: 'wen',
     ...makeNpcStats(4, 'normal'),
     skills: ['wudang_changquan'],
@@ -786,6 +839,7 @@ export const NPC_STATS_INIT: Record<string, Omit<NpcStats, 'exp'>> = {
   tanzhou_zhifu: {
     id: 'tanzhou_zhifu', name: '周必正', talent: 'normal', sect: 'none', level: 5,
     discipleRank: 'outer', courtRank: 'juren', personality: 'gentle',
+    gender: 'male',
     courtStats: { strategy: 35, eloquence: 40, charisma: 40, scholarship: 70 }, influence: 55, courtPath: 'wen',
     ...makeNpcStats(5, 'normal'),
     skills: ['wudang_changquan'],
@@ -798,11 +852,76 @@ export const NPC_STATS_INIT: Record<string, Omit<NpcStats, 'exp'>> = {
   guangzhou_shibosi: {
     id: 'guangzhou_shibosi', name: '陈望海', talent: 'normal', sect: 'none', level: 6,
     discipleRank: 'outer', courtRank: 'jinshi', personality: 'cunning',
+    gender: 'male',
     courtStats: { strategy: 45, eloquence: 55, charisma: 50, scholarship: 55 }, influence: 70, courtPath: 'wen',
     ...makeNpcStats(6, 'normal'),
     skills: ['wudang_changquan'],
     equippedFabao: { weapon: 'refined_sword', armor: 'silk_robe', accessory: 'jade_ring' },
     ownedFabao: ['refined_sword', 'silk_robe', 'jade_ring'],
     currentLocationId: 'guangzhou_city',
+  },
+
+  // ═══════════════════════════════════════════════
+  // 🆕 v2.1 补充五大宗门掌门
+  // ═══════════════════════════════════════════════
+
+  riyue_leader: {
+    id: 'riyue_leader', name: '东方教主', talent: 'normal', sect: 'riyue', level: 48,
+    discipleRank: 'leader', courtRank: 'commoner', personality: 'aloof',
+    gender: 'male',
+    courtStats: { strategy: 55, eloquence: 50, charisma: 60, scholarship: 35 }, influence: 100, courtPath: null,
+    ...makeNpcStats(48, 'normal'),
+    skills: ['riyue_moon_palm', 'riyue_sun_qi', 'riyue_dark_fist', 'riyue_shadow_step'],
+    equippedFabao: { weapon: 'refined_sword', armor: 'silk_robe', accessory: 'jade_ring' },
+    ownedFabao: ['refined_sword', 'silk_robe', 'jade_ring'],
+    currentLocationId: 'heimu_cliff',
+  },
+
+  tiezhang_leader: {
+    id: 'tiezhang_leader', name: '铁掌水上飘', talent: 'normal', sect: 'tiezhang', level: 38,
+    discipleRank: 'leader', courtRank: 'commoner', personality: 'bold',
+    gender: 'male',
+    courtStats: { strategy: 35, eloquence: 25, charisma: 40, scholarship: 20 }, influence: 45, courtPath: null,
+    ...makeNpcStats(38, 'normal'),
+    skills: ['wudang_changquan', 'shaolin_luohan_18'],
+    equippedFabao: { weapon: 'refined_sword', armor: 'silk_robe', accessory: 'jade_ring' },
+    ownedFabao: ['refined_sword', 'silk_robe', 'jade_ring'],
+    currentLocationId: 'chongqing_city',
+  },
+
+  wudu_leader: {
+    id: 'wudu_leader', name: '五毒教主', talent: 'normal', sect: 'wudu', level: 35,
+    discipleRank: 'leader', courtRank: 'commoner', personality: 'cunning',
+    gender: 'female',
+    courtStats: { strategy: 30, eloquence: 20, charisma: 35, scholarship: 25 }, influence: 40, courtPath: null,
+    ...makeNpcStats(35, 'normal'),
+    skills: ['wudang_changquan'],
+    equippedFabao: { weapon: 'iron_sword', armor: 'silk_robe', accessory: 'silver_pendant' },
+    ownedFabao: ['iron_sword', 'silk_robe', 'silver_pendant'],
+    currentLocationId: 'dali_city',
+  },
+
+  xuedao_leader: {
+    id: 'xuedao_leader', name: '血刀老祖', talent: 'normal', sect: 'xuedao', level: 40,
+    discipleRank: 'leader', courtRank: 'commoner', personality: 'bold',
+    gender: 'male',
+    courtStats: { strategy: 40, eloquence: 15, charisma: 30, scholarship: 15 }, influence: 60, courtPath: null,
+    ...makeNpcStats(40, 'normal'),
+    skills: ['wudang_changquan', 'shaolin_luohan_18'],
+    equippedFabao: { weapon: 'refined_sword', armor: 'silk_robe', accessory: 'silver_pendant' },
+    ownedFabao: ['refined_sword', 'silk_robe', 'silver_pendant'],
+    currentLocationId: 'liangzhou_city',
+  },
+
+  haisha_leader: {
+    id: 'haisha_leader', name: '海沙掌门', talent: 'normal', sect: 'haisha', level: 33,
+    discipleRank: 'leader', courtRank: 'commoner', personality: 'cunning',
+    gender: 'male',
+    courtStats: { strategy: 30, eloquence: 30, charisma: 35, scholarship: 15 }, influence: 35, courtPath: null,
+    ...makeNpcStats(33, 'normal'),
+    skills: ['wudang_changquan'],
+    equippedFabao: { weapon: 'iron_sword', armor: 'silk_robe', accessory: 'silver_pendant' },
+    ownedFabao: ['iron_sword', 'silk_robe', 'silver_pendant'],
+    currentLocationId: 'mingzhou_city',
   },
 };

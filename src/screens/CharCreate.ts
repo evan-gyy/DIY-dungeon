@@ -149,6 +149,10 @@ export function confirmCreate(): void {
       influence: 0,
       courtPath: null,
       lastActionType: 'idle',
+      gameMonth: 1,
+      turnInMonth: 0,
+      councilCooldown: 0,
+      sectState: {},
     };
 
     setPlayer(player);
@@ -231,6 +235,10 @@ export function confirmCreate(): void {
       influence: 0,
       courtPath: null,
       lastActionType: 'idle',
+      gameMonth: 1,
+      turnInMonth: 0,
+      councilCooldown: 0,
+      sectState: {},
     };
     setPlayer(player);
     saveGame(player, _pendingSlot);

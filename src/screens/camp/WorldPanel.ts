@@ -32,7 +32,6 @@ function alignmentBadge(alignment: string): string {
     righteous:  { label: '正道', cssClass: 'wp-align-righteous' },
     neutral:    { label: '中立', cssClass: 'wp-align-neutral' },
     chaotic:    { label: '邪道', cssClass: 'wp-align-chaotic' },
-    unorthodox: { label: '左道', cssClass: 'wp-align-unorthodox' },
   };
   const b = map[alignment] ?? { label: alignment, cssClass: 'wp-align-neutral' };
   return `<span class="wp-alignment-badge ${b.cssClass}">${b.label}</span>`;

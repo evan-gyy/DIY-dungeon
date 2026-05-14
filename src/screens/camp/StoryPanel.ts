@@ -4,7 +4,7 @@ import { NPC_DIALOGS } from '../../data/npcs';
 import { getChapter } from '../../data/chapters/index';
 import { showToast } from '../../ui/toast';
 import { openDialog } from '../DialogScreen';
-import { enterCamp, switchCampTab, renderSidebar } from '../Camp';
+import { enterCamp, switchCampTab, renderSidebar, advanceTurn } from '../Camp';
 import { checkLevelUp, getRealmName } from '../../state/LevelSystem';
 import { calculateFinalStats } from '../../data/realmConfig';
 import { WORLD_MAP, type LocationAction } from '../../data/worldMap';
@@ -13,6 +13,7 @@ import { syncSlotsOnPromotion } from '../../systems/NPCManager';
 import { updateMissionProgress, getMissionDef } from '../../systems/MissionSystem';
 import { tickFactionDiplomacy } from '../../systems/FactionSystem';
 import { tickWorldState, contributeToFaction, addChronicleEntry, joinSect } from '../../systems/WorldState';
+import { tryTriggerEncounter } from '../../systems/EncounterSystem';
 import type { DiscipleRank } from '../../data/sandboxTypes';
 import { COURT_RANK_ORDER, COURT_RANK_LABEL, type CourtRank } from '../../data/sandboxTypes';
 import type { CampScene } from '../../data/chapters/types';
@@ -135,6 +136,17 @@ function doDailyTask(action: LocationAction): void {
     const bonus = { ...finalPlayer, exp: finalPlayer.exp + 10 };
     setPlayer(bonus);
     saveGame(bonus);
+  }
+
+  // 🆕 沙盒：时间推进（日常任务也应推进回合）
+  advanceTurn();
+
+  // 🆕 沙盒：随机遭遇事件
+  if (p.gameMode === 'sandbox') {
+    const encounter = tryTriggerEncounter();
+    if (encounter) {
+      setTimeout(() => showEncounterDialog(encounter), 800);
+    }
   }
 
   // 刷新面板
@@ -461,6 +473,54 @@ function showCourtPathChoice(): void {
   overlay.querySelector('#court-path-wen')?.addEventListener('click', () => doJoinCourt('wen'));
   overlay.querySelector('#court-path-wu')?.addEventListener('click', () => doJoinCourt('wu'));
   overlay.querySelector('#court-path-cancel')?.addEventListener('click', close);
+}
+
+/** 🆕 随机遭遇弹窗 */
+function showEncounterDialog(encounter: {
+  type: string; title: string; description: string;
+  enemyId?: string; enemyName?: string;
+  rewards: { exp: number; gold: number };
+}): void {
+  const overlay = document.createElement('div');
+  overlay.className = 'encounter-overlay';
+  overlay.innerHTML = `
+    <div class="encounter-dialog">
+      <div class="encounter-icon">${encounter.type === 'monster' ? '🐉' : encounter.type === 'bandit' ? '🦹' : encounter.type === 'ruins' ? '🏛️' : encounter.type === 'duel' ? '⚔️' : '✨'}</div>
+      <div class="encounter-title">${encounter.title}</div>
+      <div class="encounter-desc">${encounter.description}</div>
+      <div class="encounter-rewards">${encounter.rewards.exp > 0 ? `EXP +${encounter.rewards.exp}` : ''} ${encounter.rewards.gold > 0 ? `💰 +${encounter.rewards.gold}` : ''}</div>
+      <div class="encounter-actions">
+        <button class="encounter-btn go" id="encounter-go">前往</button>
+        <button class="encounter-btn ignore" id="encounter-ignore">忽略</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const close = () => overlay.remove();
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+  overlay.querySelector('#encounter-ignore')?.addEventListener('click', close);
+
+  overlay.querySelector('#encounter-go')?.addEventListener('click', () => {
+    close();
+    if (encounter.enemyId) {
+      // 战斗型遭遇
+      import('../../systems/BattleEngine').then(m => m.initBattle(encounter.enemyId as any));
+    } else {
+      // 非战斗型：直接给奖励
+      const p = getPlayer();
+      const updated = {
+        ...p,
+        exp: p.exp + encounter.rewards.exp,
+        gold: p.gold + encounter.rewards.gold,
+      };
+      setPlayer(updated);
+      saveGame(updated);
+      showToast(`${encounter.title}完成！经验 +${encounter.rewards.exp}，铜钱 +${encounter.rewards.gold}`);
+      const content = document.getElementById('camp-content');
+      if (content) renderStoryPanel(content);
+    }
+  });
 }
 
 function triggerStoryEvent(eventId: string): void {

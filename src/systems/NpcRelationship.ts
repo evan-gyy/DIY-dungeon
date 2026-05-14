@@ -10,7 +10,7 @@
 // ============================================================
 
 import type { NpcPersonality } from '../data/npcStats';
-import type { SectId } from '../data/types';
+import type { SectId, PlayerNpcRelation } from '../data/types';
 import { getPlayer, setPlayer } from '../state/GameState';
 
 // ──── 性格兼容矩阵 ────
@@ -202,4 +202,133 @@ function hashCode(str: string): number {
     hash |= 0;
   }
   return Math.abs(hash);
+}
+
+// ──── 主角-NPC 关系标签系统 ────
+
+/** 获取主角与某 NPC 的好感度（player→npc） */
+function getPlayerToNpcAffection(npcId: string): number {
+  const p = getPlayer();
+  return p.npcAffection?.[npcId] ?? 0;
+}
+
+/** 获取主角与某 NPC 的所有关系标签 */
+export function getPlayerNpcRelations(npcId: string): PlayerNpcRelation[] {
+  const p = getPlayer();
+  return p.npcRelations?.[npcId] ?? [];
+}
+
+/** 检查主角与某 NPC 是否有某关系 */
+export function hasPlayerNpcRelation(npcId: string, relation: PlayerNpcRelation): boolean {
+  return getPlayerNpcRelations(npcId).includes(relation);
+}
+
+/** 添加主角与 NPC 的关系标签 */
+export function addPlayerNpcRelation(npcId: string, relation: PlayerNpcRelation): void {
+  const p = getPlayer();
+  const current = getPlayerNpcRelations(npcId);
+  if (current.includes(relation)) return;
+  const npcRelations = { ...p.npcRelations, [npcId]: [...current, relation] };
+  setPlayer({ ...p, npcRelations });
+}
+
+/** 移除主角与 NPC 的关系标签 */
+export function removePlayerNpcRelation(npcId: string, relation: PlayerNpcRelation): void {
+  const p = getPlayer();
+  const current = getPlayerNpcRelations(npcId);
+  if (!current.includes(relation)) return;
+  const npcRelations = { ...p.npcRelations, [npcId]: current.filter(r => r !== relation) };
+  setPlayer({ ...p, npcRelations });
+}
+
+/** 检查是否可结为道侣 */
+export function canBecomeLover(npcId: string): { allowed: boolean; reason?: string } {
+  const p = getPlayer();
+  const db = p.npcDatabase;
+  const npc = db?.[npcId];
+  if (!npc) return { allowed: false, reason: 'NPC不存在' };
+
+  const affection = getPlayerToNpcAffection(npcId);
+  if (affection < 85) return { allowed: false, reason: '好感度不足（需≥85）' };
+
+  // 性别检查：必须异性
+  const playerGender = p.charId?.startsWith('male') ? 'male' : 'female';
+  const npcGender = npc.gender ?? 'male';
+  if (playerGender === npcGender) return { allowed: false, reason: '道侣需为异性' };
+
+  const existing = getPlayerNpcRelations(npcId);
+  if (existing.includes('lover')) return { allowed: false, reason: '已经是道侣' };
+
+  return { allowed: true };
+}
+
+/** 检查是否可结义 */
+export function canSwornBrother(npcId: string): { allowed: boolean; reason?: string } {
+  const p = getPlayer();
+  const db = p.npcDatabase;
+  if (!db?.[npcId]) return { allowed: false, reason: 'NPC不存在' };
+
+  const affection = getPlayerToNpcAffection(npcId);
+  if (affection < 75) return { allowed: false, reason: '好感度不足（需≥75）' };
+
+  const existing = getPlayerNpcRelations(npcId);
+  if (existing.includes('sworn_brother')) return { allowed: false, reason: '已经是结义兄弟' };
+
+  return { allowed: true };
+}
+
+/** 检查是否可拜师（NPC 为师父） */
+export function canBecomeMaster(npcId: string): { allowed: boolean; reason?: string } {
+  const p = getPlayer();
+  const db = p.npcDatabase;
+  const npc = db?.[npcId];
+  if (!npc) return { allowed: false, reason: 'NPC不存在' };
+
+  const affection = getPlayerToNpcAffection(npcId);
+  if (affection < 60) return { allowed: false, reason: '好感度不足（需≥60）' };
+
+  if (npc.level < p.level + 10) return { allowed: false, reason: '对方修为不足以担任师父（需高出10级以上）' };
+
+  const existing = getPlayerNpcRelations(npcId);
+  if (existing.includes('master')) return { allowed: false, reason: '已经是师父' };
+
+  // 检查是否已有师父
+  const allRelations = p.npcRelations ?? {};
+  for (const [, rels] of Object.entries(allRelations)) {
+    if (rels.includes('master')) return { allowed: false, reason: '已有师父（一人不事二师）' };
+  }
+
+  return { allowed: true };
+}
+
+/** 检查是否可收徒 */
+export function canBecomeStudent(npcId: string): { allowed: boolean; reason?: string } {
+  const p = getPlayer();
+  const db = p.npcDatabase;
+  const npc = db?.[npcId];
+  if (!npc) return { allowed: false, reason: 'NPC不存在' };
+
+  const affection = getPlayerToNpcAffection(npcId);
+  if (affection < 60) return { allowed: false, reason: '好感度不足（需≥60）' };
+
+  if (p.level < npc.level + 10) return { allowed: false, reason: '自身修为不足以收徒（需高出对方10级以上）' };
+
+  const existing = getPlayerNpcRelations(npcId);
+  if (existing.includes('student')) return { allowed: false, reason: '已经是徒弟' };
+
+  return { allowed: true };
+}
+
+/** 自动检测 NPC 间友好/仇敌关系标签（基于好感度阈值） */
+export function getNpcNpcRelationTag(affection: number): 'friend' | 'enemy' | null {
+  if (affection >= 60) return 'friend';
+  if (affection <= -60) return 'enemy';
+  return null;
+}
+
+/** 判断两个 NPC 之间是否应该显示关系标签 */
+export function getNpcPairRelation(idA: string, idB: string): { tag: 'friend' | 'enemy' | null; affection: number } {
+  const aff = getNpcAffection(idA, idB);
+  const tag = getNpcNpcRelationTag(aff);
+  return { tag, affection: aff };
 }

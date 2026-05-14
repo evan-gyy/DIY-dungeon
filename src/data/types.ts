@@ -114,6 +114,61 @@ export type SkillId =
   | 'tang_blade_adv' | 'tang_poison_mist' | 'tang_dart_storm' | 'tang_toxic_art'
   // 元婴
   | 'tang_blade_master' | 'tang_pear_flower' | 'tang_poison_secret' | 'tang_night_walker'
+  // ── 华山派（P6 Batch 3）──
+  // 炼气
+  | 'huashan_sword_basic' | 'huashan_mountain_qi' | 'huashan_wind_step' | 'huashan_sword_flash'
+  // 筑基
+  | 'huashan_wind_sword' | 'huashan_sword_shield' | 'huashan_storm_sword' | 'huashan_sword_heart'
+  // 结丹
+  | 'huashan_lonely_sword' | 'huashan_sword_soul' | 'huashan_mountain_guard' | 'huashan_sword_9'
+  // ── 崆峒派（P6 Batch 3）──
+  // 炼气
+  | 'kongtong_fist_basic' | 'kongtong_inner_qi' | 'kongtong_iron_arm' | 'kongtong_rock_fist'
+  // 筑基
+  | 'kongtong_storm_fist' | 'kongtong_body_guard' | 'kongtong_crush_palm' | 'kongtong_mountain_roar'
+  // 结丹
+  | 'kongtong_7_hurt' | 'kongtong_qi_shield' | 'kongtong_thunder_fist' | 'kongtong_titan_palm'
+  // ── 青城派（P6 Batch 3）──
+  // 炼气
+  | 'qingcheng_sword_basic' | 'qingcheng_dao_qi' | 'qingcheng_crane_step' | 'qingcheng_wind_sword'
+  // 筑基
+  | 'qingcheng_cloud_sword' | 'qingcheng_mist_body' | 'qingcheng_sword_qi' | 'qingcheng_dao_heart'
+  // 结丹
+  | 'qingcheng_luofu_sword' | 'qingcheng_immortal_guard' | 'qingcheng_sword_storm' | 'qingcheng_taiji_sword'
+  // ── 点苍派（P6 Batch 3）──
+  // 炼气
+  | 'diancang_sword_basic' | 'diancang_snake_qi' | 'diancang_mist_step' | 'diancang_viper_sword'
+  // 筑基
+  | 'diancang_double_sword' | 'diancang_snake_skin' | 'diancang_circling_sword' | 'diancang_southern_qi'
+  // 结丹
+  | 'diancang_sword_storm' | 'diancang_poison_soul' | 'diancang_shadow_sword' | 'diancang_king_cobra'
+  // ── 铁掌帮（P6 Batch 3）──
+  // 炼气
+  | 'tiezhang_palm_basic' | 'tiezhang_iron_qi' | 'tiezhang_sand_palm' | 'tiezhang_hard_body'
+  // 筑基
+  | 'tiezhang_iron_palm' | 'tiezhang_water_step' | 'tiezhang_fire_palm' | 'tiezhang_steel_skin'
+  // 结丹
+  | 'tiezhang_crushing_palm' | 'tiezhang_mountain_body' | 'tiezhang_thunder_palm' | 'tiezhang_supreme_palm'
+  // ── 茅山派（P6 Batch 4）──
+  // 炼气
+  | 'maoshan_talisman' | 'maoshan_ghost_qi' | 'maoshan_bind_ghost' | 'maoshan_tao_step'
+  // 筑基
+  | 'maoshan_5_thunder' | 'maoshan_exorcism' | 'maoshan_spirit_cage' | 'maoshan_taoist_heart'
+  // ── 五毒教（P6 Batch 4）──
+  // 炼气
+  | 'wudu_poison_palm' | 'wudu_insect_qi' | 'wudu_scorpion_tail' | 'wudu_poison_skin'
+  // 筑基
+  | 'wudu_centipede_bite' | 'wudu_toad_breath' | 'wudu_spider_web' | 'wudu_5_poison_array'
+  // ── 血刀门（P6 Batch 4）──
+  // 炼气
+  | 'xuedao_blade_basic' | 'xuedao_blood_qi' | 'xuedao_blood_slash' | 'xuedao_blood_thirst'
+  // 筑基
+  | 'xuedao_blood_rain' | 'xuedao_blood_armor' | 'xuedao_blood_craze' | 'xuedao_blood_sea'
+  // ── 海沙派（P6 Batch 4）──
+  // 炼气
+  | 'haisha_palm_basic' | 'haisha_tide_qi' | 'haisha_sand_palm' | 'haisha_water_step'
+  // 筑基
+  | 'haisha_wave_palm' | 'haisha_sea_guard' | 'haisha_tsunami' | 'haisha_whirlpool'
   ;
 
 export type EnemyId =
@@ -578,8 +633,48 @@ export interface PlayerState {
   currentLocationId: LocationId;       // 玩家当前所在地点
   // 主角天赋系统
   playerTalent: TalentId;              // 主角天赋（默认为 dragon_vein 九霄龙脉）
+  /** 🆕 主角与 NPC 的关系标签：key=NPC的npcDbId，value=关系类型数组 */
+  npcRelations?: Record<string, PlayerNpcRelation[]>;
+  /** 🆕 势力领土控制：key=LocationId，value=控制该地的SectId（'none'=无主） */
+  territoryControl?: Record<LocationId, SectId>;
+  /** 🆕 江湖传闻列表（最近10条） */
+  worldNews?: WorldNewsItem[];
+  /** 🆕 领土攻城冷却：key=LocationId，value=下次可被攻打的回合数 */
+  siegeCooldown?: Record<string, number>;
+  // 🆕 时间系统：10回合=1月
+  gameMonth: number;         // 当前游戏月份（从1开始）
+  turnInMonth: number;       // 本月内的回合数（0-9）
+  councilCooldown: number;   // 下次议事可触发的 month 数（防止重复触发）
+  // 🆕 门派经营：每个门派的资源与稳定度
+  sectState: Record<string, SectStateData>;
   _slot: number;
   _savedAt?: string;
+}
+
+/** 主角与 NPC 的关系类型 */
+export type PlayerNpcRelation = 'lover' | 'sworn_brother' | 'master' | 'student' | 'friend' | 'enemy';
+
+/** 关系标签的中文显示 */
+export const PLAYER_NPC_RELATION_LABEL: Record<PlayerNpcRelation, { label: string; icon: string; color: string }> = {
+  lover:         { label: '道侣',   icon: '💕', color: '#FF69B4' },
+  sworn_brother: { label: '结义',   icon: '🤝', color: '#FFD700' },
+  master:        { label: '师父',   icon: '👨‍🏫', color: '#9A7CFF' },
+  student:       { label: '徒弟',   icon: '📚', color: '#78BE00' },
+  friend:        { label: '好友',   icon: '💚', color: '#4CAF50' },
+  enemy:         { label: '仇敌',   icon: '💢', color: '#FD1430' },
+};
+
+/** 门派状态数据（资源 + 稳定度） */
+export interface SectStateData {
+  resources: number;  // 经济资源 0-1000
+  stability: number;  // 稳定度 0-100
+}
+
+/** 江湖传闻条目 */
+export interface WorldNewsItem {
+  text: string;
+  turn: number;
+  leftTime: number; // 展示剩余回合数
 }
 
 // ──── 战斗上下文 ────

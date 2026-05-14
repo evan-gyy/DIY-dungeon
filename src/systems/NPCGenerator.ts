@@ -11,7 +11,9 @@
 // ============================================================
 
 import type { NpcStats, NpcPersonality } from '../data/npcStats';
+import { NPC_STATS_INIT } from '../data/npcStats';
 import type { SectId, SkillId, FabaoId } from '../data/types';
+import { SECT_SKILL_TABLES } from '../data/sectSkillTables';
 import type { TalentId } from '../data/realmConfig';
 import type { CourtStats, CourtPath, DiscipleRank, CourtRank } from '../data/sandboxTypes';
 import type { LocationId } from '../data/worldMap';
@@ -124,14 +126,22 @@ const PERSONALITY_WEIGHTS: Record<NpcPersonality, number> = {
   aloof: 12, kind: 18, cunning: 10, upright: 15, gentle: 25, bold: 20,
 };
 
-/** 各门派为根据地的 DiscipleRank 分布（权重） */
-const SECT_RANK_DIST: Record<DiscipleRank, number> = {
-  outer: 40, inner: 30, true: 15, elder: 10, vice_leader: 3, leader: 2,
+/** 金字塔职级比例（掌门由手写 NPC 独占，随机生成器不产出 leader/vice_leader） */
+const PYRAMID_RATIOS = {
+  elder: 0.08,   // 长老：总人数 × 8%
+  true:  0.17,   // 真传：总人数 × 17%
+  inner: 0.30,   // 内门：总人数 × 30%
+  // 外门：剩余（约 45%）
 };
 
-/** 城市散修的 DiscipleRank 分布（大多是外门/无门派） */
+/** 门派据点随机 NPC 职级权重（outer/inner/true/elder，不含 leader/vice_leader） */
+const SECT_RANK_DIST: Record<DiscipleRank, number> = {
+  outer: 50, inner: 30, true: 13, elder: 7, vice_leader: 0, leader: 0,
+};
+
+/** 城市散修的 DiscipleRank 分布（大多外门/内门，极少真传/长老） */
 const CITY_RANK_DIST: Record<DiscipleRank, number> = {
-  outer: 55, inner: 25, true: 12, elder: 5, vice_leader: 2, leader: 1,
+  outer: 55, inner: 30, true: 10, elder: 5, vice_leader: 0, leader: 0,
 };
 
 // ═════════════════════════════════════════════════════════════
@@ -187,13 +197,14 @@ const BEGGAR_SKILL_TABLE: Array<[number, SkillId]> = [
   [18, 'mud_walk'], [28, 'dragon_palm'],
 ];
 
-/** 各门派技能表索引 */
+/** 各门派技能表索引（全局表覆盖17宗门，本地详细表优先） */
 const SECT_SKILL_TABLE: Partial<Record<SectId, Array<[number, SkillId]>>> = {
+  ...SECT_SKILL_TABLES,
+  // 本地 detailed table 覆盖，保证高等级 NPC 有更细致技能
   wudang: WUDANG_SKILL_TABLE,
   shaolin: SHAOLIN_SKILL_TABLE,
   emei: EMEI_SKILL_TABLE,
   beggar: BEGGAR_SKILL_TABLE,
-  // 新门派暂无专属技能表，从武当池借用（与华山/魔教一致）
 };
 
 // ═════════════════════════════════════════════════════════════
@@ -373,6 +384,15 @@ function getSectGenderChance(sect: SectId): [number, number] {
  * 使用种子随机保证同一 config 每次产出相同结果。
  */
 export function generateNpc(config: NpcGenConfig): NpcStats {
+  return _generateNpc(config);
+}
+
+/** 带预设职级生成（用于金字塔配额控制） */
+function generateNpcWithRank(config: NpcGenConfig, rank: DiscipleRank): NpcStats {
+  return _generateNpc(config, rank);
+}
+
+function _generateNpc(config: NpcGenConfig, presetRank?: DiscipleRank): NpcStats {
   const { sect, locationId, index, isSectHub, isCapital, levelRange, genderChance } = config;
   const seed = hashCode(`${sect}_${locationId}_${index}`);
   const rng = seededRandom(seed);
@@ -398,10 +418,15 @@ export function generateNpc(config: NpcGenConfig): NpcStats {
   // 等级（三角金字塔分布：宗门层级越高，顶尖高手越多）
   let level = pyramidLevel(sect, levelRange, rng);
 
-  // 武林身份
-  const rankDist = getRankDist(isSectHub);
-  const rankKeys = Object.keys(rankDist) as DiscipleRank[];
-  const discipleRank = weightedPick(rankKeys, rankDist as any, rng, 10);
+  // 武林身份（预设职级优先，否则按概率随机）
+  let discipleRank: DiscipleRank;
+  if (presetRank) {
+    discipleRank = presetRank;
+  } else {
+    const rankDist = getRankDist(isSectHub);
+    const rankKeys = Object.keys(rankDist) as DiscipleRank[];
+    discipleRank = weightedPick(rankKeys, rankDist as any, rng, 10);
+  }
 
   // 朝廷身份
   const courtRankDist = isCapital ? CAPITAL_COURT_RANK_DIST : COURT_RANK_DIST;
@@ -545,6 +570,7 @@ const SECT_HUBS: SectHubConfig[] = [
   // ── 顶尖大派 (supreme): 人数多，顶尖高手可达大乘 ──
   { locationId: 'wudang_mountain',    sect: 'wudang',     countRange: [10, 14], levelRange: [1, 70] },
   { locationId: 'shaolin_temple',     sect: 'shaolin',    countRange: [16, 24], levelRange: [1, 65] },
+  { locationId: 'heimu_cliff',        sect: 'riyue',      countRange: [14, 20], levelRange: [1, 60] },
   // ── 一流门派 (first_rate): 人数中上，顶尖高手可达渡劫 ──
   { locationId: 'emei_mountain',      sect: 'emei',       countRange: [14, 20], levelRange: [1, 55] },
   { locationId: 'beggar_hq',          sect: 'beggar',     countRange: [18, 24], levelRange: [1, 55] },
@@ -552,11 +578,16 @@ const SECT_HUBS: SectHubConfig[] = [
   { locationId: 'kunlun_mountain',    sect: 'kunlun',     countRange: [10, 16], levelRange: [1, 55] },
   { locationId: 'tangmen_estate',     sect: 'tangmen',    countRange: [10, 16], levelRange: [1, 55] },
   // ── 二流门派 (second_rate): 人数中等，顶尖可达化神 ──
+  { locationId: 'huashan_base',       sect: 'huashan',    countRange: [12, 18], levelRange: [1, 45] },
   { locationId: 'qingcheng_mountain', sect: 'qingcheng',  countRange: [12, 18], levelRange: [1, 45] },
   { locationId: 'kongtong_mountain',  sect: 'kongtong',   countRange: [10, 16], levelRange: [1, 45] },
   { locationId: 'diancang_mountain',  sect: 'diancang',   countRange: [8, 14],  levelRange: [1, 45] },
+  { locationId: 'chongqing_city',     sect: 'tiezhang',   countRange: [10, 16], levelRange: [1, 40] },
   // ── 旁门左道 (fringe): 人数较少，顶尖可达元婴 ──
   { locationId: 'maoshan_daoyuan',    sect: 'maoshan',    countRange: [12, 18], levelRange: [1, 35] },
+  { locationId: 'dali_city',         sect: 'wudu',       countRange: [10, 16], levelRange: [1, 35] },
+  { locationId: 'liangzhou_city',    sect: 'xuedao',     countRange: [8, 14],  levelRange: [1, 35] },
+  { locationId: 'mingzhou_city',     sect: 'haisha',     countRange: [8, 14],  levelRange: [1, 35] },
   // ── 特殊: 逍遥派精锐少但层次高，魔教无固定据点（在城市中生成）──
   { locationId: 'xiaoyao_valley',     sect: 'xiaoyao',    countRange: [5, 10],  levelRange: [15, 55] },
 ];
@@ -603,6 +634,7 @@ const ALL_SECTS: SectId[] = [
   'wudang', 'shaolin', 'emei', 'beggar', 'huashan', 'demon',
   'maoshan', 'kunlun', 'qingcheng', 'tangmen', 'xiaoyao',
   'quanzhen', 'kongtong', 'diancang',
+  'riyue', 'tiezhang', 'wudu', 'xuedao', 'haisha',
 ];
 
 // ═════════════════════════════════════════════════════════════
@@ -627,13 +659,45 @@ export function generateAllNpcs(): Record<string, NpcStats> {
   const all: Record<string, NpcStats> = {};
   const globalRng = seededRandom(GLOBAL_SEED);
 
-  // 1. 宗门根据地 NPC
+  // 预统计手写 NPC 的职级占用（掌门/长老/真传/内门/外门，按宗门）
+  const handcraftedQuota: Record<string, Record<string, number>> = {};
+  for (const [, init] of Object.entries(NPC_STATS_INIT)) {
+    const s = init.sect;
+    const r = init.discipleRank;
+    if (s === 'none') continue;
+    if (!handcraftedQuota[s]) handcraftedQuota[s] = {};
+    handcraftedQuota[s]![r] = (handcraftedQuota[s]![r] ?? 0) + 1;
+  }
+
+  // 1. 宗门根据地 NPC（含金字塔配额控制）
   for (const hub of SECT_HUBS) {
     const [min, max] = hub.countRange;
-    const count = min + Math.floor(globalRng() * (max - min + 1));
+    const totalN = min + Math.floor(globalRng() * (max - min + 1));
+    const hc = handcraftedQuota[hub.sect] ?? {};
 
-    for (let i = 0; i < count; i++) {
-      const npc = generateNpc({
+    // 计算金字塔配额
+    const quotaElder  = Math.max(1, Math.floor(totalN * PYRAMID_RATIOS.elder)) - (hc['elder'] ?? 0);
+    const quotaTrue   = Math.max(2, Math.floor(totalN * PYRAMID_RATIOS.true))  - (hc['true'] ?? 0) - (hc['vice_leader'] ?? 0);
+    const quotaInner  = Math.max(3, Math.floor(totalN * PYRAMID_RATIOS.inner)) - (hc['inner'] ?? 0);
+    const quotaOuter  = totalN - 1; // 掌门占1（手写），剩余全部外门兜底
+
+    let genElder = 0, genTrue = 0, genInner = 0;
+
+    for (let i = 0; i < totalN; i++) {
+      // 根据剩余配额选择职级
+      let rank: DiscipleRank;
+      const roll = globalRng();
+      if (genElder < quotaElder && roll < 0.10) {
+        rank = 'elder'; genElder++;
+      } else if (genTrue < quotaTrue && roll < 0.30) {
+        rank = 'true'; genTrue++;
+      } else if (genInner < quotaInner && roll < 0.60) {
+        rank = 'inner'; genInner++;
+      } else {
+        rank = 'outer';
+      }
+
+      const npc = generateNpcWithRank({
         sect: hub.sect,
         locationId: hub.locationId,
         index: i,
@@ -641,7 +705,7 @@ export function generateAllNpcs(): Record<string, NpcStats> {
         isCapital: false,
         levelRange: hub.levelRange,
         genderChance: getSectGenderChance(hub.sect),
-      });
+      }, rank);
       all[npc.id] = npc;
     }
   }

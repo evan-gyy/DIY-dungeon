@@ -1,7 +1,7 @@
 # DIY-Dungeon 项目架构文档
 
 > 本文档面向开发者和 AI Agent，描述当前项目的完整架构、各模块职责，以及接下来的开发方向。
-> 最后更新：2026-05-14（P6 Batch 2 完成 + NPC 详情弹窗鬼谷八荒式横版重设计）
+> 最后更新：2026-05-14（v2.1 P6全宗门技能树 / v2.0五问题修复 / 随机遭遇系统 / 月度CG / 门派属性可视化）
 
 ---
 
@@ -58,31 +58,34 @@ DIY-dungeon/
 │   │   ├── LevelSystem.ts         修为系统：REALM_NAMES(80层制)、突破机制（canBreakThrough / breakThroughRealm）
 │   │   └── schemas.ts             PlayerStateSchema（Zod，含所有字段的 .default()，支持旧存档兼容）
 │   │
-│   ├── systems/                   游戏逻辑（依赖 data + state，不依赖 DOM）— 17 个文件
+│   ├── systems/                   游戏逻辑（依赖 data + state，不依赖 DOM）— 20 个文件
 │   │   ├── BattleEngine.ts        4v4 团队战引擎（initBattle / playerUseSkill / playerBasicAttack / 队友AI / 回合交替）
 │   │   ├── StatusEffects.ts       applyStatus / tickStatus / getStatusValue
 │   │   ├── EnemyAI.ts             enemyTurn / weightedRandom / predictAction
-│   │   ├── NpcBehavior.ts         NPC 行为引擎（购买法器/学习技能/修炼 三选一 + 独立移动判定）
-│   │   ├── NPCGenerator.ts        随机 NPC 生成器（门派中枢 + 城市游荡者 + 京城官员，性别规则按门派）
+│   │   ├── NpcBehavior.ts         NPC 行为引擎（5级优先级：疗伤→修炼60%→社交15%→门派任务15%→移动10%，含阵营加权移动 + NPC间16种互动动作池）
+│   │   ├── NPCGenerator.ts        随机 NPC 生成器（门派中枢 + 城市游荡者 + 京城官员，三角金字塔 + 36天赋 + 天骄）
 │   │   ├── NPCInteraction.ts      NPC 互动（对话/切磋/送礼）
 │   │   ├── NPCManager.ts          NPC 槽位管理 / 指派任务
+│   │   ├── NpcRelationship.ts     🆕 NPC 间友好度系统（性格兼容矩阵 + 同门加成 + 关系标签：好友/仇敌）
 │   │   ├── Inventory.ts           addItem / removeItem / useItem
 │   │   ├── PromotionSystem.ts     沙盒晋升（canPromote / executePromotion / getPromotionTrial）
 │   │   ├── MissionSystem.ts       任务引擎（接取/追踪/完成/放弃/进度更新）
 │   │   ├── FactionSystem.ts       势力外交引擎（tickFactionDiplomacy / getFactionRelation / 倾向匹配 + 文化相似度）
-│   │   ├── WorldState.ts          世界演算引擎（6 门派资源演化 / 10 种世界事件 / 势力排名 / 个人日志 / 宗门加入）
+│   │   ├── FactionWarfare.ts      🆕 势力领土争夺（tryTriggerSiege / playerJoinSiege 4v4攻城 / 领土控制 / 世界新闻）
+│   │   ├── SectManagement.ts      🆕 门派经营管理（19门派双属性：资源+稳定度 / NPC门派任务 / 月度议事决策 / 攻城消耗结算）
+│   │   ├── WorldState.ts          世界演算引擎（门派资源演化 / 10 种世界事件 / 势力排名 / 个人日志 / 宗门加入）
 │   │   ├── CourtSystem.ts         朝廷系统（品阶晋升 / 影响力计算）
 │   │   ├── CourtEngine.ts         朝廷政务引擎（D100 掷骰 + 修正值判定）
 │   │   ├── CourtMissionPool.ts    朝廷任务池（按品阶/类型分组）
 │   │   ├── FabaoShop.ts           法器商店逻辑（商品池/按境界分组/购买）
 │   │   └── BreakthroughPill.ts    突破丹系统（丹药替代剧情解锁突破）
 │   │
-│   ├── screens/                   UI 层（依赖全部下层模块）— 根级 8 个 + camp/ 10 个
+│   ├── screens/                   UI 层（依赖全部下层模块）— 根级 8 个 + camp/ 12 个
 │   │   ├── ScreenManager.ts       showScreen / getCurrentScreen
 │   │   ├── MainMenu.ts            主菜单渲染
 │   │   ├── SaveSelect.ts          存档槽选择（含沙盒字段显示）
 │   │   ├── CharCreate.ts          角色创建（选立绘 + 输入姓名 + 沙盒字段初始化）
-│   │   ├── Camp.ts                营地主容器（Tab 切换 + 侧边栏「附近的人」+ 地图弹窗 + 沙盒兼容初始化）
+│   │   ├── Camp.ts                营地主容器（Tab 切换 + 侧边栏「附近的人」+ 地图弹窗 + 沙盒兼容初始化 + 时间推进 + 议事触发）
 │   │   ├── camp/
 │   │   │   ├── AttrPanel.ts       属性面板（修为突破按钮 + 宗门身份 + 贡献值 + 晋升进度/试炼按钮）
 │   │   │   ├── BagPanel.ts        背包面板（24 格，使用道具）
@@ -93,6 +96,7 @@ DIY-dungeon/
 │   │   │   ├── MissionPanel.ts    任务面板（接取/追踪/完成/放弃，左侧常驻）
 │   │   │   ├── WorldPanel.ts      江湖态势面板（势力排行/详情卡片/个人日志/宗门加入/世界推演）
 │   │   │   ├── CourtPanel.ts      朝廷面板（品阶/政务/影响力/文武双线）
+│   │   │   ├── CouncilScreen.ts   🆕 月度议事 CG 全屏界面（掌门立绘+长老+对话气泡+rank分级选项+攻城参战入口）
 │   │   │   ├── FabaoShopUI.ts     法器商店 UI 覆盖层（宗门/城市商店）
 │   │   │   └── SkillLearnOverlay.ts  🆕 宗门习武弹窗（按6境界分层显示本派技能，消耗贡献值学习）
 │   │   ├── DialogScreen.ts        NPC 对话树
@@ -520,38 +524,40 @@ export function predictNextAction(enemy: BattleEnemyUnit): { icon: string; name:
 
 适配多单位架构，AI 选择目标时遍历存活友方单位。
 
-#### `NpcBehavior.ts` — NPC 动态行为引擎（🆕 0430 重构，0510 更新）
+#### `NpcBehavior.ts` — NPC 动态行为引擎（🆕 v2.0 优先级重构）
 
-技能表已从此文件提取到 `src/data/sectSkillTables.ts`，本文件改为 `import { SECT_SKILL_TABLES } from '../data/sectSkillTables'` 引用。
-
-NPC 每回合（存档/休息/地点移动时）执行以下行为判定：
+**v2.0 重构**：从旧版「三选一 + 独立移动判定」改为 5 级优先级行为树 + NPC 间互动。
 
 ```typescript
 export function initNpcDatabase(): Record<string, NpcStats>   // 初始化 NPC 数据库（含初始位置）
 export function getNpcStats(id: string): NpcStats | null       // 获取单个 NPC 数值
-export function tickNpcBehaviors(): NpcTickResult[]            // 执行所有 NPC 行为 tick
+export function tickNpcBehaviors(): NpcTickResult[]            // 执行所有 NPC 行为 tick（5级优先级）
 export function getNpcsAtLocation(locId: LocationId): NpcStats[] // 获取指定地点的 NPC
+export function tickNpcToNpcInteractions(): NpcInteractionResult[] // NPC 间自主互动
+export function appendNpcLog(npcId: string, entry: string): void  // 追加 NPC 近期经历
 ```
 
-**回合行为模型**：
-- **主要行为（三选一）**：购买法器 / 学习技能 / 修炼，三者随机选一项执行
-- **移动（独立判定）**：在主要行为之后，额外独立判定是否移动（35%基础概率）
-- 同一回合内NPC可能既修炼升级又移动到新地点
+**5 级优先级行为树**（每回合仅执行一项）：
 
-| 行为 | 触发条件 | 概率 | 结果分布 |
-|------|----------|------|----------|
-| 🗡️ 购买法器 | NPC 三件法器未全部装备 | 40% | 20%淘到宝(高一阶) / 30%同阶 / 50%来晚了 |
-| 📖 学习技能 | NPC 未学满同级技能 | 30% | 50%成功领悟 / 50%领悟失败 |
-| 🧘 修炼 | 剩余概率补齐至 100% | 可变 | 10%天人合一(+30exp) / 80%修行(+15exp) / 10%走火入魔(+5exp) |
-| 🚶 移动 | 独立判定（前3项之后） | 35%基础 | 随机移动到相邻地点 |
+| 优先级 | 行为 | 触发条件 | 概率 |
+|--------|------|----------|------|
+| 1 | 🩹 疗伤 | HP < 50% → 恢复 20-30% | 条件触发（跳过其他行为） |
+| 2 | 🧘 修炼 | 含门派资源加成（±20%） | 60% |
+| 3 | 💬 社交 | 记录为社交行为 | 15% |
+| 4 | 📋 门派任务 | patrol(稳定度+3~8) / gather(资源+10~25) / train(exp+30%) | 15% |
+| 5 | 🚶 移动 | 阵营加权：正道→友好据点(×3)，混乱→邪道据点(×1.8) | 10% |
 
-**🆕 NPC天赋简化**：
-- 仅柳清寒保留专属天赋 `sword_heart_frost`（剑心·寒：修行速度×1.6，身法+15%，攻击+10%）
-- 主角保留 `dragon_vein`（九霄龙脉：修行速度×1.3，全属性+10%，暴击+5%），不在面板展示
-- 其余所有NPC天赋统一为 `normal`（无特殊），属性由 `calculateFinalStats` 按普通人基准计算
-- 天赋数据定义保留在 `npcStats.ts` 中供后续扩展
+**NPC 间自主互动**（`tickNpcToNpcInteractions`）：
+- 按地点分组，同地点 NPC 两两配对
+- 性格×阵营×友好度 多因素驱动：16 种互动动作池（交谈/赠礼/指点/相助/品茶/切磋/交换情报/交易/论道/挑衅/激斗/暗算/谣言/夺宝/复仇）
+- 自动关系标签检测：好感≥60→好友、≤-60→仇敌
 
-NPC 数据库包含 34 个角色的初始数值卡（`src/data/npcStats.ts`：13 个剧情 NPC + 6 掌门 + 6 传功长老 + 9 城市官员），每个 NPC 的 `currentLocationId` 字段记录其当前位置，存储在 `PlayerState.npcDatabase` 中，随存档持久化。
+**NPC 天赋系统（P8）**：
+- 36 天赋 × 5 层权重（绝世3%/上等11%/中等45%/下等28%/诅咒11%）
+- 0.5% 天骄（强制 2 绝世 + 1 上等，修行×1.5，全属性+20%）
+- `migrateNpcTalents()` 兼容旧存档 `talent` 单字段 → `talents[]` 数组
+
+NPC 数据库含 ~34 个手写 NPC + ~500-800 随机生成 NPC，存储在 `PlayerState.npcDatabase` 中随存档持久化。
 
 #### `realmConfig.ts` — 境界基础数值配置（🆕 0430 新增）
 
@@ -1034,6 +1040,9 @@ export function openDialog(npcId: NpcId): void
 | `NPCGenerator.ts` | 随机 NPC 生成 | `generateSectNPCs()`, `generateCityNPCs()`, `generateCapitalNPCs()`, 门派性别规则 |
 | `NPCInteraction.ts` | NPC 互动 | `interactNpc()`, `giftToNpc()`, `sparWithNpc()` |
 | `NPCManager.ts` | NPC 管理 | `assignNpcToSlot()`, `getNpcBySlot()`, NPC 槽位分配 |
+| `NpcRelationship.ts` | 🆕 NPC 间友好度 | `initAllNpcRelationships()`, `changeNpcAffection()`, `getAffectionTier()`, `getNpcNpcRelationTag()` |
+| `FactionWarfare.ts` | 🆕 领土争夺 | `tryTriggerSiege()`, `playerJoinSiege()`, 4v4 攻城 / 领土控制 / 世界新闻 |
+| `SectManagement.ts` | 🆕 门派经营 | `initSectState()`, `tickSectNaturalChange()`, `executeSectTask()`, `generateCouncilProposal()`, `executeCouncilDecision()` |
 
 #### 沙盒 UI 面板（`src/screens/camp/`）
 
@@ -1044,14 +1053,18 @@ export function openDialog(npcId: NpcId): void
 | `CourtPanel.ts` | 🏛️ 朝廷 | 品阶显示+政务行动+影响力进度+文武双线选择 |
 | `FabaoShopUI.ts` | 覆盖层弹窗 | 法器商店 UI（宗门店/城市店，按境界分组浏览购买） |
 | `SkillLearnOverlay.ts` | 🆕 覆盖层弹窗 | 宗门习武 UI：按6境界分层显示本派技能，消耗贡献值学习 |
+| `CouncilScreen.ts` | 🆕 CG全屏覆盖层 | 月度议事 UI：掌门立绘+长老+对话气泡+rank分级选项+攻城参战入口 |
 
 #### 沙盒数据流
 
 ```
-做日常任务（StoryPanel.doDailyTask）
+做日常任务 / 旅行 / 休息
   → 增加 sectContribution / exp / gold
-  → tickNpcBehaviors()（NPC 每回合成长）
+  → tickNpcBehaviors()（NPC 5级优先级行为 + NPC间互动）
+  → tickSectNaturalChange()（门派资源+稳定度自然变化）
   → tickWorldState()（每 3 回合触发世界演算）
+  → tryTriggerSiege()（势力自动攻城）
+  → advanceTurn()（回合推进 → 月初触发月度议事检查）
   → tickFactionDiplomacy()（势力外交检查）
   → updateMissionProgress()（推进活跃任务进度）
   → contributeToFaction()（为所属宗门贡献资源）
@@ -1440,7 +1453,7 @@ second_meet: {
 
 10. **营地导航变更**：`江湖往事` Tab 改名为 `人物活动`；新增 `人物关系` 和 `法宝装备` Tab；移除 `拜师学功` 按钮。新手引导中"前往学功"改为"前往人物活动"。顶部「🗡️ 踏入江湖」按钮改为「🗺️ 地图」，点击弹出世界地图弹窗。地图导航栏精简为只显示当前地点名称，移除描述文字和附近城市按钮（移动统一通过地图弹窗进行）。
 
-11. **NPC 动态系统（🆕 0430 重构）**：`tickNpcBehaviors()` 在存档/休息/地点移动时调用，遍历 `PlayerState.npcDatabase` 中所有 NPC 执行行为判定。每回合从购买法器/学习技能/修炼中**三选一**作为主要行为，然后**独立判定**是否移动（35% 基础概率）。NPC 的修为提升会更新其 level 和属性，影响后续战斗中的队友强度。NPC 天赋已简化：仅柳清寒保留 `sword_heart_frost`，其余统一为 `normal`。
+11. **NPC 动态系统（🆕 v2.0 优先级重构）**：`tickNpcBehaviors()` 在存档/休息/地点移动时调用，遍历 `PlayerState.npcDatabase` 中所有 NPC 执行 5 级优先级行为判定（疗伤→修炼60%→社交15%→门派任务15%→移动10%）。修炼受门派资源加成影响（±20%）。移动为阵营加权（正道→友好据点，混乱→邪道领地）。同地点 NPC 间触发 16 种自主互动（交谈/赠礼/切磋/挑衅等），自动形成好友/仇敌关系标签。NPC 天赋为 36 天赋池 × 5 层权重，含 0.5% 天骄。
 
 12. **队友 AI 触发条件**：在 `_advanceTurn()` 中，当 `nextUnit.side === 'ally' && !nextUnit.isPlayer` 时触发 `_allyTurn()`。队友 AI 不依赖独立的 `AllyAI.ts` 文件，而是直接内嵌在 `BattleEngine.ts` 中。
 
@@ -1486,30 +1499,17 @@ second_meet: {
 
 > 以下是下一步开发的核心任务，按优先级排列。所有扩展都是**在现有代码基础上叠加**，不重写已有系统。
 
-### 10.1 P6：宗门技能树扩展（🔄 进行中）
+### 10.1 P6：宗门技能树扩展（✅ 已完成）
 
-**当前状态**：武当/少林/日月教/峨眉/丐帮/全真/昆仑/唐门（8宗门/155技）技能表已在 `sectSkillTables.ts` 中实装，`SkillLearnOverlay.ts` 已可用。其余9个宗门的技能表尚未填充（`SECT_SKILL_TABLES` 中无对应键），NPC 战斗仍 fallback 到武当技能表。
+**当前状态**：17 宗门全部拥有独立技能树，总计 ~272 个专属技能。`SECT_SKILL_TABLES` 已包含全部17宗门的完整映射。NPCGenerator 已导入全局技能表，所有宗门 NPC 均可获得本门技能。
 
-**当前问题**：`src/data/skills.ts` 中 8 个宗门已拥有独立技能树（155个技能）。其余 9 个宗门（二流+旁门）全部 fallback 到武当技能表（`src/data/skills.ts` 底部逻辑）。
+**已完成批次**：
+1. **Batch 1**：少林（25技）+ 日月教（25技）—— 50技能 ✅
+2. **Batch 2**：峨眉 + 丐帮 + 全真 + 昆仑 + 唐门（各16技）—— 80技能 ✅
+3. **Batch 3**：华山 + 崆峒 + 青城 + 点苍 + 铁掌帮（各12技）—— 60技能 ✅
+4. **Batch 4**：茅山 + 五毒 + 血刀 + 海沙（各8技）—— 32技能 ✅
 
-**目标**：17 个宗门各拥有独立技能树，总计 ~259 个技能。同时补全各宗门 `sectSkillTables.ts` 中的技能表条目，使 `SkillLearnOverlay` 对所有门派可用。
-
-**涉及文件**：
-
-| 文件 | 改动说明 |
-|------|---------|
-| `src/data/skills.ts` | **核心改动**：为 14 个宗门新增 ~184 个技能定义（武当/少林/日月已完成） |
-| `src/data/types.ts` | 新增 ~234 个 `SkillId` 到联合类型 |
-| `src/systems/BattleEngine.ts` | 无需改动（已支持按 `unit.skills` 动态读取） |
-| `src/systems/NpcBehavior.ts` | 更新 NPC 技能分配逻辑，按宗门+层级分配 |
-
-**实施批次**（推荐 AI 按此顺序实现）：
-1. ~~**Batch 1**：少林（25技，6境）+ 日月教（25技，6境）—— 50技能~~ **✅ 已完成**（已在 sectSkillTables.ts）
-2. ~~**Batch 2**：峨眉 + 丐帮 + 全真 + 昆仑 + 唐门（各16技，4境）—— 80技能~~ **✅ 已完成**（0513，72新技+8保留旧技）
-3. **Batch 3**：华山 + 崆峒 + 青城 + 点苍 + 铁掌帮（各12技，3境）—— 60技能（待补）
-4. **Batch 4**：茅山 + 五毒 + 血刀 + 海沙（各8技，1-2境）—— 32技能（待补）
-
-**设计参考**：武当现有 25 技按境界分层结构（外门→内门→真传→长老→掌门→入圣），新增技能树可复制此模板，替换技能名和效果。
+**涉及文件**：`src/data/skills.ts`、`src/data/types.ts`、`src/data/sectSkillTables.ts`、`src/systems/NPCGenerator.ts`
 
 ### 10.2 P7：地图扩展（✅ 已完成）
 
@@ -1523,9 +1523,9 @@ second_meet: {
 | 宗门据点新增 | 8 | 黑木崖（日月教）、终南山（全真）、昆仑山（昆仑）、唐家堡（唐门）、崆峒山、青城山、点苍山、华山 |
 | 其他 | — | 地图点击不关闭（旅行后刷新）；地图节点图标按类型显示 |
 
-**残余工作（未来可选）**：WorldPanel.ts / FactionSystem.ts / WorldState.ts 的势力排行尚未从6扩展到17宗门；NPCGenerator.ts 的随机 NPC 生成地点尚未指向新据点。
+**残余工作**：WorldPanel 势力排行适配 17 宗门（已可显示，待完善排序逻辑）。
 
-> **⚠️ 旁门左道（茅山/五毒/血刀/海沙/铁掌帮）不设独立地图节点**，通过世界事件和剧情触发访问。
+> **⚠️ 旁门左道（茅山/五毒/血刀/海沙）**不设独立地图节点，通过世界事件和剧情触发访问。铁掌帮、华山、黑木崖已有据点。
 
 ### 10.3 P8：NPC 三角金字塔 + 天赋池 + 天骄系统（✅ 已完成）
 
@@ -1561,4 +1561,4 @@ second_meet: {
 
 4. **TypeScript strict mode**：所有新增 ID 必须先在 `src/data/types.ts` 的联合类型中声明，再在其他文件中使用。`tsc --noEmit` 会验证所有引用。
 
-5. **开发顺序建议**：P6 Batch 1-2 ✅ → P7 ✅ → P8 ✅ → P6 Batch 3-4（技能）→ P9（势力更新17宗门版）→ P4系列。优先解决技能 fallback 问题，然后扩展世界，最后深化 NPC 系统。
+5. **开发顺序建议**：P6 ✅ → P7 ✅ → P8 ✅ → v2.0修复 ✅ → P9（势力17宗门全量外交+可视化）→ P4系列（事件介入/外交图/秘境/夺权）→ P5系列（偷师/悬赏/NPC间高级关系）

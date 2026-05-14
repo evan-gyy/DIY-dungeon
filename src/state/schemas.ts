@@ -4,7 +4,7 @@ export const PlayerStateSchema = z.object({
   name:     z.string().default('无名'),
   charId:   z.enum(['male_good', 'male_evil', 'female_good', 'female_evil']).default('male_good'),
   charImg:  z.string().default('picture/maincharacter/male_good.png'),
-  sect:     z.enum(['wudang', 'emei', 'shaolin', 'beggar', 'huashan', 'demon', 'none']).default('wudang'),
+  sect:     z.string().default('wudang'),
 
   hp:    z.number().default(80),
   maxHp: z.number().default(80),
@@ -113,8 +113,10 @@ export const PlayerStateSchema = z.object({
     influence: z.number().default(0),
     courtPath: z.enum(['wen', 'wu']).nullable().default(null),
     // 🆕 立绘系统
-    gender: z.enum(['male','female']).optional(),
+    gender: z.enum(['male','female']).default('male'),
     portraitIndex: z.number().optional(),
+    // 🆕 近期经历日志
+    recentLog: z.array(z.string()).default([]),
   })).default({}),
 
   // 🆕 NPC 好感度字典
@@ -202,6 +204,33 @@ export const PlayerStateSchema = z.object({
 
   // 主角天赋系统
   playerTalent: z.string().default('dragon_vein'),  // 主角天赋（默认九霄龙脉）
+
+  // 🆕 主角与 NPC 的关系标签
+  npcRelations: z.record(z.string(), z.array(z.enum(['lover','sworn_brother','master','student','friend','enemy']))).default({}),
+
+  // 🆕 势力领土控制
+  territoryControl: z.record(z.string(), z.string()).default({}),
+
+  // 🆕 江湖传闻
+  worldNews: z.array(z.object({
+    text: z.string(),
+    turn: z.number(),
+    leftTime: z.number(),
+  })).default([]),
+
+  // 🆕 攻城冷却
+  siegeCooldown: z.record(z.string(), z.number()).default({}),
+
+  // 🆕 时间系统
+  gameMonth: z.number().default(1),
+  turnInMonth: z.number().default(0),
+  councilCooldown: z.number().default(0),
+
+  // 🆕 门派经营
+  sectState: z.record(z.string(), z.object({
+    resources: z.number().default(200),
+    stability: z.number().default(50),
+  })).default({}),
 
   _slot:    z.number().default(1),
   _savedAt: z.string().optional(),
