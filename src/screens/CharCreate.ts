@@ -141,6 +141,7 @@ export function confirmCreate(): void {
       factionRelations: {} as Record<string, Record<string, { relation: string; trust: number; lastEvent?: string; lastEventTurn?: number }>>,
       diplomacyTickCounter: 0,
       npcAffection: {} as Record<string, number>,
+      npcRelationship: {} as Record<string, number>,
       currentLocationId: 'kaifeng_city', // 沙盒起点：东京汴梁
       playerTalent: 'dragon_vein',
       _slot: _pendingSlot,
@@ -222,6 +223,7 @@ export function confirmCreate(): void {
       factionRelations: {} as Record<string, Record<string, { relation: string; trust: number; lastEvent?: string; lastEventTurn?: number }>>,
       diplomacyTickCounter: 0,
       npcAffection: {} as Record<string, number>,
+      npcRelationship: {} as Record<string, number>,
       currentLocationId: 'wudang_mountain',
       playerTalent: 'dragon_vein',
       _slot: _pendingSlot,

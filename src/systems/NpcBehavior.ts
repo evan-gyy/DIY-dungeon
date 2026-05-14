@@ -128,6 +128,23 @@ function expNeeded(level: number): number {
 
 // ── Public API ──
 
+/**
+ * P8 迁移：将旧版 `talent` 单字段转换为 `talents` 数组。
+ * 旧存档兼容：如果 NPC 有 talent 但无 talents 或 talents 为空，则从 talent 构建。
+ */
+export function migrateNpcTalents(npc: NpcStats): NpcStats {
+  if ((!npc.talents || npc.talents.length === 0) && npc.talent) {
+    return { ...npc, talents: [npc.talent], isTianjiao: npc.isTianjiao ?? false };
+  }
+  if (!npc.talents) {
+    return { ...npc, talents: ['normal'], isTianjiao: npc.isTianjiao ?? false };
+  }
+  if (npc.isTianjiao === undefined) {
+    return { ...npc, isTianjiao: false };
+  }
+  return npc;
+}
+
 export function initNpcDatabase(): Record<string, NpcStats> {
   const db: Record<string, NpcStats> = {};
 
@@ -135,7 +152,8 @@ export function initNpcDatabase(): Record<string, NpcStats> {
   for (const [id, init] of Object.entries(NPC_STATS_INIT)) {
     // 优先使用 NPC 数据中指定的位置，否则从位置映射表取，最后回退到武当山
     const initialLoc = init.currentLocationId ?? NPC_INITIAL_LOCATION[id] ?? 'wudang_mountain';
-    db[id] = { ...init, exp: 0, currentLocationId: initialLoc };
+    const migrated = migrateNpcTalents({ ...init, exp: 0, currentLocationId: initialLoc } as NpcStats);
+    db[id] = migrated;
   }
 
   // 2. 随机生成 NPC（填充地图）
@@ -192,7 +210,8 @@ export function tickNpcBehaviors(): NpcTickResult[] {
       ownedFabao: [...npc.ownedFabao],
     };
 
-    const talent = TALENTS[n.talent];
+    const primaryTalent = n.talents?.[0] ?? n.talent ?? 'normal';
+    const talent = TALENTS[primaryTalent];
     const missingSlots    = getMissingSlots(n);
     const learnableSkills = getLearnableSkills(n);
 
@@ -268,7 +287,7 @@ export function tickNpcBehaviors(): NpcTickResult[] {
       if (n.exp >= expNeeded(n.level)) {
         n.exp -= expNeeded(n.level);
         n.level += 1;
-        const newStats = calculateFinalStats(n.level, [n.talent]);
+        const newStats = calculateFinalStats(n.level, n.talents?.length ? n.talents : (n.talent ? [n.talent] : ['normal']));
         n.maxHp = newStats.hp; n.hp = n.maxHp;
         n.maxMp = newStats.mp; n.mp = n.maxMp;
         n.atk   = newStats.atk;
@@ -289,7 +308,8 @@ export function tickNpcBehaviors(): NpcTickResult[] {
     if (currentLoc && currentLoc.connections.length > 0) {
       // 计算移动概率（基础概率 + 天赋修正）
       let moveChance = BASE_MOVE_CHANCE;
-      const talentModifier = TALENT_MOVE_MODIFIER[n.talent];
+      const primaryTalentMove = n.talents?.[0] ?? n.talent ?? 'normal';
+      const talentModifier = TALENT_MOVE_MODIFIER[primaryTalentMove];
       if (talentModifier) {
         moveChance += talentModifier;
       }

@@ -906,6 +906,687 @@ export const SKILLS: Record<SkillId, SkillData> = {
     cost: { exp: 800 }, sect: 'wudang',
     battleTip: '蓄力一击·必暴击·高冷却',
   },
+
+  // ═══════════════════════════════════════════════════════════
+  //  峨眉派扩展（P6 Batch 2 · 一流门派）
+  //  保留: emei_sword, liing_palm, emei_poison, hundred_birds
+  // ═══════════════════════════════════════════════════════════
+
+  // ── 峨眉 · 炼气期 ──
+  emei_chan_yi: {
+    id: 'emei_chan_yi', name: '禅意心经', icon: '🕉️', type: 'passive', target: 'self',
+    mp: 0, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 0, effect: { type: 'regen_mp', value: 3, duration: 99 },
+    healPct: 0,
+    desc: '【被动】峨眉佛门心法，每回合自动恢复3点内力，以禅入武。',
+    cost: { exp: 0 }, sect: 'emei',
+    battleTip: '被动·稳定内力回复',
+  },
+  emei_flower_needle: {
+    id: 'emei_flower_needle', name: '飞花针', icon: '🌸', type: 'attack', target: 'enemy',
+    mp: 12, hit: 2, powerMul: 0.6, defPen: 0.8,
+    cooldown: 0, effect: null, healPct: 0,
+    desc: '针如飞花，轻盈连刺，两击各造成60%攻击伤害，穿透极高。',
+    cost: { exp: 0 }, sect: 'emei',
+    battleTip: '二段连击·高穿透',
+  },
+  emei_cloud_step: {
+    id: 'emei_cloud_step', name: '云步', icon: '☁️', type: 'support', target: 'self',
+    mp: 14, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 2, effect: { type: 'evade', value: 0.4, duration: 1 },
+    healPct: 0,
+    desc: '峨眉轻功身法，如踏云端，提升40%闪避率1回合。',
+    cost: { exp: 100 }, sect: 'emei',
+    battleTip: '闪避·规避伤害',
+  },
+
+  // ── 峨眉 · 筑基期 ──
+  emei_sword_breeze: {
+    id: 'emei_sword_breeze', name: '清风剑', icon: '🍃', type: 'attack', target: 'enemy',
+    mp: 24, hit: 1, powerMul: 1.4, defPen: 0.7,
+    cooldown: 1, effect: { type: 'weaken_def', value: 8, duration: 2 },
+    healPct: 0,
+    desc: '剑如清风拂面，柔中带锋。造成140%攻击伤害，削弱敌方防御8点持续2回合。',
+    cost: { exp: 200 }, sect: 'emei',
+    battleTip: '爆发·减防连招',
+  },
+  emei_jade_guard: {
+    id: 'emei_jade_guard', name: '玉女守门', icon: '🛡️', type: 'passive', target: 'self',
+    mp: 0, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 0, effect: { type: 'def_boost', value: 10, duration: 99 },
+    healPct: 0,
+    desc: '【被动】玉女守门心法，战斗中常驻防御提升10点，稳如磐石。',
+    cost: { exp: 300 }, sect: 'emei',
+    battleTip: '被动·常驻加防',
+  },
+  emei_iron_finger: {
+    id: 'emei_iron_finger', name: '铁指诀', icon: '☝️', type: 'attack', target: 'enemy',
+    mp: 20, hit: 1, powerMul: 1.2, defPen: 0.9,
+    cooldown: 1, effect: null, healPct: 0,
+    desc: '以指为剑，刚猛穿甲。造成120%攻击伤害，几乎无视防御。',
+    cost: { exp: 250 }, sect: 'emei',
+    battleTip: '高穿甲·克高防',
+  },
+
+  // ── 峨眉 · 结丹期 ──
+  emei_lotus_palm: {
+    id: 'emei_lotus_palm', name: '金莲掌', icon: '🪷', type: 'attack', target: 'enemy',
+    mp: 36, hit: 1, powerMul: 2.0, defPen: 0.65,
+    cooldown: 2, effect: null, healPct: 0,
+    desc: '佛门掌法精华，金莲绽放间一掌制敌。造成200%攻击伤害。',
+    cost: { exp: 500 }, sect: 'emei',
+    battleTip: '中等爆发·2回合冷却',
+  },
+  emei_swallow_sword: {
+    id: 'emei_swallow_sword', name: '燕归剑', icon: '🕊️', type: 'attack', target: 'enemy',
+    mp: 32, hit: 2, powerMul: 0.75, defPen: 0.7,
+    cooldown: 2, effect: null, healPct: 0.1,
+    desc: '剑如归燕，双剑连斩各造成75%攻击伤害，并恢复10%最大气血。',
+    cost: { exp: 450 }, sect: 'emei',
+    battleTip: '二段连击·附带回血',
+  },
+  emei_bell_sound: {
+    id: 'emei_bell_sound', name: '梵钟', icon: '🔔', type: 'control', target: 'enemy',
+    mp: 35, hit: 1, powerMul: 0.6, defPen: 0.5,
+    cooldown: 3, effect: { type: 'stun', value: 1, duration: 1 },
+    healPct: 0,
+    desc: '以梵钟之音震慑心神，造成60%攻击伤害，必定眩晕敌方1回合。',
+    cost: { exp: 550 }, sect: 'emei',
+    battleTip: '强控·必晕1回合',
+  },
+
+  // ── 峨眉 · 元婴期 ──
+  emei_nirvana: {
+    id: 'emei_nirvana', name: '涅槃心经', icon: '🌟', type: 'passive', target: 'self',
+    mp: 0, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 0, effect: { type: 'regen_mp_pct', value: 15, duration: 99 },
+    healPct: 0,
+    desc: '【被动】涅槃之法，浴火重生。每回合恢复15%最大内力，气血恢复效果+20%。',
+    cost: { exp: 1500 }, sect: 'emei',
+    battleTip: '被动·终极内力循环',
+  },
+  emei_sword_phoenix: {
+    id: 'emei_sword_phoenix', name: '凤凰剑', icon: '🦅', type: 'attack', target: 'enemy',
+    mp: 55, hit: 1, powerMul: 3.0, defPen: 0.7,
+    cooldown: 3, effect: null, healPct: 0,
+    desc: '凤舞九天，剑化凤凰。造成300%攻击伤害，威力冠绝峨眉。',
+    cost: { exp: 2000 }, sect: 'emei',
+    battleTip: '终极爆发·高穿透',
+  },
+  emei_plum_heal: {
+    id: 'emei_plum_heal', name: '寒梅吐蕊', icon: '🌸', type: 'support', target: 'self',
+    mp: 45, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 4, effect: { type: 'self_heal', value: 0, duration: 0 },
+    healPct: 0.4,
+    desc: '寒梅吐蕊，暗香浮动。恢复自身40%最大气血，并清除所有中毒状态。',
+    cost: { exp: 1800 }, sect: 'emei',
+    battleTip: '大回血·解毒',
+  },
+
+  // ═══════════════════════════════════════════════════════════
+  //  丐帮扩展（P6 Batch 2 · 一流门派）
+  //  保留: beggar_fist, stick_art, mud_walk, dragon_palm
+  // ═══════════════════════════════════════════════════════════
+
+  // ── 丐帮 · 炼气期 ──
+  beggar_wine: {
+    id: 'beggar_wine', name: '醉饮功', icon: '🍶', type: 'passive', target: 'self',
+    mp: 0, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 0, effect: { type: 'regen_mp', value: 3, duration: 99 },
+    healPct: 0,
+    desc: '【被动】丐帮酒豪内功，以酒入武，每回合自动恢复3点内力。',
+    cost: { exp: 0 }, sect: 'beggar',
+    battleTip: '被动·稳定内力回复',
+  },
+  beggar_slap: {
+    id: 'beggar_slap', name: '叫花掌', icon: '🖐️', type: 'attack', target: 'enemy',
+    mp: 10, hit: 2, powerMul: 0.6, defPen: 0.7,
+    cooldown: 0, effect: null, healPct: 0,
+    desc: '丐帮入门掌法，双掌连拍各造成60%攻击伤害，野路子但管用。',
+    cost: { exp: 0 }, sect: 'beggar',
+    battleTip: '二段连击·低消耗',
+  },
+  beggar_roll: {
+    id: 'beggar_roll', name: '懒驴打滚', icon: '🌀', type: 'support', target: 'self',
+    mp: 12, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 2, effect: { type: 'evade', value: 0.4, duration: 1 },
+    healPct: 0,
+    desc: '看似狼狈，实则高妙。提升40%闪避率1回合。',
+    cost: { exp: 80 }, sect: 'beggar',
+    battleTip: '闪避·规避伤害',
+  },
+
+  // ── 丐帮 · 筑基期 ──
+  beggar_kick: {
+    id: 'beggar_kick', name: '旋风腿', icon: '🦵', type: 'attack', target: 'enemy',
+    mp: 20, hit: 1, powerMul: 1.4, defPen: 0.7,
+    cooldown: 1, effect: { type: 'weaken_def', value: 8, duration: 2 },
+    healPct: 0,
+    desc: '一腿扫出，如旋风骤起。造成140%攻击伤害，削弱敌方防御8点持续2回合。',
+    cost: { exp: 200 }, sect: 'beggar',
+    battleTip: '爆发·减防连招',
+  },
+  beggar_iron_shirt: {
+    id: 'beggar_iron_shirt', name: '铁布衫', icon: '🛡️', type: 'passive', target: 'self',
+    mp: 0, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 0, effect: { type: 'def_boost', value: 10, duration: 99 },
+    healPct: 0,
+    desc: '【被动】丐帮外门护体功法，战斗中常驻防御提升10点。',
+    cost: { exp: 300 }, sect: 'beggar',
+    battleTip: '被动·常驻加防',
+  },
+  beggar_storm_fist: {
+    id: 'beggar_storm_fist', name: '狂风拳', icon: '👊', type: 'attack', target: 'enemy',
+    mp: 22, hit: 3, powerMul: 0.45, defPen: 0.7,
+    cooldown: 1, effect: null, healPct: 0,
+    desc: '拳如狂风骤雨，三连击各造成45%攻击伤害。快拳压制，令敌难以喘息。',
+    cost: { exp: 280 }, sect: 'beggar',
+    battleTip: '三连击·压制型',
+  },
+
+  // ── 丐帮 · 结丹期 ──
+  beggar_18_subdue: {
+    id: 'beggar_18_subdue', name: '降龙十八掌', icon: '🐉', type: 'attack', target: 'enemy',
+    mp: 40, hit: 1, powerMul: 2.2, defPen: 0.6,
+    cooldown: 2, effect: { type: 'stun', value: 1, duration: 1 },
+    healPct: 0,
+    desc: '亢龙有悔！降龙十八掌精华，造成220%攻击伤害，60%概率眩晕敌方1回合。',
+    cost: { exp: 600 }, sect: 'beggar',
+    battleTip: '中爆发·概率眩晕',
+  },
+  beggar_dog_storm: {
+    id: 'beggar_dog_storm', name: '棒打双犬', icon: '🦯', type: 'attack', target: 'enemy',
+    mp: 30, hit: 2, powerMul: 0.75, defPen: 0.75,
+    cooldown: 1, effect: null, healPct: 0,
+    desc: '打狗棒法秘传，棒影分袭，二段各造成75%攻击伤害，穿透较高。',
+    cost: { exp: 500 }, sect: 'beggar',
+    battleTip: '二段连击·高穿透',
+  },
+  beggar_roar: {
+    id: 'beggar_roar', name: '醉吼功', icon: '📢', type: 'control', target: 'enemy',
+    mp: 32, hit: 1, powerMul: 0.5, defPen: 0.5,
+    cooldown: 3, effect: { type: 'weaken_def', value: 15, duration: 3 },
+    healPct: 0,
+    desc: '酒气化为咆哮，震慑敌胆。造成50%攻击伤害，大幅削弱敌方防御15点持续3回合。',
+    cost: { exp: 550 }, sect: 'beggar',
+    battleTip: '控制·大幅破甲',
+  },
+
+  // ── 丐帮 · 元婴期 ──
+  beggar_overlord: {
+    id: 'beggar_overlord', name: '霸王卸甲', icon: '💪', type: 'attack', target: 'enemy',
+    mp: 55, hit: 1, powerMul: 3.0, defPen: 0.7,
+    cooldown: 3, effect: null, healPct: 0,
+    desc: '霸王之气，卸甲碎甲。造成300%攻击伤害，穿透极高。',
+    cost: { exp: 2000 }, sect: 'beggar',
+    battleTip: '终极爆发·高穿透',
+  },
+  beggar_dragon_roar: {
+    id: 'beggar_dragon_roar', name: '龙吟', icon: '🐲', type: 'passive', target: 'self',
+    mp: 0, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 0, effect: { type: 'regen_mp_pct', value: 15, duration: 99 },
+    healPct: 0,
+    desc: '【被动】龙吟九霄，内力不竭。每回合恢复15%最大内力，气血恢复效果+20%。',
+    cost: { exp: 1500 }, sect: 'beggar',
+    battleTip: '被动·终极内力循环',
+  },
+  beggar_chief_fist: {
+    id: 'beggar_chief_fist', name: '帮主神拳', icon: '👑', type: 'attack', target: 'enemy',
+    mp: 50, hit: 3, powerMul: 0.6, defPen: 0.8,
+    cooldown: 2, effect: { type: 'weaken_def', value: 12, duration: 3 },
+    healPct: 0,
+    desc: '帮主独传神拳，三连击各造成60%攻击伤害，削弱敌方防御12点持续3回合。',
+    cost: { exp: 1800 }, sect: 'beggar',
+    battleTip: '多段+高破甲',
+  },
+
+  // ═══════════════════════════════════════════════════════════
+  //  全真教（P6 Batch 2 · 一流门派 · 道门剑法+北斗阵法+内丹）
+  // ═══════════════════════════════════════════════════════════
+
+  // ── 全真 · 炼气期 ──
+  quanzhen_sword: {
+    id: 'quanzhen_sword', name: '全真剑法', icon: '⚔️', type: 'attack', target: 'enemy',
+    mp: 8, hit: 1, powerMul: 1.6, defPen: 0.75,
+    cooldown: 0, effect: null, healPct: 0,
+    desc: '全真教入门剑法，剑出中正平和，造成160%攻击伤害。',
+    cost: { exp: 0 }, sect: 'quanzhen',
+    battleTip: '基础攻击·低消耗',
+  },
+  quanzhen_qi: {
+    id: 'quanzhen_qi', name: '全真心法', icon: '🧘', type: 'passive', target: 'self',
+    mp: 0, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 0, effect: { type: 'regen_mp', value: 3, duration: 99 },
+    healPct: 0,
+    desc: '【被动】全真教基础内功心法，每回合自动恢复3点内力。',
+    cost: { exp: 0 }, sect: 'quanzhen',
+    battleTip: '被动·稳定内力回复',
+  },
+  quanzhen_fist: {
+    id: 'quanzhen_fist', name: '通玄拳', icon: '🥊', type: 'attack', target: 'enemy',
+    mp: 12, hit: 2, powerMul: 0.6, defPen: 0.8,
+    cooldown: 0, effect: null, healPct: 0,
+    desc: '全真通玄拳法，双拳连击各造成60%攻击伤害，穿透极高。',
+    cost: { exp: 0 }, sect: 'quanzhen',
+    battleTip: '二段连击·高穿透',
+  },
+  quanzhen_step: {
+    id: 'quanzhen_step', name: '七星步', icon: '⭐', type: 'support', target: 'self',
+    mp: 14, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 2, effect: { type: 'evade', value: 0.4, duration: 1 },
+    healPct: 0,
+    desc: '全真教七星步法，踏北斗而行，提升40%闪避率1回合。',
+    cost: { exp: 100 }, sect: 'quanzhen',
+    battleTip: '闪避·规避伤害',
+  },
+
+  // ── 全真 · 筑基期 ──
+  quanzhen_sword_qian: {
+    id: 'quanzhen_sword_qian', name: '乾元剑', icon: '☀️', type: 'attack', target: 'enemy',
+    mp: 24, hit: 1, powerMul: 1.4, defPen: 0.7,
+    cooldown: 1, effect: { type: 'weaken_def', value: 8, duration: 2 },
+    healPct: 0,
+    desc: '乾元之剑，刚健有力。造成140%攻击伤害，削弱敌方防御8点持续2回合。',
+    cost: { exp: 200 }, sect: 'quanzhen',
+    battleTip: '爆发·减防连招',
+  },
+  quanzhen_neidan: {
+    id: 'quanzhen_neidan', name: '金丹诀', icon: '💊', type: 'passive', target: 'self',
+    mp: 0, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 0, effect: { type: 'regen_mp', value: 7, duration: 99 },
+    healPct: 0,
+    desc: '【被动】全真内丹术入门，每回合自动恢复7点内力。',
+    cost: { exp: 350 }, sect: 'quanzhen',
+    battleTip: '被动·内力引擎',
+  },
+  quanzhen_beidou: {
+    id: 'quanzhen_beidou', name: '北斗剑阵', icon: '🔷', type: 'attack', target: 'enemy',
+    mp: 26, hit: 3, powerMul: 0.5, defPen: 0.7,
+    cooldown: 1, effect: null, healPct: 0,
+    desc: '以北斗七星之阵运剑，三连击各造成50%攻击伤害，剑势连绵不绝。',
+    cost: { exp: 300 }, sect: 'quanzhen',
+    battleTip: '三连击·压制型',
+  },
+  quanzhen_fu: {
+    id: 'quanzhen_fu', name: '镇邪符', icon: '📜', type: 'control', target: 'enemy',
+    mp: 28, hit: 1, powerMul: 0.6, defPen: 0.5,
+    cooldown: 3, effect: { type: 'stun', value: 1, duration: 1 },
+    healPct: 0,
+    desc: '符箓镇邪，法光灼心。造成60%攻击伤害，必定眩晕敌方1回合。',
+    cost: { exp: 350 }, sect: 'quanzhen',
+    battleTip: '强控·必晕1回合',
+  },
+
+  // ── 全真 · 结丹期 ──
+  quanzhen_sword_kun: {
+    id: 'quanzhen_sword_kun', name: '坤元剑', icon: '🌙', type: 'attack', target: 'enemy',
+    mp: 36, hit: 1, powerMul: 2.0, defPen: 0.65,
+    cooldown: 2, effect: null, healPct: 0,
+    desc: '坤元之剑，柔韧绵长。造成200%攻击伤害，全真剑法中乘。',
+    cost: { exp: 500 }, sect: 'quanzhen',
+    battleTip: '中等爆发·2回合冷却',
+  },
+  quanzhen_thunder: {
+    id: 'quanzhen_thunder', name: '五雷正法', icon: '⚡', type: 'attack', target: 'enemy',
+    mp: 40, hit: 1, powerMul: 1.8, defPen: 0.85,
+    cooldown: 2, effect: null, healPct: 0,
+    desc: '道门五雷正法，雷击破甲。造成180%攻击伤害，几乎无视防御。',
+    cost: { exp: 600 }, sect: 'quanzhen',
+    battleTip: '高爆发·极高穿透',
+  },
+  quanzhen_7star_array: {
+    id: 'quanzhen_7star_array', name: '天罡北斗阵', icon: '🌟', type: 'support', target: 'self',
+    mp: 38, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 3, effect: { type: 'buff_atk', value: 25, duration: 3 },
+    healPct: 0.15,
+    desc: '天罡北斗阵法加身，攻击力提升25点持续3回合，恢复15%最大气血。',
+    cost: { exp: 700 }, sect: 'quanzhen',
+    battleTip: '攻击增益·小量回血',
+  },
+  quanzhen_sword_divide: {
+    id: 'quanzhen_sword_divide', name: '一气化三清', icon: '✨', type: 'attack', target: 'enemy',
+    mp: 38, hit: 3, powerMul: 0.55, defPen: 0.8,
+    cooldown: 2, effect: null, healPct: 0,
+    desc: '一剑化三清，三清归一剑。三连击各造成55%攻击伤害，穿透极高。',
+    cost: { exp: 650 }, sect: 'quanzhen',
+    battleTip: '三连击·高贯穿',
+  },
+
+  // ── 全真 · 元婴期 ──
+  quanzhen_dao_jing: {
+    id: 'quanzhen_dao_jing', name: '道德真经', icon: '📿', type: 'passive', target: 'self',
+    mp: 0, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 0, effect: { type: 'regen_mp_pct', value: 15, duration: 99 },
+    healPct: 0,
+    desc: '【被动】道德真经入心，道法自然。每回合恢复15%最大内力，常驻防御+10。',
+    cost: { exp: 1500 }, sect: 'quanzhen',
+    battleTip: '被动·终极内力循环+加防',
+  },
+  quanzhen_sword_lord: {
+    id: 'quanzhen_sword_lord', name: '纯阳剑', icon: '☀️', type: 'attack', target: 'enemy',
+    mp: 55, hit: 1, powerMul: 3.0, defPen: 0.7,
+    cooldown: 3, effect: null, healPct: 0,
+    desc: '纯阳之气凝于剑尖，一剑造成300%攻击伤害。全真剑道巅峰。',
+    cost: { exp: 2000 }, sect: 'quanzhen',
+    battleTip: '终极爆发·高穿透',
+  },
+  quanzhen_shendan: {
+    id: 'quanzhen_shendan', name: '九转金丹', icon: '💊', type: 'support', target: 'self',
+    mp: 50, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 4, effect: { type: 'buff_atk', value: 15, duration: 3 },
+    healPct: 0.4,
+    desc: '九转金丹大成，恢复40%最大气血，攻击力提升15点持续3回合。',
+    cost: { exp: 1800 }, sect: 'quanzhen',
+    battleTip: '大回血·小加攻',
+  },
+  quanzhen_sword_star: {
+    id: 'quanzhen_sword_star', name: '周天星斗剑', icon: '🌌', type: 'attack', target: 'enemy',
+    mp: 50, hit: 4, powerMul: 0.5, defPen: 0.8,
+    cooldown: 3, effect: { type: 'weaken_def', value: 15, duration: 3 },
+    healPct: 0,
+    desc: '周天星斗化为剑意，四连击各造成50%攻击伤害，削弱敌方防御15点持续3回合。',
+    cost: { exp: 1800 }, sect: 'quanzhen',
+    battleTip: '四连击·大幅破甲',
+  },
+
+  // ═══════════════════════════════════════════════════════════
+  //  昆仑派（P6 Batch 2 · 一流门派 · 冰寒剑法+雪山内功+九霄身法）
+  // ═══════════════════════════════════════════════════════════
+
+  // ── 昆仑 · 炼气期 ──
+  kunlun_sword: {
+    id: 'kunlun_sword', name: '昆仑剑法', icon: '⚔️', type: 'attack', target: 'enemy',
+    mp: 8, hit: 1, powerMul: 1.6, defPen: 0.75,
+    cooldown: 0, effect: null, healPct: 0,
+    desc: '昆仑派入门剑法，剑出如雪山之风，造成160%攻击伤害。',
+    cost: { exp: 0 }, sect: 'kunlun',
+    battleTip: '基础攻击·低消耗',
+  },
+  kunlun_ice_qi: {
+    id: 'kunlun_ice_qi', name: '寒冰真气', icon: '❄️', type: 'passive', target: 'self',
+    mp: 0, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 0, effect: { type: 'regen_mp', value: 3, duration: 99 },
+    healPct: 0,
+    desc: '【被动】昆仑寒冰真气，冰寒入体，每回合自动恢复3点内力。',
+    cost: { exp: 0 }, sect: 'kunlun',
+    battleTip: '被动·稳定内力回复',
+  },
+  kunlun_frost_palm: {
+    id: 'kunlun_frost_palm', name: '冰魄掌', icon: '🧊', type: 'attack', target: 'enemy',
+    mp: 14, hit: 2, powerMul: 0.6, defPen: 0.8,
+    cooldown: 0, effect: null, healPct: 0,
+    desc: '冰魄寒气凝于掌中，双掌连拍各造成60%攻击伤害，穿透极高。',
+    cost: { exp: 0 }, sect: 'kunlun',
+    battleTip: '二段连击·高穿透',
+  },
+  kunlun_snow_step: {
+    id: 'kunlun_snow_step', name: '雪影步', icon: '🌨️', type: 'support', target: 'self',
+    mp: 14, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 2, effect: { type: 'evade', value: 0.4, duration: 1 },
+    healPct: 0,
+    desc: '踏雪无痕，身如雪影。提升40%闪避率1回合。',
+    cost: { exp: 100 }, sect: 'kunlun',
+    battleTip: '闪避·规避伤害',
+  },
+
+  // ── 昆仑 · 筑基期 ──
+  kunlun_sword_cold: {
+    id: 'kunlun_sword_cold', name: '霜寒剑', icon: '❄️', type: 'attack', target: 'enemy',
+    mp: 24, hit: 1, powerMul: 1.4, defPen: 0.7,
+    cooldown: 1, effect: { type: 'weaken_def', value: 8, duration: 2 },
+    healPct: 0,
+    desc: '剑带霜寒之气，冻结敌方护甲。造成140%攻击伤害，削弱敌方防御8点持续2回合。',
+    cost: { exp: 200 }, sect: 'kunlun',
+    battleTip: '爆发·减防连招',
+  },
+  kunlun_ice_guard: {
+    id: 'kunlun_ice_guard', name: '玄冰护体', icon: '🛡️', type: 'passive', target: 'self',
+    mp: 0, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 0, effect: { type: 'def_boost', value: 10, duration: 99 },
+    healPct: 0,
+    desc: '【被动】玄冰化为护体真气，战斗中常驻防御提升10点。',
+    cost: { exp: 300 }, sect: 'kunlun',
+    battleTip: '被动·常驻加防',
+  },
+  kunlun_blizzard: {
+    id: 'kunlun_blizzard', name: '风雪剑法', icon: '🌨️', type: 'attack', target: 'enemy',
+    mp: 26, hit: 3, powerMul: 0.5, defPen: 0.7,
+    cooldown: 1, effect: null, healPct: 0,
+    desc: '剑如暴风雪，铺天盖地。三连击各造成50%攻击伤害，剑势凶猛。',
+    cost: { exp: 300 }, sect: 'kunlun',
+    battleTip: '三连击·压制型',
+  },
+  kunlun_freeze: {
+    id: 'kunlun_freeze', name: '凝冰诀', icon: '🧊', type: 'control', target: 'enemy',
+    mp: 28, hit: 1, powerMul: 0.6, defPen: 0.5,
+    cooldown: 3, effect: { type: 'stun', value: 1, duration: 1 },
+    healPct: 0,
+    desc: '寒冰真气化为凝冰之力，冻结敌方经脉。造成60%攻击伤害，必定眩晕1回合。',
+    cost: { exp: 350 }, sect: 'kunlun',
+    battleTip: '强控·必晕1回合',
+  },
+
+  // ── 昆仑 · 结丹期 ──
+  kunlun_sword_jiuxiao: {
+    id: 'kunlun_sword_jiuxiao', name: '九霄剑', icon: '🌌', type: 'attack', target: 'enemy',
+    mp: 36, hit: 1, powerMul: 2.0, defPen: 0.65,
+    cooldown: 2, effect: null, healPct: 0,
+    desc: '九霄云外，一剑穿云。造成200%攻击伤害，昆仑剑法中乘。',
+    cost: { exp: 500 }, sect: 'kunlun',
+    battleTip: '中等爆发·2回合冷却',
+  },
+  kunlun_glacier: {
+    id: 'kunlun_glacier', name: '冰川掌', icon: '🏔️', type: 'attack', target: 'enemy',
+    mp: 38, hit: 1, powerMul: 1.8, defPen: 0.85,
+    cooldown: 2, effect: null, healPct: 0,
+    desc: '千年冰川之力凝于一掌，造成180%攻击伤害，几乎无视防御。',
+    cost: { exp: 550 }, sect: 'kunlun',
+    battleTip: '高爆发·极高穿透',
+  },
+  kunlun_snow_veil: {
+    id: 'kunlun_snow_veil', name: '雪幕', icon: '🌫️', type: 'support', target: 'self',
+    mp: 34, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 3, effect: { type: 'evade', value: 0.5, duration: 1 },
+    healPct: 0.15,
+    desc: '雪幕笼罩全身，提升50%闪避率1回合，并恢复15%最大气血。',
+    cost: { exp: 600 }, sect: 'kunlun',
+    battleTip: '高闪避·小回血',
+  },
+  kunlun_sword_storm: {
+    id: 'kunlun_sword_storm', name: '冰风暴剑', icon: '🌪️', type: 'attack', target: 'enemy',
+    mp: 40, hit: 3, powerMul: 0.55, defPen: 0.8,
+    cooldown: 2, effect: null, healPct: 0,
+    desc: '剑化冰风暴，三连击各造成55%攻击伤害，穿透极高。',
+    cost: { exp: 650 }, sect: 'kunlun',
+    battleTip: '三连击·高贯穿',
+  },
+
+  // ── 昆仑 · 元婴期 ──
+  kunlun_hanbing: {
+    id: 'kunlun_hanbing', name: '万载寒冰诀', icon: '🧊', type: 'passive', target: 'self',
+    mp: 0, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 0, effect: { type: 'regen_mp_pct', value: 15, duration: 99 },
+    healPct: 0,
+    desc: '【被动】万载寒冰化为内力之源，每回合恢复15%最大内力，常驻攻击+10。',
+    cost: { exp: 1500 }, sect: 'kunlun',
+    battleTip: '被动·终极内力循环+加攻',
+  },
+  kunlun_sword_peak: {
+    id: 'kunlun_sword_peak', name: '昆仑绝顶剑', icon: '🏔️', type: 'attack', target: 'enemy',
+    mp: 55, hit: 1, powerMul: 3.0, defPen: 0.7,
+    cooldown: 3, effect: null, healPct: 0,
+    desc: '昆仑之巅，绝顶一剑。造成300%攻击伤害，万剑俯首。',
+    cost: { exp: 2000 }, sect: 'kunlun',
+    battleTip: '终极爆发·高穿透',
+  },
+  kunlun_jade_purity: {
+    id: 'kunlun_jade_purity', name: '玉清心法', icon: '💎', type: 'support', target: 'self',
+    mp: 48, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 4, effect: { type: 'def_boost', value: 15, duration: 3 },
+    healPct: 0.35,
+    desc: '玉清妙法，冰清玉洁。恢复35%最大气血，防御提升15点持续3回合。',
+    cost: { exp: 1800 }, sect: 'kunlun',
+    battleTip: '大回血·加防',
+  },
+  kunlun_sword_frozen: {
+    id: 'kunlun_sword_frozen', name: '冰封万里', icon: '❄️', type: 'attack', target: 'enemy',
+    mp: 55, hit: 1, powerMul: 2.5, defPen: 0.7,
+    cooldown: 3, effect: { type: 'stun', value: 1, duration: 1 },
+    healPct: 0,
+    desc: '冰封万里，天地同冻。造成250%攻击伤害，必定眩晕敌方1回合。',
+    cost: { exp: 2000 }, sect: 'kunlun',
+    battleTip: '大爆发+必晕',
+  },
+
+  // ═══════════════════════════════════════════════════════════
+  //  唐门（P6 Batch 2 · 一流门派 · 淬毒暗器+暴雨梨花+毒经秘传）
+  // ═══════════════════════════════════════════════════════════
+
+  // ── 唐门 · 炼气期 ──
+  tang_needle: {
+    id: 'tang_needle', name: '牛毛针', icon: '📌', type: 'attack', target: 'enemy',
+    mp: 10, hit: 2, powerMul: 0.6, defPen: 0.85,
+    cooldown: 0, effect: null, healPct: 0,
+    desc: '唐门入门暗器，牛毛细针二连发各造成60%攻击伤害，穿透极高。',
+    cost: { exp: 0 }, sect: 'tangmen',
+    battleTip: '二段连击·超高穿透',
+  },
+  tang_poison_qi: {
+    id: 'tang_poison_qi', name: '唐门毒功', icon: '☠️', type: 'passive', target: 'self',
+    mp: 0, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 0, effect: { type: 'regen_mp', value: 3, duration: 99 },
+    healPct: 0,
+    desc: '【被动】唐门基础毒功，以毒淬体，每回合自动恢复3点内力。',
+    cost: { exp: 0 }, sect: 'tangmen',
+    battleTip: '被动·稳定内力回复',
+  },
+  tang_blade_basic: {
+    id: 'tang_blade_basic', name: '飞刀术', icon: '🔪', type: 'attack', target: 'enemy',
+    mp: 12, hit: 1, powerMul: 1.2, defPen: 0.8,
+    cooldown: 0, effect: null, healPct: 0,
+    desc: '飞刀之术，快准狠。造成120%攻击伤害，穿透较高。',
+    cost: { exp: 0 }, sect: 'tangmen',
+    battleTip: '基础攻击·高穿透',
+  },
+  tang_smoke: {
+    id: 'tang_smoke', name: '烟幕弹', icon: '💨', type: 'support', target: 'self',
+    mp: 12, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 2, effect: { type: 'evade', value: 0.4, duration: 1 },
+    healPct: 0,
+    desc: '烟幕弥漫，遁形其中。提升40%闪避率1回合。',
+    cost: { exp: 80 }, sect: 'tangmen',
+    battleTip: '闪避·规避伤害',
+  },
+
+  // ── 唐门 · 筑基期 ──
+  tang_dart: {
+    id: 'tang_dart', name: '袖箭', icon: '🎯', type: 'attack', target: 'enemy',
+    mp: 22, hit: 1, powerMul: 1.4, defPen: 0.75,
+    cooldown: 1, effect: { type: 'weaken_def', value: 8, duration: 2 },
+    healPct: 0,
+    desc: '袖中暗箭，防不胜防。造成140%攻击伤害，削弱敌方防御8点持续2回合。',
+    cost: { exp: 200 }, sect: 'tangmen',
+    battleTip: '爆发·减防连招',
+  },
+  tang_shadow_step: {
+    id: 'tang_shadow_step', name: '影遁', icon: '👤', type: 'support', target: 'self',
+    mp: 20, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 2, effect: { type: 'evade', value: 0.5, duration: 1 },
+    healPct: 0,
+    desc: '唐门秘传身法，融入暗影之中，提升50%闪避率1回合。',
+    cost: { exp: 250 }, sect: 'tangmen',
+    battleTip: '高闪避·规避爆发',
+  },
+  tang_rain_needle: {
+    id: 'tang_rain_needle', name: '暴雨针', icon: '🌧️', type: 'attack', target: 'enemy',
+    mp: 24, hit: 4, powerMul: 0.35, defPen: 0.8,
+    cooldown: 1, effect: null, healPct: 0,
+    desc: '针如暴雨倾盆，四连击各造成35%攻击伤害。数量压制，密不透风。',
+    cost: { exp: 300 }, sect: 'tangmen',
+    battleTip: '四连击·数量压制',
+  },
+  tang_venom: {
+    id: 'tang_venom', name: '五毒镖', icon: '🦂', type: 'attack', target: 'enemy',
+    mp: 28, hit: 1, powerMul: 0.8, defPen: 0.7,
+    cooldown: 2, effect: { type: 'poison', value: 12, duration: 3 },
+    healPct: 0,
+    desc: '五毒淬镖，中者即毒。造成80%攻击伤害，并施毒3回合每回合损失12HP。',
+    cost: { exp: 320 }, sect: 'tangmen',
+    battleTip: '攻击+中毒·持续消耗',
+  },
+
+  // ── 唐门 · 结丹期 ──
+  tang_blade_adv: {
+    id: 'tang_blade_adv', name: '夺魄刀', icon: '🗡️', type: 'attack', target: 'enemy',
+    mp: 36, hit: 1, powerMul: 2.0, defPen: 0.65,
+    cooldown: 2, effect: null, healPct: 0,
+    desc: '一刃夺魄，刀不留痕。造成200%攻击伤害，唐门中乘暗器。',
+    cost: { exp: 500 }, sect: 'tangmen',
+    battleTip: '中等爆发·2回合冷却',
+  },
+  tang_poison_mist: {
+    id: 'tang_poison_mist', name: '毒雾术', icon: '☠️', type: 'control', target: 'enemy',
+    mp: 35, hit: 1, powerMul: 0.3, defPen: 0.5,
+    cooldown: 3, effect: { type: 'weaken_def', value: 18, duration: 3 },
+    healPct: 0,
+    desc: '毒雾弥漫，腐蚀护甲。造成30%攻击伤害，大幅削弱敌方防御18点持续3回合。',
+    cost: { exp: 600 }, sect: 'tangmen',
+    battleTip: '控制·大幅破甲',
+  },
+  tang_dart_storm: {
+    id: 'tang_dart_storm', name: '飞蝗石雨', icon: '🪨', type: 'attack', target: 'enemy',
+    mp: 38, hit: 3, powerMul: 0.55, defPen: 0.8,
+    cooldown: 2, effect: null, healPct: 0,
+    desc: '飞蝗石如雨倾泻，三连击各造成55%攻击伤害，穿透极高。',
+    cost: { exp: 550 }, sect: 'tangmen',
+    battleTip: '三连击·高贯穿',
+  },
+  tang_toxic_art: {
+    id: 'tang_toxic_art', name: '毒经要诀', icon: '📜', type: 'passive', target: 'self',
+    mp: 0, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 0, effect: { type: 'regen_mp', value: 6, duration: 99 },
+    healPct: 0,
+    desc: '【被动】毒经秘传，中毒状态下敌人额外受到+5点/回合伤害，每回合恢复6点内力。',
+    cost: { exp: 650 }, sect: 'tangmen',
+    battleTip: '被动·中毒加深+内力回复',
+  },
+
+  // ── 唐门 · 元婴期 ──
+  tang_blade_master: {
+    id: 'tang_blade_master', name: '追魂刀', icon: '🔪', type: 'attack', target: 'enemy',
+    mp: 52, hit: 1, powerMul: 3.0, defPen: 0.7,
+    cooldown: 3, effect: null, healPct: 0,
+    desc: '追魂夺命，一刀封喉。造成300%攻击伤害，唐门暗器巅峰。',
+    cost: { exp: 2000 }, sect: 'tangmen',
+    battleTip: '终极爆发·高穿透',
+  },
+  tang_pear_flower: {
+    id: 'tang_pear_flower', name: '暴雨梨花针', icon: '🌸', type: 'attack', target: 'enemy',
+    mp: 55, hit: 5, powerMul: 0.4, defPen: 0.85,
+    cooldown: 3, effect: { type: 'poison', value: 10, duration: 2 },
+    healPct: 0,
+    desc: '唐门镇派暗器，五连击各造成40%攻击伤害，附带中毒2回合每回合损失10HP。',
+    cost: { exp: 2000 }, sect: 'tangmen',
+    battleTip: '五连击+中毒·毁灭暗器',
+  },
+  tang_poison_secret: {
+    id: 'tang_poison_secret', name: '唐门毒典', icon: '☠️', type: 'passive', target: 'self',
+    mp: 0, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 0, effect: { type: 'regen_mp_pct', value: 15, duration: 99 },
+    healPct: 0,
+    desc: '【被动】唐门至高毒典，每回合恢复15%最大内力，所有攻击附带微毒（+3HP/回合）。',
+    cost: { exp: 1800 }, sect: 'tangmen',
+    battleTip: '被动·终极内力循环+全技附毒',
+  },
+  tang_night_walker: {
+    id: 'tang_night_walker', name: '月夜行', icon: '🌙', type: 'attack', target: 'enemy',
+    mp: 55, hit: 1, powerMul: 2.5, defPen: 0.75,
+    cooldown: 3, effect: { type: 'stun', value: 1, duration: 1 },
+    healPct: 0,
+    desc: '月黑风高，一击封命。造成250%攻击伤害，必定眩晕敌方1回合。',
+    cost: { exp: 2000 }, sect: 'tangmen',
+    battleTip: '大爆发+必晕',
+  },
 };
 
 // 保留 ELDERS 导出（向后兼容，虽然 LearnScreen 已移除）

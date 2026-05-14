@@ -80,7 +80,9 @@ export const PlayerStateSchema = z.object({
   npcDatabase: z.record(z.string(), z.object({
     id:     z.string(),
     name:   z.string(),
-    talent: z.string().default('normal'),
+    talent: z.string().optional(),  // 旧字段兼容
+    talents: z.array(z.string()).default([]),  // P8: 天赋列表
+    isTianjiao: z.boolean().default(false),    // P8: 天骄标记
     sect:   z.string().default('wudang'),
     level:  z.number().default(1),
     exp:    z.number().default(0),
@@ -110,10 +112,15 @@ export const PlayerStateSchema = z.object({
     }).default({ strategy: 5, eloquence: 5, charisma: 5, scholarship: 5 }),
     influence: z.number().default(0),
     courtPath: z.enum(['wen', 'wu']).nullable().default(null),
+    // 🆕 立绘系统
+    gender: z.enum(['male','female']).optional(),
+    portraitIndex: z.number().optional(),
   })).default({}),
 
   // 🆕 NPC 好感度字典
   npcAffection: z.record(z.string(), z.number()).default({}),
+  // 🆕 P8: NPC 间友好度字典
+  npcRelationship: z.record(z.string(), z.number()).default({}),
 
   // 🆕 突破解锁状态（旧存档兼容：默认为空数组）
   realmBreakUnlocked: z.array(z.string()).default([]),

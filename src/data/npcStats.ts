@@ -68,7 +68,12 @@ export const PERSONALITY: Record<NpcPersonality, PersonalityConfig> = {
 export interface NpcStats {
   id: string;
   name: string;
-  talent: TalentId;
+  /** @deprecated 使用 talents 数组代替，旧存档兼容 */
+  talent?: TalentId;
+  /** NPC 天赋列表（P8: 每人3个随机天赋，迁移填充） */
+  talents?: TalentId[];
+  /** 是否为天骄（P8: 0.5%概率，强制2绝世+1上等，迁移填充） */
+  isTianjiao?: boolean;
   sect: SectId;
   level: number;
   exp: number;
@@ -184,10 +189,10 @@ export const NPC_STATS_INIT: Record<string, Omit<NpcStats, 'exp'>> = {
     ownedFabao: ['refined_sword', 'silk_robe', 'jade_ring'],
   },
   
-  // ☯️ 武当派 - 顾小桑（筑基三层 · 外门师姐）
+  // ☯️ 武当派 - 顾小桑（筑基三层 · 内门弟子）
   gu_xiaosang: {
     id: 'gu_xiaosang', name: '顾小桑', talent: 'normal', sect: 'wudang', level: 13,
-    discipleRank: 'outer', courtRank: 'commoner', personality: 'kind',
+    discipleRank: 'inner', courtRank: 'commoner', personality: 'kind',
     courtStats: { strategy: 10, eloquence: 35, charisma: 50, scholarship: 15 }, influence: 5, courtPath: null,
     ...makeNpcStats(13, 'normal'),
     skills: ['wudang_changquan', 'wudang_jianfa_basic', 'wudang_qinggong', 'mianzhang'],

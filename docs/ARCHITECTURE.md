@@ -1,7 +1,7 @@
 # DIY-Dungeon 项目架构文档
 
 > 本文档面向开发者和 AI Agent，描述当前项目的完整架构、各模块职责，以及接下来的开发方向。
-> 最后更新：2026-05-10（宗门习武 UI + 任务战斗联动 + 地图35节点 + 单敌自动选中 + 地图不自动关闭）
+> 最后更新：2026-05-14（P6 Batch 2 完成 + NPC 详情弹窗鬼谷八荒式横版重设计）
 
 ---
 
@@ -42,7 +42,7 @@ DIY-dungeon/
 │   │   ├── fabao.ts               法宝系统：FABAO: Record<FabaoId, FabaoData>（6境×3类×3件=54件）
 │   │   ├── realmConfig.ts         境界基础数值配置（基准值 + 大境界飞跃公式 + 主角天赋融入）
 │   │   ├── worldMap.ts            世界地图节点配置（~35 个地点 + LocationAction 日常行动 + sect_learn_skill 行动）
-│   │   ├── sectSkillTables.ts     🆕 各宗门技能表（WUDANG/SHAOLIN/RIYUE_SKILL_TABLE + SECT_SKILL_TABLES + getSkillRealm()）
+│   │   ├── sectSkillTables.ts     🆕 各宗门技能表（WUDANG/SHAOLIN/RIYUE/EMEI/BEGGAR/QUANZHEN/KUNLUN/TANGMEN + SECT_SKILL_TABLES + getSkillRealm()）
 │   │   ├── sects.ts               SECTS: Record<SectId, SectData>（含 alignment + culture 标签）
 │   │   ├── story.ts               WUDANG_TIERS（关卡配置，遗留文件）
 │   │   └── chapters/
@@ -89,7 +89,7 @@ DIY-dungeon/
 │   │   │   ├── SkillPanel.ts      技能装配面板
 │   │   │   ├── StoryPanel.ts      营地剧情面板（日常任务按地点动态读取 + 宗门习武入口 + 任务战斗按钮 + 沙盒 tick 调用）
 │   │   │   ├── FabaoPanel.ts      法宝装备面板（三槽装备/卸下）
-│   │   │   ├── RelationPanel.ts   人物关系面板（可折叠分类 + 好感度 + NPC 状态弹窗）
+│   │   │   ├── RelationPanel.ts   人物关系面板（可折叠分类 + 好感度 + 🆕 鬼谷八荒式横版 NPC 详情弹窗：左侧立绘+境界光效，右侧属性含宗门/朝廷身份）
 │   │   │   ├── MissionPanel.ts    任务面板（接取/追踪/完成/放弃，左侧常驻）
 │   │   │   ├── WorldPanel.ts      江湖态势面板（势力排行/详情卡片/个人日志/宗门加入/世界推演）
 │   │   │   ├── CourtPanel.ts      朝廷面板（品阶/政务/影响力/文武双线）
@@ -683,13 +683,23 @@ export const WUDANG_SKILL_TABLE: Array<[number, SkillId]> = [
 
 export const SHAOLIN_SKILL_TABLE: Array<[number, SkillId]>;
 export const RIYUE_SKILL_TABLE: Array<[number, SkillId]>;  // 日月教（黑木崖）
+export const EMEI_SKILL_TABLE: Array<[number, SkillId]>;
+export const BEGGAR_SKILL_TABLE: Array<[number, SkillId]>;
+export const QUANZHEN_SKILL_TABLE: Array<[number, SkillId]>;
+export const KUNLUN_SKILL_TABLE: Array<[number, SkillId]>;
+export const TANGMEN_SKILL_TABLE: Array<[number, SkillId]>;
 
 // 按宗门 ID 索引，供 SkillLearnOverlay 查表
 export const SECT_SKILL_TABLES: Partial<Record<SectId, Array<[number, SkillId]>>> = {
   wudang: WUDANG_SKILL_TABLE,
   shaolin: SHAOLIN_SKILL_TABLE,
   riyue: RIYUE_SKILL_TABLE,
-  // emei/beggar/maoshan/... 待填充
+  emei: EMEI_SKILL_TABLE,
+  beggar: BEGGAR_SKILL_TABLE,
+  quanzhen: QUANZHEN_SKILL_TABLE,
+  kunlun: KUNLUN_SKILL_TABLE,
+  tangmen: TANGMEN_SKILL_TABLE,
+  // 华山/崆峒/青城/点苍/铁掌帮/茅山/五毒/血刀/海沙 待填充
 };
 
 // 根据等级返回境界信息（用于分层渲染）
@@ -868,7 +878,7 @@ const rankLabel = rankLabels[p.discipleRank] || '外门弟子';
 
 每人显示小立绘（56×84px）+ 好感度数值，一行四列布局。分类标题带有光效动画（左侧光条、图标浮动、箭头弹跳），引导玩家点击展开。未解锁角色显示灰色立绘 + "未解锁"标注（如趙沁微在第三章前未解锁，沈霓裳在第二章 act≥4 后解锁，纪无双/苏云绣/方仲和在第三章 act≥8 后解锁，孟文渊/叶紫衣在第三章 act≥9 后解锁）。
 
-**🆕 NPC 状态弹窗**：点击已解锁角色的立绘卡片，弹出该角色的详细状态面板，显示修为、修为进度（经验条）、天赋、HP/MP/ATK/DEF/AGI/暴击、装备法宝等信息。支持关闭按钮、点击背景、ESC 键三种关闭方式。修为进度条在满层时显示红色"已满（等待突破契机）"。`showNpcStatsOverlay()` 已导出为 public API，供 `Camp.ts` 的 sidebar 复用。
+**🆕 NPC 状态弹窗（0513 鬼谷八荒式横版重设计）**：点击已解锁角色的立绘卡片，弹出该角色的详细状态面板。横版布局（720px）：左侧 240px 立绘面板带境界颜色光晕（`--realm-glow` CSS 变量），天骄 NPC 金色光效增强；右侧属性面板显示六大区块：身份标识（所属帮派 🏛️ + 朝廷地位 🏯）、修为境界（名称+经验进度条）、六维属性网格（HP/MP/ATK/DEF/AGI/暴击）、天赋标签（按品质着色）、装备法宝（3件横排）、好感度条+性格描述。支持关闭按钮、点击背景、ESC 键三种关闭方式。`showNpcStatsOverlay()` 已导出为 public API，供 `Camp.ts` 的 sidebar 复用。
 
 #### `Camp.ts` — 营地主容器（🆕 0507 更新，0510 地图行为更新）
 
@@ -1440,7 +1450,7 @@ second_meet: {
 
 15. **🆕 日常任务地点化（0501 重构）**：日常任务不再使用硬编码的 `DAILY_TASKS` 数组 + `wudangOnlyTasks` 检查，改为从 `WORLD_MAP[currentLocationId].actions` 动态读取。每个地点的 `actions` 字段定义该地点可执行的日常任务。玩家移动到不同地点时，日常任务列表自动切换。新增城市「城中静修」行动（+30经验）。`renderDailyTasks()` 标题显示 `📋 日常修行 · {地点名}`。
 
-16. **NPC 状态弹窗（🆕 0430）**：`RelationPanel.ts` 中点击已解锁角色的立绘卡片，弹出 `npc-stats-overlay` 弹窗，显示该 NPC 的完整数值（修为、修为进度条、天赋、HP/MP/ATK/DEF/AGI/暴击、装备法宝）。支持关闭按钮、点击背景、ESC 键关闭。修为进度条直观展示NPC的晋升情况。`showNpcStatsOverlay()` 已导出，被 `Camp.ts` 的 sidebar 复用。
+16. **NPC 状态弹窗（🆕 0430，0513 鬼谷八荒式横版重设计）**：`RelationPanel.ts` 中点击已解锁角色的立绘卡片，弹出 `npc-stats-overlay` 弹窗，横版布局（720px）：左侧 240px 立绘面板带境界颜色光晕（`--realm-glow` CSS 变量），天骄 NPC 金色光效增强；右侧属性面板显示六大区块：身份标识（所属帮派 🏛️ + 朝廷地位 🏯）、修为境界（名称+经验进度条）、六维属性网格（HP/MP/ATK/DEF/AGI/暴击）、天赋标签（按品质着色）、装备法宝（3件横排）、好感度条+性格描述。支持关闭按钮、点击背景、ESC 键关闭。`showNpcStatsOverlay()` 已导出，被 `Camp.ts` 的 sidebar 复用。
 
 17. **法宝独立面板（🆕 0430）**：法宝装备从人物关系面板中独立出来，作为左侧导航的 `fabao` Tab（🔮 法宝装备）。`FabaoPanel.ts` 提供三槽装备界面，复用原有的法宝选择器逻辑。
 
@@ -1460,13 +1470,15 @@ second_meet: {
 
 20. **🆕 0509 沙盒地基论**：**沙盒模式是整个游戏的底层框架（地基），剧情模式是叠加在地基上的"作弊层"**。这不是两个平行模式，而是同一套系统的两种使用方式：沙盒路径是真实成长（贡献+试炼），剧情节点相当于作弊指令直接改数值。所有开发应以沙盒为基础进行，剧情在此基础上扩展。
 
-21. **🆕 宗门习武 UI（0510 新增）**：玩家在本门派据点（宗门地图节点）可见"📖 习武学功"日常行动。点击后弹出 `SkillLearnOverlay`，按6境界展示本派技能，消耗贡献值学习。技能表数据由 `sectSkillTables.ts` 统一管理（武当/少林/日月教已实装，其余待填充）。`SECT_SKILL_TABLES` 是宗门 ID → 技能等级表的映射，`NpcBehavior.ts` 和 `SkillLearnOverlay.ts` 共用此表。
+21. **🆕 宗门习武 UI（0510 新增）**：玩家在本门派据点（宗门地图节点）可见"📖 习武学功"日常行动。点击后弹出 `SkillLearnOverlay`，按6境界展示本派技能，消耗贡献值学习。技能表数据由 `sectSkillTables.ts` 统一管理（武当/少林/日月教/峨眉/丐帮/全真/昆仑/唐门已实装，其余待填充）。`SECT_SKILL_TABLES` 是宗门 ID → 技能等级表的映射，`NpcBehavior.ts` 和 `SkillLearnOverlay.ts` 共用此表。
 
 22. **🆕 任务地图战斗联动（0510 新增）**：接取 combat/escort 类任务后，前往对应地点，日常行动区会出现"⚔️ 进行中任务"卡片（`.mission-fight-card` CSS 类，橙色描边）。点击"执行战斗"按钮直接触发战斗，胜利后自动推进任务进度。`MissionDef` 接口新增 `enemyId?: string` 字段，6个 combat 任务均已设置对应敌人 ID。
 
 23. **🆕 单敌自动选中（0510 新增）**：战斗中若场上只有1个存活敌人，点击普通攻击或攻击/控制技能时自动选中该敌人并立即触发攻击，无需额外点击。多敌情况仍需手动点击选目标。实现位于 `BattleScreen.ts` 的 `basicBtn` 和装备技能按钮 click handler 中。
 
 24. **黑月教（demon）宗门习武缺口（已知问题）**：`worldMap.ts` 中扬州城（`yangzhou_city`）的黑月教只有 `join_sect` 行动，**无** `sect_learn_skill`。`SECT_SKILL_TABLES` 中也无 `demon` 键。日月教（`riyue`，黑木崖）已完整实装，但黑月教技能学习是已知待填充缺口，后续补充需同时：① 在 `sectSkillTables.ts` 添加技能表 ② 在 `worldMap.ts` 的 `yangzhou_city` 添加 `sect_learn_skill` 行动。
+
+25. **🆕 NPC 详情弹窗横版重设计（0513）**：`RelationPanel.ts` 的 `showNpcStatsOverlay()` 和 `style.css` 的 `.npc-stats-overlay-inner` 从竖版（380px）改为鬼谷八荒式横版布局（720px、flex row）。左侧 240px 固定宽度立绘面板（`.npc-stats-left`），右侧属性面板（`.npc-stats-right`）包含六大区块。境界光晕通过 CSS `--realm-glow` 变量传递（8 境界→8 颜色），天骄 NPC 新增金色增强光效（`.tianjiao` 类）。身份标签横向排列（`.npc-stats-identity-tag.sect` 金色 + `.court` 绿色）。天赋标签按品质分色（`.legendary`/`.superior`/`.common`/`.inferior`/`.cursed`）。响应式断点 600px 回退竖版。
 
 ---
 
@@ -1476,9 +1488,9 @@ second_meet: {
 
 ### 10.1 P6：宗门技能树扩展（🔄 进行中）
 
-**当前状态**：武当/少林/日月教技能表已在 `sectSkillTables.ts` 中实装，`SkillLearnOverlay.ts` 已可用。其余14个宗门的技能表尚未填充（`SECT_SKILL_TABLES` 中无对应键），NPC 战斗仍 fallback 到武当技能表。
+**当前状态**：武当/少林/日月教/峨眉/丐帮/全真/昆仑/唐门（8宗门/155技）技能表已在 `sectSkillTables.ts` 中实装，`SkillLearnOverlay.ts` 已可用。其余9个宗门的技能表尚未填充（`SECT_SKILL_TABLES` 中无对应键），NPC 战斗仍 fallback 到武当技能表。
 
-**当前问题**：`src/data/skills.ts` 中仅有武当派拥有完整技能树（25个技能，炼气~渡劫六境）。其余 14 个宗门全部 fallback 到武当技能表（`src/data/skills.ts` 底部逻辑），导致**所有 NPC 战斗中使用相同技能，零差异化**。
+**当前问题**：`src/data/skills.ts` 中 8 个宗门已拥有独立技能树（155个技能）。其余 9 个宗门（二流+旁门）全部 fallback 到武当技能表（`src/data/skills.ts` 底部逻辑）。
 
 **目标**：17 个宗门各拥有独立技能树，总计 ~259 个技能。同时补全各宗门 `sectSkillTables.ts` 中的技能表条目，使 `SkillLearnOverlay` 对所有门派可用。
 
@@ -1493,9 +1505,9 @@ second_meet: {
 
 **实施批次**（推荐 AI 按此顺序实现）：
 1. ~~**Batch 1**：少林（25技，6境）+ 日月教（25技，6境）—— 50技能~~ **✅ 已完成**（已在 sectSkillTables.ts）
-2. **Batch 2**：峨眉 + 丐帮 + 全真 + 昆仑 + 唐门（各16技，4境）—— 80技能（待补）
-3. **Batch 3**：华山 + 崆峒 + 青城 + 点苍 + 铁掌帮（各12技，3境）—— 60技能
-4. **Batch 4**：茅山 + 五毒 + 血刀 + 海沙（各8技，1-2境）—— 32技能
+2. ~~**Batch 2**：峨眉 + 丐帮 + 全真 + 昆仑 + 唐门（各16技，4境）—— 80技能~~ **✅ 已完成**（0513，72新技+8保留旧技）
+3. **Batch 3**：华山 + 崆峒 + 青城 + 点苍 + 铁掌帮（各12技，3境）—— 60技能（待补）
+4. **Batch 4**：茅山 + 五毒 + 血刀 + 海沙（各8技，1-2境）—— 32技能（待补）
 
 **设计参考**：武当现有 25 技按境界分层结构（外门→内门→真传→长老→掌门→入圣），新增技能树可复制此模板，替换技能名和效果。
 
@@ -1515,14 +1527,9 @@ second_meet: {
 
 > **⚠️ 旁门左道（茅山/五毒/血刀/海沙/铁掌帮）不设独立地图节点**，通过世界事件和剧情触发访问。
 
-### 10.3 P8：NPC 三角金字塔 + 天赋池 + 天骄系统
+### 10.3 P8：NPC 三角金字塔 + 天赋池 + 天骄系统（✅ 已完成）
 
-**当前问题**：`NPCGenerator.ts` 使用旧的6门派 + 简单随机规则，不支持宗门层级差异化生成，NPC 没有天赋系统。
-
-**目标**：
-- NPC 按宗门层级三角金字塔生成（顶尖57-82人 → 旁门10-26人）
-- 每人随机3天赋，从36天赋池按权重抽取
-- 0.5% NPC 标记为天骄（🌟金色名字）
+**当前状态**：已实装。`NPCGenerator.ts` 按宗门层级三角金字塔生成 NPC，每人随机3天赋从36天赋池按5层权重抽取，0.5% NPC 标记为天骄（🌟金色名字）。NPC间友好度地基已建立。
 
 **涉及文件**：
 
@@ -1554,4 +1561,4 @@ second_meet: {
 
 4. **TypeScript strict mode**：所有新增 ID 必须先在 `src/data/types.ts` 的联合类型中声明，再在其他文件中使用。`tsc --noEmit` 会验证所有引用。
 
-5. **开发顺序建议**：P6（技能）→ P7（地图）→ P8（NPC天赋天骄）→ P9（势力更新17宗门版）→ P4系列。优先解决技能 fallback 问题，然后扩展世界，最后深化 NPC 系统。
+5. **开发顺序建议**：P6 Batch 1-2 ✅ → P7 ✅ → P8 ✅ → P6 Batch 3-4（技能）→ P9（势力更新17宗门版）→ P4系列。优先解决技能 fallback 问题，然后扩展世界，最后深化 NPC 系统。

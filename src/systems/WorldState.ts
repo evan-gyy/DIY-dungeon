@@ -23,75 +23,124 @@ import { SECTS } from '../data/sects';
 import type { SectId } from '../data/types';
 import type { LocationId } from '../data/worldMap';
 
-// ──── 势力排名（全部从 npcDatabase 实时计算）────
+// ──── 宗门层级体系 ────
+
+export type SectTier = 'supreme' | 'first_rate' | 'second_rate' | 'fringe' | 'special';
+
+const SECT_TIER: Record<SectId, SectTier> = {
+  wudang: 'supreme', shaolin: 'supreme', riyue: 'supreme',
+  emei: 'first_rate', beggar: 'first_rate', quanzhen: 'first_rate', kunlun: 'first_rate', tangmen: 'first_rate',
+  huashan: 'second_rate', kongtong: 'second_rate', qingcheng: 'second_rate', diancang: 'second_rate', tiezhang: 'second_rate',
+  maoshan: 'fringe', wudu: 'fringe', xuedao: 'fringe', haisha: 'fringe',
+  xiaoyao: 'special', demon: 'special',
+  none: 'special',
+};
+
+const TIER_LABEL: Record<SectTier, string> = { supreme: '顶尖大派', first_rate: '一流门派', second_rate: '二流门派', fringe: '旁门左道', special: '特殊' };
+const TIER_SORT: Record<SectTier, number> = { supreme: 0, first_rate: 1, second_rate: 2, fringe: 3, special: 4 };
+
+export function getSectTier(sectId: SectId): SectTier { return SECT_TIER[sectId] ?? 'special'; }
+
+// ──── 势力总览（废除排名公式，改为按层级+实际实力排列）────
 
 export interface FactionScore {
   factionId: SectId;
   name: string;
-  /** 综合评分 */
-  score: number;
-  /** 该势力实际 NPC 人数 */
+  tier: SectTier;
+  tierLabel: string;
   npcCount: number;
-  /** 平均修为等级 */
-  avgLevel: number;
-  /** 最高修为等级 */
   maxLevel: number;
-  /** 最高修为者姓名 */
   topNpcName: string;
-  rank: number;
-  trend: 'rising' | 'stable' | 'declining';
+  topNpcRank: string;
 }
 
-/** 获取所有势力排名（全部从 npcDatabase 实时计算，无一编造） */
+/** 获取所有势力概览（按层级→最高修为排列，废除 avgLevel×5+npcCount×2 的虚假排名） */
 export function getFactionRankings(): FactionScore[] {
   const p = getPlayer();
   const npcs = Object.values(p.npcDatabase ?? {});
 
-  // 按势力分组（跳过 sect='none' 的朝廷 NPC）
   const bySect = new Map<SectId, typeof npcs>();
-  for (const id of ALL_FACTIONS) {
-    bySect.set(id, []);
-  }
+  for (const id of ALL_FACTIONS) bySect.set(id, []);
   for (const npc of npcs) {
     const s = npc.sect;
     if (s === 'none' || !bySect.has(s as SectId)) continue;
     bySect.get(s as SectId)!.push(npc);
   }
 
+  const rankLabel = (lv: number, tier: SectTier): string => {
+    if (tier === 'supreme' || tier === 'special') {
+      if (lv >= 41) return '掌门级';
+      if (lv >= 31) return '长老';
+      if (lv >= 21) return '真传';
+      if (lv >= 11) return '内门';
+      return '外门';
+    }
+    if (tier === 'first_rate') {
+      if (lv >= 41) return '掌门级';
+      if (lv >= 31) return '长老';
+      if (lv >= 21) return '真传';
+      if (lv >= 11) return '内门';
+      return '外门';
+    }
+    if (lv >= 31) return '掌门级';
+    if (lv >= 21) return '长老';
+    if (lv >= 11) return '内门';
+    return '外门';
+  };
+
   const results: FactionScore[] = [];
 
   for (const factionId of ALL_FACTIONS) {
     const sectNpcs = bySect.get(factionId) ?? [];
     const npcCount = sectNpcs.length;
-    const levels = sectNpcs.map(n => n.level);
-    const avgLevel = npcCount > 0
-      ? Math.round(levels.reduce((a, b) => a + b, 0) / npcCount)
-      : 1;
-    const maxLevel = npcCount > 0 ? Math.max(...levels) : 1;
-    const topNpc = npcCount > 0
-      ? sectNpcs.reduce((a, b) => a.level > b.level ? a : b)
-      : null;
-
-    // 宗门实力 = 平均修为 × 5 + 人数 × 2
-    const score = avgLevel * 5 + npcCount * 2;
+    const maxLevel = npcCount > 0 ? Math.max(...sectNpcs.map(n => n.level)) : 1;
+    const topNpc = npcCount > 0 ? sectNpcs.reduce((a, b) => a.level > b.level ? a : b) : null;
+    const tier = getSectTier(factionId);
 
     results.push({
       factionId,
       name: (SECTS[factionId] as { name?: string })?.name ?? factionId,
-      score,
+      tier,
+      tierLabel: TIER_LABEL[tier],
       npcCount,
-      avgLevel,
       maxLevel,
       topNpcName: topNpc?.name ?? '—',
-      rank: 0,
-      trend: 'stable',
+      topNpcRank: topNpc ? rankLabel(topNpc.level, tier) : '—',
     });
   }
 
-  results.sort((a, b) => b.score - a.score);
-  results.forEach((r, i) => (r.rank = i + 1));
+  // 按层级 → 最高修为 排序
+  results.sort((a, b) => {
+    const tierDiff = TIER_SORT[a.tier] - TIER_SORT[b.tier];
+    if (tierDiff !== 0) return tierDiff;
+    return b.maxLevel - a.maxLevel;
+  });
 
   return results;
+}
+
+/** 获取世界事件历史 */
+export function getWorldEventHistory(): Array<{ eventId: string; title: string; description: string; turn: number; timestamp: number; category: string }> {
+  const p = getPlayer();
+  const ws = p.worldState;
+  if (!ws?.worldEvents || ws.worldEvents.length === 0) return [];
+
+  const eventMap = new Map<string, WorldEvent>();
+  for (const ev of WORLD_EVENT_POOL) eventMap.set(ev.id, ev);
+
+  return ws.worldEvents
+    .map(e => {
+      const def = eventMap.get(e.eventId);
+      return {
+        eventId: e.eventId,
+        title: def?.title ?? e.eventId,
+        description: def?.description ?? '',
+        turn: e.turn,
+        timestamp: e.timestamp,
+        category: def?.category ?? 'discovery',
+      };
+    })
+    .reverse();
 }
 
 // ──── 世界事件 ────
@@ -454,16 +503,20 @@ export function canJoinSect(sectId: SectId): {
 export function getSectLeaderNpcId(sectId: SectId): string | undefined {
   const map: Partial<Record<SectId, string>> = {
     wudang: 'zhang_xuansu',
-    shaolin: 'shaolin_kongjian',
-    emei: 'emei_jingxuan',
-    beggar: 'beggar_lu',
-    huashan: 'huashan_feng',
-    demon: 'demon_yang',
-    maoshan: 'maoshan_elder',
-    kunlun: 'kunlun_elder',
-    qingcheng: 'qingcheng_elder',
-    tangmen: 'tangmen_elder',
-    xiaoyao: 'xiaoyao_elder',
+    shaolin: 'shaolin_kongwen',
+    emei: 'emei_miejue',
+    beggar: 'beggar_hong',
+    huashan: 'huashan_master',
+    demon: 'demon_master',
+    maoshan: 'maoshan_zhangmen',
+    kunlun: 'kunlun_zhangmen',
+    qingcheng: 'qingcheng_zhangmen',
+    tangmen: 'tangmen_zhangmen',
+    xiaoyao: 'xiaoyao_zhangmen',
+    quanzhen: 'quanzhen_zhangmen',
+    kongtong: 'kongtong_zhangmen',
+    diancang: 'diancang_zhangmen',
+    riyue: 'demon_master',
   };
   return map[sectId];
 }

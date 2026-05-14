@@ -532,6 +532,42 @@ body {
   text-align: center;
   white-space: nowrap;
 }
+/* 🆕 P8: 天骄 NPC 金色边框与名称 */
+.nearby-npc-card.npc-tianjiao {
+  border-color: var(--color-gold);
+  box-shadow: 0 0 8px rgba(232, 200, 122, 0.3);
+}
+.nearby-npc-card.npc-tianjiao .nearby-npc-name {
+  color: var(--color-gold);
+  text-shadow: 0 0 6px rgba(232, 200, 122, 0.4);
+}
+/* 🆕 P8: 天赋标签（NPC 详情面板中使用） */
+.npc-talent-tag {
+  display: inline-block;
+  padding: 2px 6px;
+  margin: 1px 2px;
+  border-radius: 3px;
+  font-size: 10px;
+  letter-spacing: 1px;
+}
+.npc-talent-legendary { background: #c9a84c22; color: #ffd700; border: 1px solid #c9a84c44; }
+.npc-talent-superior  { background: #ab47bc22; color: #ce93d8; border: 1px solid #ab47bc44; }
+.npc-talent-common    { background: #42a5f522; color: #90caf9; border: 1px solid #42a5f544; }
+.npc-talent-inferior  { background: #78909c22; color: #b0bec5; border: 1px solid #78909c44; }
+.npc-talent-cursed    { background: #ef535022; color: #ef9a9a; border: 1px solid #ef535044; }
+/* 🆕 P8: 天骄标识（NPC 详情面板） */
+.npc-tianjiao-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: bold;
+  color: #1a1a2e;
+  background: linear-gradient(135deg, #ffd700, #ffb300);
+  text-shadow: none;
+  letter-spacing: 2px;
+  margin-left: 6px;
+}
 .nearby-npc-realm {
   font-size: 10px;
   color: var(--text-dim);
@@ -1642,58 +1678,240 @@ body {
 }
 
 /* ===== NPC 状态弹窗 ===== */
+/* ═══════════════════════════════════════════════════════════
+   鬼谷八荒式 NPC 横版人物界面
+   左侧：立绘（带境界光环）  右侧：属性面板
+   ═══════════════════════════════════════════════════════════ */
+
 .npc-stats-overlay {
-  position: fixed; inset: 0; background: rgba(0,0,0,0.8);
+  position: fixed; inset: 0; background: rgba(0,0,0,0.85);
   display: flex; align-items: center; justify-content: center;
   z-index: 400;
+  animation: fadeIn 0.2s ease;
 }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
 .npc-stats-overlay-inner {
-  background: var(--bg-panel);
-  border: 1px solid var(--border-gold);
-  border-radius: 12px;
-  padding: 24px 28px;
-  max-width: 380px; width: 90%;
-  max-height: 85vh; overflow-y: auto;
+  background: linear-gradient(135deg, #0d0d1a 0%, #111128 40%, #0a0a18 100%);
+  border: 1px solid rgba(201,168,76,0.35);
+  border-radius: 16px;
+  padding: 0;
+  width: 720px; max-width: 94vw;
+  max-height: 88vh; overflow-y: auto;
+  display: flex; flex-direction: row;
+  box-shadow: 0 0 60px rgba(0,0,0,0.7), 0 0 120px rgba(201,168,76,0.06);
 }
-.npc-stats-header {
-  display: flex; flex-direction: column; align-items: center; gap: 12px;
-  margin-bottom: 16px;
+
+/* ── 左侧立绘区 ── */
+.npc-stats-left {
+  flex: 0 0 240px;
+  display: flex; flex-direction: column; align-items: center;
+  padding: 28px 20px 20px;
+  background: linear-gradient(180deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.6) 100%);
+  border-right: 1px solid rgba(201,168,76,0.15);
+  position: relative; overflow: hidden;
+}
+/* 立绘区装饰光晕 */
+.npc-stats-left::before {
+  content: ''; position: absolute; top: -40%; left: -20%;
+  width: 140%; height: 80%;
+  background: radial-gradient(ellipse, rgba(201,168,76,0.06) 0%, transparent 70%);
+  pointer-events: none;
 }
 .npc-stats-portrait {
-  width: 120px; height: 180px;
+  width: 180px; height: 270px;
   object-fit: cover;
-  border: 1px solid rgba(201,168,76,0.5);
-  border-radius: 8px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+  border-radius: 10px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.7);
+  position: relative; z-index: 1;
+  transition: transform 0.3s ease;
 }
-.npc-stats-title {
-  font-size: 18px; color: var(--text-gold); letter-spacing: 4px; font-weight: bold;
+.npc-stats-overlay-inner:hover .npc-stats-portrait {
+  transform: scale(1.03);
 }
-.npc-stats-body {
-  display: flex; flex-direction: column; gap: 6px;
+/* 立绘边框光环 — 境界颜色由 JS 动态设置 */
+.npc-stats-portrait-wrap {
+  position: relative; z-index: 1;
+  padding: 4px;
+  border-radius: 12px;
+  margin-bottom: 12px;
 }
-.npc-stats-row {
+.npc-stats-portrait-wrap::after {
+  content: ''; position: absolute; inset: 0;
+  border-radius: 12px;
+  border: 2px solid var(--realm-glow, rgba(201,168,76,0.5));
+  box-shadow: 0 0 20px var(--realm-glow, rgba(201,168,76,0.2)),
+              0 0 40px var(--realm-glow, rgba(201,168,76,0.08));
+  pointer-events: none;
+  transition: all 0.3s ease;
+}
+/* 天骄光环更强 */
+.npc-stats-portrait-wrap.tianjiao::after {
+  border-width: 3px;
+  box-shadow: 0 0 24px rgba(255,215,0,0.4),
+              0 0 50px rgba(255,215,0,0.15),
+              0 0 80px rgba(255,215,0,0.06);
+}
+
+/* 立绘下方境界标签 */
+.npc-stats-realm-tag {
+  position: relative; z-index: 1;
+  font-size: 13px; letter-spacing: 3px;
+  padding: 4px 20px;
+  border-radius: 16px;
+  color: #fff;
+  font-weight: bold;
+  text-shadow: 0 0 8px rgba(255,255,255,0.3);
+}
+
+/* ── 右侧属性区 ── */
+.npc-stats-right {
+  flex: 1;
+  display: flex; flex-direction: column;
+  padding: 24px 28px 20px;
+  min-width: 0;
+}
+
+/* 名字 + 天骄标识 */
+.npc-stats-name-row {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 6px;
+}
+.npc-stats-name {
+  font-size: 22px; font-weight: bold;
+  color: var(--text-gold); letter-spacing: 5px;
+}
+.npc-stats-tianjiao-badge {
+  font-size: 11px; letter-spacing: 2px;
+  padding: 2px 10px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #ffd700, #ff8c00);
+  color: #1a1a2e; font-weight: bold;
+  text-shadow: none;
+}
+
+/* ── 身份双栏 ── */
+.npc-stats-identity-row {
+  display: flex; gap: 10px; margin-bottom: 10px;
+}
+.npc-stats-identity-tag {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 11px; letter-spacing: 1px;
+  padding: 4px 12px; border-radius: 4px;
+}
+.npc-stats-identity-tag.sect {
+  background: rgba(201,168,76,0.1); border: 1px solid rgba(201,168,76,0.25);
+  color: #c9a84c;
+}
+.npc-stats-identity-tag.court {
+  background: rgba(142,200,160,0.08); border: 1px solid rgba(142,200,160,0.2);
+  color: #8ec8a0;
+}
+
+/* ── 属性分隔区块 ── */
+.npc-stats-section {
+  margin-bottom: 8px;
+}
+.npc-stats-section-title {
+  font-size: 11px; letter-spacing: 3px;
+  color: rgba(201,168,76,0.6);
+  margin-bottom: 6px; padding-bottom: 4px;
+  border-bottom: 1px solid rgba(201,168,76,0.12);
+}
+.npc-stats-section-title .icon { margin-right: 4px; }
+
+/* 六维属性网格：2列 × 3行 */
+.npc-stats-attr-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px;
+}
+.npc-stats-attr-row {
   display: flex; justify-content: space-between; align-items: center;
-  padding: 5px 0;
-  border-bottom: 1px solid rgba(255,255,255,0.04);
+  padding: 4px 0;
   font-size: 13px;
 }
-.npc-stats-label {
-  color: var(--text-dim); letter-spacing: 1px;
+.npc-stats-attr-label {
+  color: var(--text-dim); letter-spacing: 1px; font-size: 12px;
 }
-.npc-stats-value {
-  color: var(--text-light); letter-spacing: 1px; font-weight: bold;
+.npc-stats-attr-value {
+  color: var(--text-light); font-weight: bold;
+  font-size: 13px; letter-spacing: 1px;
 }
-.npc-stats-divider {
-  height: 1px; background: rgba(201,168,76,0.2); margin: 4px 0;
+
+/* 修为进度条 */
+.npc-stats-exp-bar-wrap {
+  margin-top: 2px; margin-bottom: 4px;
 }
+.npc-stats-exp-bar {
+  height: 4px; background: #1a1a2e; border-radius: 2px; overflow: hidden;
+}
+.npc-stats-exp-fill {
+  height: 100%; border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+/* 天赋标签 */
+.npc-stats-talents {
+  display: flex; flex-wrap: wrap; gap: 6px;
+}
+.npc-stats-talent-tag {
+  font-size: 11px; padding: 3px 10px;
+  border-radius: 12px; letter-spacing: 1px;
+  border: 1px solid;
+}
+.npc-stats-talent-tag.legendary {
+  background: rgba(255,215,0,0.08); border-color: rgba(255,215,0,0.3); color: #ffd700;
+}
+.npc-stats-talent-tag.superior {
+  background: rgba(192,132,252,0.08); border-color: rgba(192,132,252,0.3); color: #c084fc;
+}
+.npc-stats-talent-tag.common {
+  background: rgba(93,173,226,0.08); border-color: rgba(93,173,226,0.2); color: #5dade2;
+}
+.npc-stats-talent-tag.inferior {
+  background: rgba(160,160,160,0.06); border-color: rgba(160,160,160,0.15); color: #999;
+}
+.npc-stats-talent-tag.cursed {
+  background: rgba(231,76,60,0.06); border-color: rgba(231,76,60,0.2); color: #e74c3c;
+}
+
+/* 法宝行 */
+.npc-stats-fabao-row {
+  display: flex; gap: 12px; font-size: 12px;
+}
+.npc-stats-fabao-item {
+  display: flex; align-items: center; gap: 4px;
+  padding: 3px 8px; border-radius: 4px;
+  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);
+}
+
+/* 好感度条 */
+.npc-stats-aff-row {
+  display: flex; align-items: center; gap: 10px; margin-top: 6px;
+}
+.npc-stats-aff-bar-wrap {
+  flex: 1; height: 6px; background: #1a1a2e; border-radius: 3px; overflow: hidden;
+}
+.npc-stats-aff-bar-fill {
+  height: 100%; border-radius: 3px;
+  background: linear-gradient(90deg, #f0a0b0, #e74c3c);
+}
+
+/* 性格标签 */
+.npc-stats-personality {
+  display: flex; align-items: center; gap: 4px;
+  font-size: 12px; color: #c084fc;
+  padding: 3px 10px; border-radius: 12px;
+  background: rgba(192,132,252,0.06); border: 1px solid rgba(192,132,252,0.15);
+}
+
 .npc-stats-close {
-  display: block; margin: 20px auto 0;
-  padding: 8px 28px;
+  display: inline-block;
+  padding: 8px 24px;
   background: transparent; border: 1px solid var(--border-dim);
   border-radius: 6px; color: var(--text-dim);
   font-family: var(--font-cn); font-size: 13px; letter-spacing: 2px;
   cursor: pointer; transition: all 0.2s;
+  margin-top: 8px;
 }
 .npc-stats-close:hover {
   border-color: var(--border-gold); color: var(--text-gold);
@@ -1701,13 +1919,13 @@ body {
 
 /* ── NPC 操作按钮区 ── */
 .npc-stats-actions {
-  display: flex; flex-direction: column; gap: 8px;
-  margin-top: 12px; padding-top: 12px;
-  border-top: 1px solid rgba(201,168,76,0.2);
+  display: flex; flex-direction: column; gap: 6px;
+  margin-top: 6px; padding-top: 10px;
+  border-top: 1px solid rgba(201,168,76,0.15);
 }
 .npc-action-row {
   display: flex; align-items: center; gap: 8px;
-  padding: 4px 0;
+  padding: 2px 0;
 }
 .npc-assign-select {
   background: var(--bg-dark); border: 1px solid var(--border-dim);
@@ -1744,9 +1962,8 @@ body {
   border-color: rgba(255,255,255,0.06);
 }
 
-/* ── NPC 互动按钮 ── */
 .npc-interact-divider {
-  height: 1px; background: rgba(142,200,160,0.15); margin: 4px 0;
+  height: 1px; background: rgba(142,200,160,0.15); margin: 2px 0;
 }
 .npc-action-talk {
   border-color: rgba(93,173,226,0.4) !important;
@@ -1781,7 +1998,28 @@ body {
   font-family: var(--font-cn); font-size: 11px;
   padding: 6px 4px; cursor: pointer;
 }
-.npc-gift-select:focus { border-color: rgba(240,160,176,0.5); outline: none; }
+
+/* ── 响应式：窄屏时转为竖版 ── */
+@media (max-width: 600px) {
+  .npc-stats-overlay-inner {
+    flex-direction: column;
+    width: 94vw;
+  }
+  .npc-stats-left {
+    flex: 0 0 auto;
+    flex-direction: row; gap: 16px;
+    padding: 16px;
+    border-right: none;
+    border-bottom: 1px solid rgba(201,168,76,0.15);
+  }
+  .npc-stats-portrait {
+    width: 100px; height: 150px;
+  }
+  .npc-stats-right {
+    padding: 16px;
+  }
+  .npc-stats-name { font-size: 18px; }
+}
 
 /* ===== 属性面板 ===== */
 .attr-grid {
@@ -2826,61 +3064,128 @@ body {
   box-shadow: 0 0 8px rgba(201,168,76,0.15);
 }
 
-/* ── 排行列表 ── */
-.wp-ranking-list {
-  padding: 12px 16px;
-  display: flex; flex-direction: column; gap: 8px;
+/* ── 顶部工具栏 ── */
+.wp-toolbar {
+  display: flex; align-items: center; gap: 12px;
+  padding: 0 0 4px 0;
 }
-.wp-rank-row {
-  display: flex; align-items: center; gap: 10px;
-  padding: 8px 12px;
-  border-radius: 6px;
-  background: rgba(255,255,255,0.02);
-  border: 1px solid transparent;
-  transition: all 0.2s;
+.wp-toolbar-title {
+  font-size: 16px; color: var(--text-gold); letter-spacing: 3px;
+  font-weight: bold;
 }
-.wp-rank-row:hover {
-  border-color: rgba(201,168,76,0.2);
+
+/* ── 层级分组 ── */
+.wp-tier-section {
+  margin-bottom: 12px;
+}
+.wp-tier-header {
+  font-size: 12px; color: var(--text-dim); letter-spacing: 2px;
+  padding: 6px 0 4px 4px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  margin-bottom: 8px;
+}
+
+/* ── 势力倾向 & 层级徽章 ── */
+.wp-alignment-badge {
+  font-size: 10px; letter-spacing: 1px;
+  padding: 1px 6px; border-radius: 4px;
+  font-weight: bold;
+}
+.wp-align-righteous  { color: #82e0aa; background: rgba(130,224,170,0.1); }
+.wp-align-neutral    { color: #888;     background: rgba(136,136,136,0.1); }
+.wp-align-chaotic    { color: #ef5350;  background: rgba(239,83,80,0.1); }
+.wp-align-unorthodox { color: #e67e22;  background: rgba(230,126,34,0.1); }
+
+.wp-tier-badge {
+  font-size: 9px; letter-spacing: 1px;
+  padding: 1px 5px; border-radius: 3px;
+  color: var(--text-dim);
   background: rgba(255,255,255,0.04);
 }
-.wp-rank-num {
-  font-size: 16px; font-weight: bold; color: var(--text-gold);
-  font-family: monospace; width: 28px; text-align: center;
-  flex-shrink: 0;
+
+/* ── 宗门卡片 ── */
+.wp-sect-name-block {
+  display: flex; flex-direction: column; gap: 2px;
+  flex: 1;
 }
-.wp-rank-icon {
-  font-size: 20px; width: 28px; text-align: center; flex-shrink: 0;
+.wp-sect-subtitle {
+  font-size: 10px; color: var(--text-dim);
+  display: flex; align-items: center; gap: 6px;
 }
-.wp-rank-info {
+.wp-sect-card-body {
+  display: flex; flex-direction: column; gap: 5px;
+}
+.wp-sect-stat {
+  display: flex; justify-content: space-between; align-items: center;
+}
+.wp-stat-label {
+  font-size: 10px; color: var(--text-dim); letter-spacing: 0.5px;
+}
+.wp-stat-value {
+  font-size: 11px; color: var(--text-main);
+}
+.wp-sect-culture {
+  display: flex; flex-wrap: wrap; gap: 3px;
+  padding-top: 4px;
+  border-top: 1px solid rgba(255,255,255,0.04);
+}
+.wp-culture-tag {
+  font-size: 8px; color: var(--text-dim); letter-spacing: 0.5px;
+  opacity: 0.6;
+}
+
+/* ── 世界事件列表 ── */
+.wp-event-list {
+  padding: 8px 12px;
+  display: flex; flex-direction: column; gap: 6px;
+  max-height: 420px;
+  overflow-y: auto;
+}
+.wp-event-entry {
+  display: flex; gap: 10px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,0.04);
+  background: rgba(255,255,255,0.01);
+  transition: all 0.2s;
+}
+.wp-event-entry:hover {
+  border-color: rgba(201,168,76,0.15);
+  background: rgba(255,255,255,0.03);
+}
+.wp-event-icon {
+  font-size: 18px; width: 24px; text-align: center; flex-shrink: 0;
+  line-height: 1.3;
+}
+.wp-event-body {
   flex: 1; min-width: 0;
 }
-.wp-rank-name {
-  font-size: 13px; letter-spacing: 1px; font-weight: bold;
-  margin-bottom: 4px;
+.wp-event-title {
+  font-size: 12px; color: var(--text-gold); letter-spacing: 1px;
+  margin-bottom: 2px;
 }
-.wp-rank-trend {
-  font-size: 12px; margin-left: 4px;
+.wp-event-desc {
+  font-size: 10px; color: var(--text-dim); letter-spacing: 0.5px;
+  line-height: 1.4; margin-bottom: 2px;
 }
-.wp-rank-bar-wrap {
-  height: 6px; background: #1a1a2e; border-radius: 3px;
-  overflow: hidden; margin-bottom: 4px;
+.wp-event-meta {
+  font-size: 9px; color: #555; letter-spacing: 0.5px;
+  display: flex; gap: 8px;
 }
-.wp-rank-bar {
-  height: 100%; border-radius: 3px; transition: width 0.5s ease;
+
+/* ── 可折叠日志 ── */
+.wp-collapsible-header {
+  cursor: pointer; user-select: none;
 }
-.wp-rank-stats {
-  display: flex; gap: 10px; font-size: 10px; color: var(--text-dim);
-  letter-spacing: 0.5px;
+.wp-collapsed {
+  display: none !important;
 }
-.wp-rank-score {
-  font-family: monospace; color: var(--text-gold); font-weight: bold;
-  margin-left: auto;
+.wp-collapse-arrow {
+  font-size: 11px; color: var(--text-dim);
+  margin-left: auto; transition: transform 0.2s;
 }
-.wp-rank-align {
-  font-size: 10px; color: var(--text-dim); letter-spacing: 1px;
-  padding: 2px 8px; border-radius: 8px;
-  background: rgba(255,255,255,0.03);
-  white-space: nowrap; flex-shrink: 0;
+.wp-collapse-open {
+  /* open state handled by textContent */
 }
 
 /* ── 双栏网格 ── */

@@ -1,5 +1,6 @@
 import type { PlayerState } from '../data/types';
 import { PlayerStateSchema } from './schemas';
+import type { NpcStats } from '../data/npcStats';
 
 const SAVE_KEY = 'diy_dungeon_saves';
 const MAX_SLOTS = 3;
@@ -30,6 +31,31 @@ export function saveGame(player: PlayerState, slot?: number): void {
   localStorage.setItem(SAVE_KEY, JSON.stringify(saves));
 }
 
+/** P8 迁移：将旧版 talent 单字段 NPC 数据转换为 talents 数组格式 */
+function migrateNpcInSave(p: PlayerState): PlayerState {
+  if (!p.npcDatabase) return p;
+  let changed = false;
+  const migrated: Record<string, NpcStats> = {};
+  for (const [id, npc] of Object.entries(p.npcDatabase)) {
+    const npcAny = npc as unknown as Record<string, unknown>;
+    if (!npcAny['talents'] || (npcAny['talents'] as unknown[]).length === 0) {
+      const oldTalent = npcAny['talent'] as string | undefined;
+      migrated[id] = {
+        ...npc,
+        talents: oldTalent ? [oldTalent] : ['normal'],
+        isTianjiao: (npcAny['isTianjiao'] as boolean) ?? false,
+      } as NpcStats;
+      changed = true;
+    } else if (npcAny['isTianjiao'] === undefined) {
+      migrated[id] = { ...npc, isTianjiao: false } as NpcStats;
+      changed = true;
+    } else {
+      migrated[id] = npc;
+    }
+  }
+  return changed ? { ...p, npcDatabase: migrated } : p;
+}
+
 // 加载一个存档槽位（Zod 自动补全缺失字段，兼容旧 storyPhase 字段）
 export function loadSave(slot: number): PlayerState | null {
   const saves = loadRaw();
@@ -45,13 +71,14 @@ export function loadSave(slot: number): PlayerState | null {
 
   const result = PlayerStateSchema.safeParse({ ...data, _slot: slot });
   if (result.success) {
-    return result.data as unknown as PlayerState;
+    return migrateNpcInSave(result.data as unknown as PlayerState);
   }
 
   // 解析失败时宽松解析（补全所有缺失字段）
   console.warn('存档字段异常，使用默认值补全', result.error.issues);
   try {
-    return PlayerStateSchema.parse({ ...data, _slot: slot }) as unknown as PlayerState;
+    const parsed = PlayerStateSchema.parse({ ...data, _slot: slot }) as unknown as PlayerState;
+    return migrateNpcInSave(parsed);
   } catch {
     return null;
   }

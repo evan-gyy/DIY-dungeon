@@ -1,6 +1,7 @@
 // ============================================================
 //  src/screens/camp/WorldPanel.ts — 江湖态势面板
-//  门派排名全部从 npcDatabase 实时计算，无一编造。
+//  废除虚假排名，改为按宗门层级+实际实力展示。
+//  新增世界事件历史、可折叠个人日志。
 // ============================================================
 
 import { getPlayer } from '../../state/GameState';
@@ -10,19 +11,41 @@ import {
   joinSect,
   canJoinSect,
   getChronicle,
+  getSectTier,
+  getWorldEventHistory,
   type FactionScore,
   type ChronicleEntry,
 } from '../../systems/WorldState';
 import {
   getFactionRelationLabel,
   getFactionTrust,
-  getFactionAlignment,
   getAlignmentLabel,
 } from '../../systems/FactionSystem';
 import { SECTS } from '../../data/sects';
 import { WORLD_MAP } from '../../data/worldMap';
-import { FACTION_DEFS } from '../../data/sandboxTypes';
 import type { SectId } from '../../data/types';
+
+// ──── 宗门倾向标签渲染 ────
+
+function alignmentBadge(alignment: string): string {
+  const map: Record<string, { label: string; cssClass: string }> = {
+    righteous:  { label: '正道', cssClass: 'wp-align-righteous' },
+    neutral:    { label: '中立', cssClass: 'wp-align-neutral' },
+    chaotic:    { label: '邪道', cssClass: 'wp-align-chaotic' },
+    unorthodox: { label: '左道', cssClass: 'wp-align-unorthodox' },
+  };
+  const b = map[alignment] ?? { label: alignment, cssClass: 'wp-align-neutral' };
+  return `<span class="wp-alignment-badge ${b.cssClass}">${b.label}</span>`;
+}
+
+function tierBadge(tier: string): string {
+  const map: Record<string, string> = {
+    supreme: 'wp-tier-supreme', first_rate: 'wp-tier-first', second_rate: 'wp-tier-second',
+    fringe: 'wp-tier-fringe', special: 'wp-tier-special',
+  };
+  const css = map[tier] ?? 'wp-tier-special';
+  return `<span class="wp-tier-badge ${css}">${tier}</span>`;
+}
 
 // ──── 渲染入口 ────
 
@@ -37,12 +60,15 @@ export function renderWorldPanel(container: HTMLElement): void {
     return;
   }
 
+  const currentTurn = p.worldState?.turn ?? 0;
+
   container.innerHTML = `
     <div class="world-panel">
-      ${renderSectPowerRanking()}
+      ${renderToolbar(currentTurn)}
+      ${renderSectCards()}
       <div class="world-panel-grid">
         <div class="world-panel-left">
-          ${renderSectDetailCards()}
+          ${renderEventHistory()}
         </div>
         <div class="world-panel-right">
           ${renderChronicleSection()}
@@ -51,159 +77,152 @@ export function renderWorldPanel(container: HTMLElement): void {
     </div>
   `;
 
-  bindJoinSectButtons(container);
+  bindButtons(container);
 }
 
-// ──── 宗门实力排行（数据来源：npcDatabase）────
+// ──── 顶部工具栏 ────
 
-function renderSectPowerRanking(): string {
-  const rankings = getFactionRankings();
-  const trendIcon = (t: string) => t === 'rising' ? '📈' : t === 'declining' ? '📉' : '➡️';
-  const maxScore = Math.max(1, ...rankings.map(r => r.score));
+function renderToolbar(currentTurn: number): string {
+  return `<div class="wp-toolbar">
+    <span class="wp-toolbar-title">🌏 江湖态势</span>
+    <span class="wp-turn-badge">第 ${currentTurn} 回合</span>
+    <button class="wp-evolve-btn" id="wp-evolve-btn" title="手动推进世界演化">⏩ 推演</button>
+  </div>`;
+}
 
-  const levelLabel = (lv: number) => {
-    if (lv >= 55) return '渡劫期';
-    if (lv >= 45) return '化神期';
-    if (lv >= 35) return '元婴期';
-    if (lv >= 25) return '结丹期';
-    if (lv >= 15) return '筑基期';
-    if (lv >= 5)  return '炼气期';
-    return '凡俗';
+// ──── 宗门详情卡片（按层级分组）────
+
+function renderSectCards(): string {
+  const factions = getFactionRankings();
+  const p = getPlayer();
+
+  // 按层级分组
+  const tierOrder = ['supreme', 'first_rate', 'second_rate', 'fringe', 'special'] as const;
+  const tierNames: Record<string, string> = {
+    supreme: '顶尖大派', first_rate: '一流门派', second_rate: '二流门派', fringe: '旁门左道', special: '特殊',
+  };
+  const grouped = new Map<string, FactionScore[]>();
+  for (const f of factions) {
+    const list = grouped.get(f.tier) ?? [];
+    list.push(f);
+    grouped.set(f.tier, list);
+  }
+
+  let html = '';
+  for (const tier of tierOrder) {
+    const list = grouped.get(tier);
+    if (!list || list.length === 0) continue;
+    html += `<div class="wp-tier-section">
+      <div class="wp-tier-header">${tierNames[tier] ?? tier}</div>
+      <div class="wp-cards-grid">
+        ${list.map(r => renderOneSectCard(r, p)).join('')}
+      </div>
+    </div>`;
+  }
+
+  return html;
+}
+
+function renderOneSectCard(r: FactionScore, p: ReturnType<typeof getPlayer>): string {
+  const sectData = SECTS[r.factionId];
+  if (!sectData) return '';
+
+  const isMySect = p.sect === r.factionId;
+  const canJoinResult = p.sect !== r.factionId ? canJoinSect(r.factionId) : { canJoin: false, reason: '' };
+  const alignment = sectData.alignment ?? 'neutral';
+
+  // 宗主/掌门信息
+  const leaderFromDb = Object.values(p.npcDatabase ?? {})
+    .filter(n => n.sect === r.factionId && (n.discipleRank === 'leader' || n.discipleRank === 'elder'))
+    .sort((a, b) => b.level - a.level)[0];
+  const leaderInfo = leaderFromDb
+    ? `${leaderFromDb.name}（Lv${leaderFromDb.level}）`
+    : r.topNpcName !== '—' ? `${r.topNpcName}（Lv${r.maxLevel}）` : '暂无';
+
+  // 加入按钮
+  let joinBtn = '';
+  if (!isMySect && canJoinResult.canJoin) {
+    joinBtn = `<button class="wp-join-btn" data-join-sect="${r.factionId}">拜入</button>`;
+  } else if (isMySect) {
+    joinBtn = `<span class="wp-my-sect-badge">⚜️ 本门</span>`;
+  } else if (canJoinResult.reason) {
+    const short = canJoinResult.reason.length > 8 ? canJoinResult.reason.slice(0, 8) + '…' : canJoinResult.reason;
+    joinBtn = `<span class="wp-join-hint" title="${canJoinResult.reason}">🔒 ${short}</span>`;
+  }
+
+  return `<div class="wp-sect-card">
+    <div class="wp-sect-card-header">
+      <span class="wp-sect-icon">${sectData.icon}</span>
+      <div class="wp-sect-name-block">
+        <span class="wp-sect-name" style="color:${sectData.color}">${sectData.name}</span>
+        <span class="wp-sect-subtitle">${alignmentBadge(alignment)}</span>
+      </div>
+      ${joinBtn}
+    </div>
+    <div class="wp-sect-card-body">
+      <div class="wp-sect-stat"><span class="wp-stat-label">弟子</span><span class="wp-stat-value">${r.npcCount} 人</span></div>
+      <div class="wp-sect-stat"><span class="wp-stat-label">宗主</span><span class="wp-stat-value">${leaderInfo}</span></div>
+      ${sectData.culture ? `<div class="wp-sect-culture">${sectData.culture.map((c: string) => `<span class="wp-culture-tag">#${c}</span>`).join(' ')}</div>` : ''}
+    </div>
+  </div>`;
+}
+
+// ──── 世界事件历史 ────
+
+function renderEventHistory(): string {
+  const events = getWorldEventHistory();
+
+  const categoryIcon: Record<string, string> = {
+    conflict: '⚔️', diplomacy: '🤝', discovery: '💎', disaster: '🦠', opportunity: '💰',
   };
 
-  const bars = rankings.map(r => {
-    const sectData = SECTS[r.factionId] ?? { name: r.factionId, color: '#888', icon: '🏯' };
-    const barWidth = Math.round((r.score / maxScore) * 100);
-    const alignment = FACTION_DEFS[r.factionId]?.alignment ?? 'neutral';
-    const alignmentLabel = getAlignmentLabel(alignment);
+  if (events.length === 0) {
+    return `<div class="wp-section">
+      <div class="wp-section-title">🌍 江湖事件</div>
+      <div class="wp-chronicle-empty">
+        <p>江湖风平浪静，暂无大事发生。</p>
+        <p style="font-size:11px;">日常修行时将有概率触发江湖事件。</p>
+      </div>
+    </div>`;
+  }
 
-    return `<div class="wp-rank-row" data-sect="${r.factionId}">
-      <div class="wp-rank-num">#${r.rank}</div>
-      <div class="wp-rank-icon">${sectData.icon}</div>
-      <div class="wp-rank-info">
-        <div class="wp-rank-name" style="color:${sectData.color}">
-          ${r.name} <span class="wp-rank-trend">${trendIcon(r.trend)}</span>
-        </div>
-        <div class="wp-rank-bar-wrap">
-          <div class="wp-rank-bar" style="width:${barWidth}%;background:${sectData.color}"></div>
-        </div>
-        <div class="wp-rank-stats">
-          <span title="NPC人数">👥${r.npcCount}人</span>
-          <span title="平均修为">📊${levelLabel(r.avgLevel)}</span>
-          <span title="最高修为">🏆${r.topNpcName}(${levelLabel(r.maxLevel)})</span>
-          <span class="wp-rank-score">实力 ${r.score}</span>
+  const now = Date.now();
+  const formatTime = (ts: number): string => {
+    const diff = Math.floor((now - ts) / 1000);
+    if (diff < 60) return '刚才';
+    if (diff < 3600) return `${Math.floor(diff / 60)}分钟前`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}小时前`;
+    return `${Math.floor(diff / 86400)}天前`;
+  };
+
+  const listHtml = events.slice(0, 15).map(e => {
+    return `<div class="wp-event-entry">
+      <div class="wp-event-icon">${categoryIcon[e.category] ?? '📌'}</div>
+      <div class="wp-event-body">
+        <div class="wp-event-title">${e.title}</div>
+        <div class="wp-event-desc">${e.description}</div>
+        <div class="wp-event-meta">
+          <span>🕐 第 ${e.turn} 回合 · ${formatTime(e.timestamp)}</span>
         </div>
       </div>
-      <div class="wp-rank-align">${alignmentLabel}</div>
     </div>`;
   }).join('');
 
-  const currentTurn = getPlayer().worldState?.turn ?? 0;
-
   return `<div class="wp-section">
-    <div class="wp-section-title">
-      🏆 宗門實力
-      <span class="wp-turn-badge">第 ${currentTurn} 回合</span>
-      <button class="wp-evolve-btn" id="wp-evolve-btn" title="手动推进世界演化">⏩ 推演</button>
-    </div>
-    <div class="wp-ranking-list">${bars}</div>
+    <div class="wp-section-title">🌍 江湖事件 <span class="wp-turn-badge">共 ${events.length} 件</span></div>
+    <div class="wp-event-list">${listHtml}</div>
   </div>`;
 }
 
-// ──── 势力详情卡片 ────
-
-function renderSectDetailCards(): string {
-  const rankings = getFactionRankings();
-  const p = getPlayer();
-
-  return `<div class="wp-section">
-    <div class="wp-section-title">📊 各派詳情</div>
-    <div class="wp-cards-grid">
-      ${rankings.map(r => {
-        const sectData = SECTS[r.factionId] ?? { name: r.factionId, color: '#888', icon: '🏯' };
-        const isMySect = p.sect === r.factionId;
-        const canJoinResult = p.sect !== r.factionId ? canJoinSect(r.factionId) : { canJoin: false, reason: '' };
-
-        // 列出该势力所有 NPC
-        const npcs = Object.values(p.npcDatabase ?? {})
-          .filter(n => n.sect === r.factionId)
-          .sort((a, b) => b.level - a.level);
-
-        const npcList = npcs.length > 0
-          ? npcs.map(n => {
-            const rankLabel = { outer:'外门', inner:'内门', true:'真传', elder:'长老', leader:'掌门' }[n.discipleRank as string] ?? n.discipleRank;
-            return `<div class="wp-npc-row">
-              <span class="wp-npc-name">${n.name}</span>
-              <span class="wp-npc-lv">Lv${n.level}</span>
-              <span class="wp-npc-rank-badge">${rankLabel}</span>
-            </div>`;
-          }).join('')
-          : `<div class="wp-npc-empty">暂无弟子</div>`;
-
-        // 外交关系
-        const relations = ['wudang','shaolin','emei','beggar','huashan','demon',
-          'maoshan','kunlun','qingcheng','tangmen','xiaoyao',
-          'quanzhen','kongtong','diancang',
-          'riyue','tiezhang','wudu','xuedao','haisha'] as SectId[];
-        const relationTags = relations
-          .filter(other => other !== r.factionId)
-          .map(other => {
-            const trust = getFactionTrust(r.factionId, other);
-            const label = getFactionRelationLabel(r.factionId, other);
-            const color = trust >= 60 ? 'var(--text-gold)' : trust >= 30 ? '#888' : '#ef5350';
-            const shortName: Record<SectId, string> = {
-              wudang:'武当', shaolin:'少林', emei:'峨眉', beggar:'丐帮', huashan:'华山', demon:'魔教',
-              maoshan:'茅山', kunlun:'昆仑', qingcheng:'青城', tangmen:'唐门', xiaoyao:'逍遥',
-              quanzhen:'全真', kongtong:'崆峒', diancang:'点苍', none:'散修',
-              riyue:'日月', tiezhang:'铁掌', wudu:'五毒', xuedao:'血刀', haisha:'海沙',
-            };
-            return `<span class="wp-rel-tag" style="color:${color}" title="${label}(${trust})">${shortName[other] ?? other}:${trust}</span>`;
-          }).join(' ');
-
-        // 加入按钮
-        const joinBtn = !isMySect && canJoinResult.canJoin
-          ? `<button class="wp-join-btn" data-join-sect="${r.factionId}">拜入</button>`
-          : isMySect
-            ? `<span class="wp-my-sect-badge">⚜️ 本门</span>`
-            : canJoinResult.reason
-              ? `<span class="wp-join-hint" title="${canJoinResult.reason}">🔒 ${canJoinResult.reason.slice(0,8)}…</span>`
-              : '';
-
-        return `<div class="wp-sect-card">
-          <div class="wp-sect-card-header">
-            <span class="wp-sect-icon">${sectData.icon}</span>
-            <div>
-              <div class="wp-sect-name" style="color:${sectData.color}">${r.name}</div>
-              <div class="wp-sect-rank">排名 #${r.rank} · 实力 ${r.score}（均Lv${r.avgLevel} × 5 + ${r.npcCount}人 × 2）</div>
-            </div>
-            ${joinBtn}
-          </div>
-          <div class="wp-sect-npc-list">
-            <div class="wp-npc-list-title">📋 門人（${r.npcCount}人）</div>
-            ${npcList}
-          </div>
-          <div class="wp-sect-relations">${relationTags}</div>
-        </div>`;
-      }).join('')}
-    </div>
-  </div>`;
-}
-
-// ──── 个人日志 ────
+// ──── 个人日志（可折叠）────
 
 function renderChronicleSection(): string {
   const entries = getChronicle();
+  const collapsed = entries.length > 5; // 超过5条默认折叠
 
   const categoryIcon: Record<string, string> = {
-    world_event: '🌍',
-    sect_join: '🏯',
-    rank_promotion: '⬆️',
-    mission_complete: '✅',
-    npc_interaction: '💬',
-    travel: '🗺️',
-    battle: '⚔️',
-    discovery: '💎',
-    court_affair: '🏛️',
+    world_event: '🌍', sect_join: '🏯', rank_promotion: '⬆️', mission_complete: '✅',
+    npc_interaction: '💬', travel: '🗺️', battle: '⚔️', discovery: '💎', court_affair: '🏛️',
   };
 
   const now = Date.now();
@@ -225,7 +244,7 @@ function renderChronicleSection(): string {
     </div>`;
   }
 
-  const listHtml = entries.slice(0, 20).map(e => {
+  const listHtml = entries.slice(0, 30).map(e => {
     const locName = e.locationId ? (WORLD_MAP[e.locationId]?.name ?? '') : '';
     return `<div class="wp-chronicle-entry">
       <div class="wp-chronicle-icon">${categoryIcon[e.category] ?? '📌'}</div>
@@ -240,33 +259,35 @@ function renderChronicleSection(): string {
     </div>`;
   }).join('');
 
+  const collapseId = 'wp-chronicle-collapse';
   return `<div class="wp-section">
-    <div class="wp-section-title">📖 个人日志 <span class="wp-turn-badge">共 ${entries.length} 条</span></div>
-    <div class="wp-chronicle-list">${listHtml}</div>
+    <div class="wp-section-title wp-collapsible-header" data-collapse="${collapseId}" style="cursor:pointer;">
+      📖 个人日志 <span class="wp-turn-badge">共 ${entries.length} 条</span>
+      <span class="wp-collapse-arrow ${collapsed ? '' : 'wp-collapse-open'}" id="${collapseId}-arrow">${collapsed ? '▶' : '▼'}</span>
+    </div>
+    <div class="wp-chronicle-list ${collapsed ? 'wp-collapsed' : ''}" id="${collapseId}">
+      ${listHtml}
+    </div>
   </div>`;
 }
 
 // ──── 绑定按钮 ────
 
-function bindJoinSectButtons(container: HTMLElement): void {
+function bindButtons(container: HTMLElement): void {
+  // 拜入宗门
   container.querySelectorAll<HTMLElement>('[data-join-sect]').forEach(btn => {
     btn.addEventListener('click', () => {
       const sectId = btn.dataset['joinSect'] as SectId;
       if (!sectId) return;
-
       const sectName = SECTS[sectId]?.name ?? sectId;
       const confirmed = confirm(`确定要拜入【${sectName}】吗？`);
       if (!confirmed) return;
-
       joinSect(sectId);
-
-      import('../Camp').then(m => {
-        m.enterCamp();
-      });
+      import('../Camp').then(m => m.enterCamp());
     });
   });
 
-  // 手动推演按钮
+  // 手动推演
   const evolveBtn = container.querySelector('#wp-evolve-btn');
   if (evolveBtn) {
     evolveBtn.addEventListener('click', () => {
@@ -284,4 +305,25 @@ function bindJoinSectButtons(container: HTMLElement): void {
       if (parent) renderWorldPanel(parent);
     });
   }
+
+  // 日志折叠/展开
+  container.querySelectorAll<HTMLElement>('[data-collapse]').forEach(header => {
+    header.addEventListener('click', () => {
+      const targetId = header.dataset['collapse'];
+      if (!targetId) return;
+      const target = document.getElementById(targetId);
+      const arrow = document.getElementById(targetId + '-arrow');
+      if (!target || !arrow) return;
+      const isCollapsed = target.classList.contains('wp-collapsed');
+      if (isCollapsed) {
+        target.classList.remove('wp-collapsed');
+        arrow.textContent = '▼';
+        arrow.classList.add('wp-collapse-open');
+      } else {
+        target.classList.add('wp-collapsed');
+        arrow.textContent = '▶';
+        arrow.classList.remove('wp-collapse-open');
+      }
+    });
+  });
 }

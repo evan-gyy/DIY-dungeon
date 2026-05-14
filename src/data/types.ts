@@ -69,6 +69,51 @@ export type SkillId =
   | 'riyue_qiankun_true' | 'riyue_sacred_sun' | 'riyue_tianren' | 'riyue_sun_moon_divine'
   // 渡劫
   | 'riyue_nirvana' | 'riyue_void_moon' | 'riyue_dark_sun' | 'riyue_ultimate'
+  // ── 峨眉派扩展（P6 Batch 2）──
+  // 炼气
+  | 'emei_chan_yi' | 'emei_flower_needle' | 'emei_cloud_step'
+  // 筑基
+  | 'emei_sword_breeze' | 'emei_jade_guard' | 'emei_iron_finger'
+  // 结丹
+  | 'emei_lotus_palm' | 'emei_swallow_sword' | 'emei_bell_sound'
+  // 元婴
+  | 'emei_nirvana' | 'emei_sword_phoenix' | 'emei_plum_heal'
+  // ── 丐帮扩展（P6 Batch 2）──
+  // 炼气
+  | 'beggar_wine' | 'beggar_slap' | 'beggar_roll'
+  // 筑基
+  | 'beggar_kick' | 'beggar_iron_shirt' | 'beggar_storm_fist'
+  // 结丹
+  | 'beggar_18_subdue' | 'beggar_dog_storm' | 'beggar_roar'
+  // 元婴
+  | 'beggar_overlord' | 'beggar_dragon_roar' | 'beggar_chief_fist'
+  // ── 全真教（P6 Batch 2）──
+  // 炼气
+  | 'quanzhen_sword' | 'quanzhen_qi' | 'quanzhen_fist' | 'quanzhen_step'
+  // 筑基
+  | 'quanzhen_sword_qian' | 'quanzhen_neidan' | 'quanzhen_beidou' | 'quanzhen_fu'
+  // 结丹
+  | 'quanzhen_sword_kun' | 'quanzhen_thunder' | 'quanzhen_7star_array' | 'quanzhen_sword_divide'
+  // 元婴
+  | 'quanzhen_dao_jing' | 'quanzhen_sword_lord' | 'quanzhen_shendan' | 'quanzhen_sword_star'
+  // ── 昆仑派（P6 Batch 2）──
+  // 炼气
+  | 'kunlun_sword' | 'kunlun_ice_qi' | 'kunlun_frost_palm' | 'kunlun_snow_step'
+  // 筑基
+  | 'kunlun_sword_cold' | 'kunlun_ice_guard' | 'kunlun_blizzard' | 'kunlun_freeze'
+  // 结丹
+  | 'kunlun_sword_jiuxiao' | 'kunlun_glacier' | 'kunlun_snow_veil' | 'kunlun_sword_storm'
+  // 元婴
+  | 'kunlun_hanbing' | 'kunlun_sword_peak' | 'kunlun_jade_purity' | 'kunlun_sword_frozen'
+  // ── 唐门（P6 Batch 2）──
+  // 炼气
+  | 'tang_needle' | 'tang_poison_qi' | 'tang_blade_basic' | 'tang_smoke'
+  // 筑基
+  | 'tang_dart' | 'tang_shadow_step' | 'tang_rain_needle' | 'tang_venom'
+  // 结丹
+  | 'tang_blade_adv' | 'tang_poison_mist' | 'tang_dart_storm' | 'tang_toxic_art'
+  // 元婴
+  | 'tang_blade_master' | 'tang_pear_flower' | 'tang_poison_secret' | 'tang_night_walker'
   ;
 
 export type EnemyId =
@@ -490,6 +535,8 @@ export interface PlayerState {
   npcDatabase?: Record<string, NpcStats>; // NPC 数值卡数据库（可选，首次加载时初始化）
   /** 🆕 NPC 好感度字典：key=NPC的npcDbId，value=好感度数值 */
   npcAffection: Record<string, number>;
+  /** 🆕 P8: NPC 间友好度字典：key=`${idA}_${idB}`(A<B字典序)，value=-100~100 */
+  npcRelationship: Record<string, number>;
   // 🆕 突破与宗门系统（沙盒模式预留）
   /** 已解锁突破的大境界列表（如 ['zhuji'] 表示筑基突破已解锁） */
   realmBreakUnlocked: string[];

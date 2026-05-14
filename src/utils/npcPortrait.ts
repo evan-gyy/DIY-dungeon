@@ -19,43 +19,85 @@ const FIXED_PORTRAIT_MAP: Record<string, string> = {
   'zhao_qinwei':      'picture/Female-main/趙沁微.png',
 
   // 武当派
-  'zhang_xuansu':     'picture/NPC/张玄素.png',
-  'chen_jingxu':      'picture/NPC/陈静虚.png',
-  'zhou_boan':        'picture/NPC/周伯安.png',
-  'song_zhiyuan':     'picture/NPC/宋知远.png',
-  'gu_xiaosang':      'picture/NPC/顾小桑.png',
-  'lu_chengzhou':     'picture/NPC/陆沉舟.png',
-  'ji_wushuang_npc':  'picture/NPC/纪无双.png',
-  'su_yunxiu_npc':    'picture/NPC/苏云绣.png',
-  'fang_zhonghe_npc': 'picture/NPC/方仲和.png',
-  'meng_wenyuan':     'picture/NPC/孟文渊.png',
-  'ye_ziyi':          'picture/NPC/叶紫衣.png',
+  'zhang_xuansu':     'picture/NPC/武当派/张玄素.png',
+  'chen_jingxu':      'picture/NPC/武当派/陈静虚.png',
+  'zhou_boan':        'picture/NPC/武当派/周伯安.png',
+  'song_zhiyuan':     'picture/NPC/武当派/宋知远.png',
+  'gu_xiaosang':      'picture/NPC/武当派/顾小桑.png',
+  'lu_chengzhou':     'picture/NPC/武当派/陆沉舟.png',
+  'ji_wushuang_npc':  'picture/NPC/武当派/纪无双.png',
+  'su_yunxiu_npc':    'picture/NPC/武当派/苏云绣.png',
+  'fang_zhonghe_npc': 'picture/NPC/武当派/方仲和.png',
+  'meng_wenyuan':     'picture/NPC/武当派/孟文渊.png',
+  'ye_ziyi':          'picture/NPC/武当派/叶紫衣.png',
+
+  // 少林派
+  'shaolin_kongwen':  'picture/NPC/少林派/空闻方丈.png',
+  'shaolin_kongjian': 'picture/NPC/少林派/空见首座.png',
+
+  // 峨眉派
+  'emei_miejue':     'picture/NPC/峨眉派/灭绝师太.png',
+  'emei_jingxuan':   'picture/NPC/峨眉派/静玄师太.png',
+
+  // 丐帮
+  'beggar_hong':     'picture/NPC/丐帮/洪帮主.png',
+  'beggar_lu':       'picture/NPC/丐帮/鲁有脚.png',
+
+  // 华山派
+  'huashan_master':  'picture/NPC/华山派/岳掌门.png',
+  'huashan_feng':    'picture/NPC/华山派/封不平.png',
+
+  // 黑月教
+  'demon_master':    'picture/NPC/黑月教/教主.png',
+  'demon_yang':      'picture/NPC/黑月教/杨左使.png',
+
+  // 茅山派
+  'maoshan_zhangmen': 'picture/NPC/茅山派/陶天师.png',
+  'maoshan_elder':    'picture/NPC/茅山派/葛玄清.png',
+
+  // 昆仑派
+  'kunlun_zhangmen': 'picture/NPC/昆仑派/何太虚.png',
+  'kunlun_elder':    'picture/NPC/昆仑派/寒松子.png',
+
+  // 青城派
+  'qingcheng_zhangmen': 'picture/NPC/青城派/余掌门.png',
+  'qingcheng_elder':    'picture/NPC/青城派/常鹤鸣.png',
+
+  // 唐门
+  'tangmen_zhangmen': 'picture/NPC/唐门/唐老太太.png',
+  'tangmen_elder':    'picture/NPC/唐门/唐无影.png',
+
+  // 逍遥派
+  'xiaoyao_zhangmen': 'picture/NPC/逍遥派/逍遥子.png',
+  'xiaoyao_elder':    'picture/NPC/逍遥派/苏星河.png',
 
   // 全真教
-  'quanzhen_zhangmen': 'picture/NPC/陈道玄.png',
-  'quanzhen_elder':    'picture/NPC/李清元.png',
-  'quanzhen_qiuchuji': 'picture/NPC/周抱朴.png',
+  'quanzhen_zhangmen':  'picture/NPC/全真派/陈道玄.png',
+  'quanzhen_elder':     'picture/NPC/全真派/李清元.png',
+  'quanzhen_qiuchuji':  'picture/NPC/全真派/周抱朴.png',
 
   // 崆峒派
-  'kongtong_zhangmen': 'picture/NPC/铁昆仑.png',
-  'kongtong_elder':    'picture/NPC/霍震岳.png',
+  'kongtong_zhangmen': 'picture/NPC/崆峒派/铁昆仑.png',
+  'kongtong_elder':    'picture/NPC/崆峒派/霍震岳.png',
 
   // 点苍派
-  'diancang_zhangmen': 'picture/NPC/杨天纵.png',
-  'diancang_elder':    'picture/NPC/谢云帆.png',
+  'diancang_zhangmen': 'picture/NPC/点苍派/杨天纵.png',
+  'diancang_elder':    'picture/NPC/点苍派/谢云帆.png',
 
   // 朝廷文官
-  'xiangyang_zhifu':    'picture/NPC/郭铁山.png',
-  'changan_zhifu':      'picture/NPC/韩维庸.png',
-  'jiangling_zhifu':    'picture/NPC/刘守安.png',
-  'chengdu_zhifu':      'picture/NPC/王仲良.png',
-  'yangzhou_zhizhou':   'picture/NPC/杜文清.png',
-  'suzhou_zhizhou':     'picture/NPC/白修文.png',
-  'hangzhou_zhifu':     'picture/NPC/林观潮.png',
-  'dali_guoxiang':      'picture/NPC/高檀让.png',
-  'jiangzhou_zhizhou':  'picture/NPC/司马秋客.png',
-  'tanzhou_zhifu':      'picture/NPC/周必正.png',
-  'guangzhou_shibosi':  'picture/NPC/陈望海.png',
+  'kaifeng_fuyin':      'picture/NPC/官府/包拯.png',
+  'luoyang_zhifu':      'picture/NPC/官府/赵汝成.png',
+  'changan_zhifu':      'picture/NPC/官府/韩维庸.png',
+  'xiangyang_zhifu':    'picture/NPC/官府/郭铁山.png',
+  'jiangling_zhifu':    'picture/NPC/官府/刘守安.png',
+  'chengdu_zhifu':      'picture/NPC/官府/王仲良.png',
+  'yangzhou_zhizhou':   'picture/NPC/官府/杜文清.png',
+  'suzhou_zhizhou':     'picture/NPC/官府/白修文.png',
+  'hangzhou_zhifu':     'picture/NPC/官府/林观潮.png',
+  'dali_guoxiang':      'picture/NPC/官府/高檀让.png',
+  'jiangzhou_zhizhou':  'picture/NPC/官府/司马秋客.png',
+  'tanzhou_zhifu':      'picture/NPC/官府/周必正.png',
+  'guangzhou_shibosi':  'picture/NPC/官府/陈望海.png',
 };
 
 // ──── 随机宗门弟子立绘池 ────

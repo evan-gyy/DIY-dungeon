@@ -1,7 +1,7 @@
 import { getPlayer, setPlayer } from '../../state/GameState';
 import { saveGame } from '../../state/SaveSystem';
 import { getNpcStats } from '../../systems/NpcBehavior';
-import { TALENTS } from '../../data/realmConfig';
+import { TALENTS, TALENT_TIER, TALENT_TIER_CONFIG, type TalentId } from '../../data/realmConfig';
 import { getRealmName, getExpForLevel, isRealmMaxLevel } from '../../state/LevelSystem';
 import { FABAO } from '../../data/fabao';
 import type { NpcStats, NpcPersonality } from '../../data/npcStats';
@@ -253,105 +253,138 @@ export function showNpcStatsOverlay(npcDbId: string, npcName: string, npcImg: st
   const affection = getNpcAffection(npcDbId);
   const isRecruited = p.npcCollection?.recruited?.includes(npcDbId) ?? false;
 
+  // ── 宗门名称映射 ──
+  const sectNames: Record<string, string> = {
+    wudang: '武当', shaolin: '少林', emei: '峨眉', beggar: '丐帮',
+    huashan: '华山', demon: '黑月教', maoshan: '茅山', kunlun: '昆仑',
+    qingcheng: '青城', tangmen: '唐门', xiaoyao: '逍遥',
+    quanzhen: '全真', kongtong: '崆峒', diancang: '点苍',
+    riyue: '日月教', tiezhang: '铁掌帮', wudu: '五毒教', xuedao: '血刀门', haisha: '海沙派',
+    none: '散修',
+  };
+
+  // ── 境界颜色映射（用于立绘光环） ──
+  const realmColors: Record<string, string> = {
+    '炼气': '#e8e8e8', '筑基': '#4caf50', '结丹': '#42a5f5',
+    '元婴': '#ab47bc', '化神': '#ffd700', '渡劫': '#ef5350',
+    '大乘': '#daa520', '飞升': '#7b68ee',
+  };
+
   let bodyHtml = '';
   if (!stats) {
     bodyHtml = `<p style="color:var(--text-dim);text-align:center;padding:20px;">暂无该角色的详细数据。</p>`;
   } else {
-    const talent = TALENTS[stats.talent];
+    const talentIds = (stats.talents?.length ? stats.talents : (stats.talent ? [stats.talent] : ['normal'])) as string[];
+    const npcTalents = talentIds.map((tid: string) => {
+      const id = tid as TalentId;
+      return { id, data: TALENTS[id], tier: TALENT_TIER[id] ?? 'common' };
+    });
     const realm = getRealmName(stats.level);
+    const realmColor = realmColors[realm] ?? '#c9a84c';
     const expNeeded = getExpForLevel(stats.level);
     const atMax = isRealmMaxLevel(stats.level);
     const expPct = atMax ? 100 : Math.min(100, Math.floor(stats.exp / expNeeded * 100));
     const fabaoWeapon = stats.equippedFabao.weapon ? FABAO[stats.equippedFabao.weapon] : null;
     const fabaoArmor = stats.equippedFabao.armor ? FABAO[stats.equippedFabao.armor] : null;
     const fabaoAcc = stats.equippedFabao.accessory ? FABAO[stats.equippedFabao.accessory] : null;
-
-    // 🆕 双身份 + 好感度 + 性格
+    const sectName = sectNames[stats.sect] ?? stats.sect;
     const discipleLabel = getRankLabel(stats.discipleRank);
     const courtLabel = COURT_RANK_LABEL[stats.courtRank as CourtRank] ?? '平民';
     const personality = stats.personality ?? 'gentle';
     const persCfg = PERSONALITY[personality];
 
     bodyHtml = `
-      <div class="npc-stats-body">
-        <!-- 双身份 -->
-        <div class="npc-stats-row">
-          <span class="npc-stats-label">武林身份</span>
-          <span class="npc-stats-value" style="color:#c9a84c;">${discipleLabel}</span>
+      <!-- 身份双栏 -->
+      <div class="npc-stats-identity-row">
+        <span class="npc-stats-identity-tag sect">🏛️ ${sectName} · ${discipleLabel}</span>
+        <span class="npc-stats-identity-tag court">🏯 ${courtLabel}</span>
+      </div>
+
+      <!-- 修为 -->
+      <div class="npc-stats-section">
+        <div class="npc-stats-section-title"><span class="icon">☯️</span>修为境界</div>
+        <div class="npc-stats-attr-row">
+          <span class="npc-stats-attr-label">境界</span>
+          <span class="npc-stats-attr-value" style="color:${realmColor};">${realm}</span>
         </div>
-        <div class="npc-stats-row">
-          <span class="npc-stats-label">庙堂身份</span>
-          <span class="npc-stats-value" style="color:#8ec8a0;">${courtLabel}</span>
+        <div class="npc-stats-exp-bar-wrap">
+          <div class="npc-stats-attr-row">
+            <span class="npc-stats-attr-label">修为进度</span>
+            <span class="npc-stats-attr-value" style="font-size:11px;color:${atMax ? '#e74c3c' : 'var(--text-dim)'};">${atMax ? '已满' : `${stats.exp} / ${expNeeded}`}</span>
+          </div>
+          <div class="npc-stats-exp-bar">
+            <div class="npc-stats-exp-fill" style="width:${expPct}%;background:${atMax ? '#e74c3c' : `linear-gradient(90deg,${realmColor},#9b59b6)`};"></div>
+          </div>
         </div>
-        <div class="npc-stats-row">
-          <span class="npc-stats-label">❤️ 好感度</span>
-          <span class="npc-stats-value" style="color:#f0a0b0;">${affection} / 100</span>
+      </div>
+
+      <!-- 六维属性 -->
+      <div class="npc-stats-section">
+        <div class="npc-stats-section-title"><span class="icon">📊</span>基础属性</div>
+        <div class="npc-stats-attr-grid">
+          <div class="npc-stats-attr-row">
+            <span class="npc-stats-attr-label">❤️ 气血</span>
+            <span class="npc-stats-attr-value">${stats.hp} / ${stats.maxHp}</span>
+          </div>
+          <div class="npc-stats-attr-row">
+            <span class="npc-stats-attr-label">💧 内力</span>
+            <span class="npc-stats-attr-value">${stats.mp} / ${stats.maxMp}</span>
+          </div>
+          <div class="npc-stats-attr-row">
+            <span class="npc-stats-attr-label">⚔️ 攻击</span>
+            <span class="npc-stats-attr-value">${stats.atk}</span>
+          </div>
+          <div class="npc-stats-attr-row">
+            <span class="npc-stats-attr-label">🛡️ 防御</span>
+            <span class="npc-stats-attr-value">${stats.def}</span>
+          </div>
+          <div class="npc-stats-attr-row">
+            <span class="npc-stats-attr-label">💨 身法</span>
+            <span class="npc-stats-attr-value">${stats.agi}</span>
+          </div>
+          <div class="npc-stats-attr-row">
+            <span class="npc-stats-attr-label">💥 暴击</span>
+            <span class="npc-stats-attr-value">${stats.crit}%</span>
+          </div>
         </div>
-        <div class="npc-stats-row">
-          <span class="npc-stats-label">性格</span>
-          <span class="npc-stats-value" style="color:#c084fc;">${persCfg.icon} ${persCfg.name}</span>
+      </div>
+
+      <!-- 天赋 -->
+      <div class="npc-stats-section">
+        <div class="npc-stats-section-title"><span class="icon">🌟</span>天赋</div>
+        <div class="npc-stats-talents">
+          ${npcTalents.map(t => {
+            const tierCfg = TALENT_TIER_CONFIG[t.tier];
+            return `<span class="npc-stats-talent-tag ${t.tier}" title="${t.data?.desc ?? ''}">${tierCfg?.label ? `[${tierCfg.label}] ` : ''}${t.data?.name ?? t.id}</span>`;
+          }).join('')}
         </div>
-        <div style="font-size:11px;color:var(--text-dim);margin-bottom:6px;line-height:1.4;">${persCfg.desc}</div>
-        <div class="npc-stats-divider"></div>
-        <div class="npc-stats-row">
-          <span class="npc-stats-label">修为</span>
-          <span class="npc-stats-value" style="color:var(--text-gold);">${realm}</span>
+      </div>
+
+      <!-- 法宝 -->
+      <div class="npc-stats-section">
+        <div class="npc-stats-section-title"><span class="icon">💎</span>装备法宝</div>
+        <div class="npc-stats-fabao-row">
+          <span class="npc-stats-fabao-item" style="color:${fabaoWeapon?.colorCss || 'var(--text-dim)'};">⚔️ ${fabaoWeapon?.name || '无'}</span>
+          <span class="npc-stats-fabao-item" style="color:${fabaoArmor?.colorCss || 'var(--text-dim)'};">🛡️ ${fabaoArmor?.name || '无'}</span>
+          <span class="npc-stats-fabao-item" style="color:${fabaoAcc?.colorCss || 'var(--text-dim)'};">💎 ${fabaoAcc?.name || '无'}</span>
         </div>
-        <div class="npc-stats-row">
-          <span class="npc-stats-label">修为进度</span>
-          <span class="npc-stats-value" style="font-size:11px;color:${atMax ? '#e74c3c' : 'var(--text-dim)'};">${atMax ? '已满（等待突破契机）' : `${stats.exp} / ${expNeeded}`}</span>
+      </div>
+
+      <!-- 好感度 + 性格 -->
+      <div class="npc-stats-section">
+        <div class="npc-stats-section-title"><span class="icon">💝</span>关系</div>
+        <div class="npc-stats-aff-row">
+          <span style="font-size:12px;color:#f0a0b0;white-space:nowrap;">❤️ ${affection}/100</span>
+          <div class="npc-stats-aff-bar-wrap">
+            <div class="npc-stats-aff-bar-fill" style="width:${affection}%;"></div>
+          </div>
+          <span class="npc-stats-personality">${persCfg.icon} ${persCfg.name}</span>
         </div>
-        <div style="height:4px;background:#1a1a2e;border-radius:2px;overflow:hidden;margin:4px 0 8px;">
-          <div style="height:100%;width:${expPct}%;background:${atMax ? '#e74c3c' : 'linear-gradient(90deg,#5dade2,#9b59b6)'};border-radius:2px;"></div>
-        </div>
-        <div class="npc-stats-row">
-          <span class="npc-stats-label">天赋</span>
-          <span class="npc-stats-value" style="color:#c084fc;">${talent?.name || '—'}</span>
-        </div>
-        <div class="npc-stats-row">
-          <span class="npc-stats-label">天赋说明</span>
-          <span class="npc-stats-value" style="font-size:11px;">${talent?.desc || '—'}</span>
-        </div>
-        <div class="npc-stats-divider"></div>
-        <div class="npc-stats-row">
-          <span class="npc-stats-label">❤️ 气血</span>
-          <span class="npc-stats-value">${stats.hp} / ${stats.maxHp}</span>
-        </div>
-        <div class="npc-stats-row">
-          <span class="npc-stats-label">💧 内力</span>
-          <span class="npc-stats-value">${stats.mp} / ${stats.maxMp}</span>
-        </div>
-        <div class="npc-stats-row">
-          <span class="npc-stats-label">⚔️ 攻击</span>
-          <span class="npc-stats-value">${stats.atk}</span>
-        </div>
-        <div class="npc-stats-row">
-          <span class="npc-stats-label">🛡️ 防御</span>
-          <span class="npc-stats-value">${stats.def}</span>
-        </div>
-        <div class="npc-stats-row">
-          <span class="npc-stats-label">💨 身法</span>
-          <span class="npc-stats-value">${stats.agi}</span>
-        </div>
-        <div class="npc-stats-row">
-          <span class="npc-stats-label">💥 暴击</span>
-          <span class="npc-stats-value">${stats.crit}%</span>
-        </div>
-        <div class="npc-stats-divider"></div>
-        <div class="npc-stats-row">
-          <span class="npc-stats-label">⚔️ 武器</span>
-          <span class="npc-stats-value" style="color:${fabaoWeapon?.colorCss || 'var(--text-dim)'};">${fabaoWeapon?.name || '无'}</span>
-        </div>
-        <div class="npc-stats-row">
-          <span class="npc-stats-label">🛡️ 衣服</span>
-          <span class="npc-stats-value" style="color:${fabaoArmor?.colorCss || 'var(--text-dim)'};">${fabaoArmor?.name || '无'}</span>
-        </div>
-        <div class="npc-stats-row">
-          <span class="npc-stats-label">💎 饰品</span>
-          <span class="npc-stats-value" style="color:${fabaoAcc?.colorCss || 'var(--text-dim)'};">${fabaoAcc?.name || '无'}</span>
-        </div>
-        ${isRecruited ? renderRecruitedActions(npcDbId, p) : ''}
-      </div>`;
+        <div style="font-size:11px;color:var(--text-dim);margin-top:3px;">${persCfg.desc}</div>
+      </div>
+
+      ${isRecruited ? renderRecruitedActions(npcDbId, p) : ''}
+    `;
   }
 
   // 操作按钮区
@@ -363,15 +396,33 @@ export function showNpcStatsOverlay(npcDbId: string, npcName: string, npcImg: st
   overlay.dataset['npcDbId'] = npcDbId;
   overlay.dataset['npcName'] = npcName;
   overlay.dataset['npcImg'] = npcImg;
+
+  const tianjiaoBadge = stats?.isTianjiao ? '<span class="npc-stats-tianjiao-badge">天骄</span>' : '';
+  const realm = stats ? getRealmName(stats.level) : '';
+  const realmColor = stats ? (realmColors[realm] ?? '#c9a84c') : '#c9a84c';
+  const tianjiaoClass = stats?.isTianjiao ? ' tianjiao' : '';
+
   overlay.innerHTML = `
     <div class="npc-stats-overlay-inner">
-      <div class="npc-stats-header">
-        <img src="${npcImg}" alt="${npcName}" class="npc-stats-portrait" onerror="this.style.display='none'">
-        <div class="npc-stats-title">${npcName}</div>
+      <!-- 左侧：立绘 -->
+      <div class="npc-stats-left">
+        <div class="npc-stats-portrait-wrap${tianjiaoClass}" style="--realm-glow:${realmColor};">
+          <img src="${npcImg}" alt="${npcName}" class="npc-stats-portrait" onerror="this.style.display='none'">
+        </div>
+        <div class="npc-stats-realm-tag" style="background:${realmColor}22;border:1px solid ${realmColor}44;">
+          ${realm}
+        </div>
       </div>
-      ${bodyHtml}
-      <div class="npc-stats-actions">${actionButtons}</div>
-      <button class="npc-stats-close" id="npc-stats-close">关 闭</button>
+      <!-- 右侧：属性 -->
+      <div class="npc-stats-right">
+        <div class="npc-stats-name-row">
+          <span class="npc-stats-name">${npcName}</span>
+          ${tianjiaoBadge}
+        </div>
+        ${bodyHtml}
+        <div class="npc-stats-actions">${actionButtons}</div>
+        <button class="npc-stats-close" id="npc-stats-close">关 闭</button>
+      </div>
     </div>
   `;
 

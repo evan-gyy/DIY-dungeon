@@ -378,13 +378,17 @@ export function renderSidebar(): void {
       statusClass = 'nearby-npc-status-rank';
     }
     
-    return `<div class="nearby-npc-card" data-npc-db-id="${npc.id}" data-npc-name="${npc.name}" data-npc-img="${imgPath}">
+    const isTianjiao = npc.isTianjiao === true;
+    const tianjiaoClass = isTianjiao ? 'npc-tianjiao' : '';
+    const tianjiaoStar = isTianjiao ? ' 🌟' : '';
+
+    return `<div class="nearby-npc-card ${tianjiaoClass}" data-npc-db-id="${npc.id}" data-npc-name="${npc.name}" data-npc-img="${imgPath}">
       <div class="nearby-npc-img-wrap">
         <img src="${imgPath}" alt="${npc.name}" onerror="this.style.display='none'">
         <div class="nearby-npc-img-fallback" style="display:${imgPath ? 'none' : 'flex'};">?</div>
       </div>
       <div class="nearby-npc-info">
-        <div class="nearby-npc-name">${npc.name}</div>
+        <div class="nearby-npc-name">${npc.name}${tianjiaoStar}</div>
         <div class="nearby-npc-realm">${realm}</div>
         <div class="nearby-npc-status ${statusClass}">${statusText}</div>
         <div class="nearby-npc-location">📍 ${locName}</div>
@@ -574,6 +578,14 @@ export function enterCamp(): void {
   if (p.gameMode === 'sandbox' && !p.chronicle) {
     p = { ...p, chronicle: initChronicle() };
     needSave = true;
+  }
+  // 🆕 P8: NPC 间友好度关系初始化（仅在沙盒模式，有 NPC 数据库时）
+  if (p.gameMode === 'sandbox' && p.npcDatabase && Object.keys(p.npcDatabase).length > 0) {
+    if (!p.npcRelationship || Object.keys(p.npcRelationship).length === 0) {
+      import('../systems/NpcRelationship').then(m => {
+        m.initAllNpcRelationships();
+      });
+    }
   }
   if (needSave) {
     setPlayer(p);
