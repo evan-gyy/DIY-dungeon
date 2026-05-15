@@ -28,11 +28,12 @@ import type { LocationId } from '../data/worldMap';
 export type SectTier = 'supreme' | 'first_rate' | 'second_rate' | 'fringe' | 'special';
 
 const SECT_TIER: Record<SectId, SectTier> = {
-  wudang: 'supreme', shaolin: 'supreme', riyue: 'supreme',
-  emei: 'first_rate', beggar: 'first_rate', quanzhen: 'first_rate', kunlun: 'first_rate', tangmen: 'first_rate',
+  wudang: 'supreme', shaolin: 'supreme',
+  emei: 'first_rate', beggar: 'first_rate', quanzhen: 'first_rate', kunlun: 'first_rate', tangmen: 'first_rate', riyue: 'first_rate',
   huashan: 'second_rate', kongtong: 'second_rate', qingcheng: 'second_rate', diancang: 'second_rate', tiezhang: 'second_rate',
   maoshan: 'fringe', wudu: 'fringe', xuedao: 'fringe', haisha: 'fringe',
   xiaoyao: 'special', demon: 'special',
+  imperial_court: 'supreme', rebels: 'first_rate',
   none: 'special',
 };
 
@@ -268,7 +269,8 @@ const WORLD_EVENT_POOL: WorldEvent[] = [
 export type ChronicleCategory =
   | 'world_event' | 'sect_join' | 'rank_promotion'
   | 'mission_complete' | 'npc_interaction' | 'travel'
-  | 'battle' | 'discovery' | 'court_affair';
+  | 'battle' | 'discovery' | 'court_affair'
+  | 'grand_event';
 
 export interface ChronicleEntry {
   id: string;

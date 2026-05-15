@@ -19,7 +19,11 @@ import { initSectState, tickSectNaturalChange, isSectBase, getCouncilContext } f
 import type { CouncilContext } from '../systems/SectManagement';
 import { getMaxRecruitSlots, getAssignmentLabel, getRankLabel } from '../systems/NPCManager';
 import { updateMissionProgress } from '../systems/MissionSystem';
-import { initFactionRelations, tickFactionDiplomacy } from '../systems/FactionSystem';
+import { initFactionRelations, tickFactionDiplomacy, tickCoalitions } from '../systems/FactionSystem';
+import { factionAITick } from '../systems/FactionAI';
+import { tryTriggerGrandEvent } from '../systems/GrandEventSystem';
+import { tickAmbitionEvents } from '../systems/AmbitionSystem';
+import { showGrandEventScreen } from './camp/GrandEventScreen';
 import { WORLD_MAP, type LocationId } from '../data/worldMap';
 import { SECTS } from '../data/sects';
 import { getRealmName } from '../state/LevelSystem';
@@ -752,6 +756,15 @@ export function advanceTurn(): void {
     // 🆕 全局 NPC 批量行为更新
     tickNpcBehaviors();
 
+    // 🆕 P8: NPC志向驱动的大事件（叛离/篡位/约战/自立门户/复仇）
+    tickAmbitionEvents();
+
+    // 🆕 AI 势力月度行动
+    factionAITick();
+
+    // 🆕 联盟系统月度检查
+    tickCoalitions();
+
     // 🆕 月初刷新 UI（延迟以配合动画）
     setTimeout(() => {
       renderSidebar();
@@ -772,6 +785,14 @@ export function advanceTurn(): void {
   // 月初触发议事检查
   if (isNewMonth) {
     checkCouncilTrigger();
+
+    // 🆕 江湖大事件（延迟以避免与议事重叠）
+    setTimeout(() => {
+      const grandEvent = tryTriggerGrandEvent();
+      if (grandEvent) {
+        showGrandEventScreen(grandEvent);
+      }
+    }, 3500);
   }
 }
 

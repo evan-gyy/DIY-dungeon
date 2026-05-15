@@ -24,8 +24,6 @@ import { executeSectTask, getSectCultivateBonus, shouldNpcLeaveSect, isSectBase 
 const NPC_INITIAL_LOCATION: Record<string, LocationId> = {
   // 武当派
   'liu_qinghan':       'wudang_mountain',
-  'shen_nishang':      'wudang_mountain',
-  'mo_jiangqing':      'wudang_mountain',
   'zhang_xuansu':      'wudang_mountain',
   'chen_jingxu':       'wudang_mountain',
   'lu_chengzhou':      'wudang_mountain',
@@ -42,6 +40,7 @@ const NPC_INITIAL_LOCATION: Record<string, LocationId> = {
   // 🆕 沙盒：峨眉派
   'emei_miejue':       'emei_mountain',
   'emei_jingxuan':     'emei_mountain',
+  'shen_nishang':      'emei_mountain',
   // 🆕 沙盒：丐帮
   'beggar_hong':       'beggar_hq',
   'beggar_lu':         'beggar_hq',
@@ -62,6 +61,32 @@ const NPC_INITIAL_LOCATION: Record<string, LocationId> = {
   'suzhou_zhizhou':    'suzhou_city',
   'hangzhou_zhifu':    'hangzhou_city',
   'dali_guoxiang':     'dali_city',
+  // 🆕 沙盒：三大新门派
+  'quanzhen_zhangmen': 'zhongnan_mountain',
+  'quanzhen_elder':    'zhongnan_mountain',
+  'quanzhen_qiuchuji': 'zhongnan_mountain',
+  'kongtong_zhangmen': 'kongtong_mountain',
+  'kongtong_elder':    'kongtong_mountain',
+  'diancang_zhangmen': 'diancang_mountain',
+  'diancang_elder':    'diancang_mountain',
+  // 🆕 沙盒：三大新城市官员
+  'jiangzhou_zhizhou': 'jiangzhou_city',
+  'tanzhou_zhifu':     'tanzhou_city',
+  'guangzhou_shibosi': 'guangzhou_city',
+  // 🆕 v2.1 五大宗门掌门
+  'riyue_leader':   'heimu_cliff',
+  'tiezhang_leader':'chongqing_city',
+  'wudu_leader':    'dali_city',
+  'xuedao_leader':  'liangzhou_city',
+  'haisha_leader':  'mingzhou_city',
+  // 🆕 P7 朝廷与叛军
+  'prime_minister':    'kaifeng_city',
+  'taiwei':            'kaifeng_city',
+  'xingbu_shangshu':   'kaifeng_city',
+  'zhao_qinwei':       'yanjing_city',
+  'mo_jiangqing':      'yanjing_city',
+  'rebel_general':     'yanjing_city',
+  'rebels_strategist': 'yanjing_city',
 };
 
 /** 正道 NPC 移动至友好/同盟势力地点的权重倍数 */
@@ -187,10 +212,23 @@ export function tickNpcBehaviors(): NpcTickResult[] {
       continue; // 跳过其他所有行为
     }
 
-    // ── Priority 2-5: 加权随机选择 ──
+    // ── Priority 2-5: 加权随机选择（P8: 受志向影响）──
     const rand = Math.random();
+    const ambition = n.ambition ?? 'content';
+    // 志向调整行为概率: [cultivate, socialize, sect_task, move]
+    const ambitionProbs: Record<string, [number, number, number, number]> = {
+      content:  [0.60, 0.15, 0.15, 0.10],
+      master:   [0.70, 0.10, 0.10, 0.10],
+      power:    [0.50, 0.25, 0.15, 0.10],
+      rebel:    [0.45, 0.15, 0.15, 0.25],
+      avenger:  [0.65, 0.10, 0.15, 0.10],
+    };
+    const [cultP, socP, taskP, moveP] = ambitionProbs[ambition] ?? ambitionProbs['content']!;
+    const thresh1 = cultP;
+    const thresh2 = thresh1 + socP;
+    const thresh3 = thresh2 + taskP;
 
-    if (rand < 0.60) {
+    if (rand < thresh1) {
       // ── 修炼（含门派资源加成）──
       const cultivateBonus = getSectCultivateBonus(n.sect);
       const sub = Math.random();
@@ -229,7 +267,7 @@ export function tickNpcBehaviors(): NpcTickResult[] {
         };
       }
 
-    } else if (rand < 0.75) {
+    } else if (rand < thresh2) {
       // ── 社交（简化：记录为社交行为，实际互动由 tickNpcToNpcInteractions 处理）──
       result = {
         npcId: id, npcName: n.name, action: 'npc_interact',
@@ -237,7 +275,7 @@ export function tickNpcBehaviors(): NpcTickResult[] {
         detail: `${n.name}在附近与人攀谈交流。`,
       };
 
-    } else if (rand < 0.90) {
+    } else if (rand < thresh3) {
       // ── 门派任务 ──
       const currentLocId = n.currentLocationId ?? 'wudang_mountain';
       const locData = WORLD_MAP[currentLocId];
@@ -309,11 +347,28 @@ export function tickNpcBehaviors(): NpcTickResult[] {
       }
     }
 
+    // 🆕 P8: rebel志向有几率偷取门派资源
+    if (ambition === 'rebel' && n.sect !== 'none' && Math.random() < 0.08) {
+      const p2 = getPlayer();
+      const state = p2.sectState?.[n.sect];
+      if (state && state.resources > 30) {
+        const stolen = Math.floor(Math.random() * 20) + 5;
+        state.resources = Math.max(0, state.resources - stolen);
+        setPlayer({ ...p2, sectState: { ...p2.sectState, [n.sect]: state } });
+        results.push({
+          npcId: id, npcName: n.name, action: 'sect_task',
+          outcome: '中饱私囊',
+          detail: `${n.name}暗中侵吞了${SECTS[n.sect]?.name ?? n.sect} ${stolen} 点资源。`,
+        });
+      }
+    }
+
     updatedDb[id] = n;
     results.push(result);
 
-    // 检查门派稳定度过低 → NPC 可能脱离
-    if (n.sect !== 'none' && shouldNpcLeaveSect(n.sect)) {
+    // 检查门派稳定度过低 → NPC 可能脱离（rebel/avenger 更易脱离）
+    const leaveChance = ambition === 'rebel' ? 0.40 : ambition === 'avenger' ? 0.25 : 0.15;
+    if (n.sect !== 'none' && shouldNpcLeaveSect(n.sect) && Math.random() < leaveChance) {
       const oldSectName = SECTS[n.sect]?.name ?? n.sect;
       n.sect = 'none';
       n.discipleRank = 'outer';

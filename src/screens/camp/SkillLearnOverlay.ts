@@ -27,6 +27,8 @@ const SECT_NAME: Partial<Record<SectId, string>> = {
   huashan: '华山', maoshan: '茅山', kunlun: '昆仑', qingcheng: '青城',
   tangmen: '唐门', xiaoyao: '逍遥', quanzhen: '全真', kongtong: '崆峒',
   diancang: '点苍', riyue: '日月教',
+  demon: '魔教', wudu: '五毒教', xuedao: '血刀门', haisha: '海沙派',
+  tiezhang: '铁掌帮', imperial_court: '朝廷', rebels: '叛军',
 };
 
 export function showSkillLearnOverlay(): void {

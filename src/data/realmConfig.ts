@@ -13,6 +13,8 @@ export type TalentId =
   // 政务天赋（朝堂）
   | 'strategist' | 'eloquent_orator' | 'born_leader' | 'erudite_scholar'
   | 'political_veteran' | 'ambitious_official'
+  | 'iron_face' | 'mastermind' | 'governance' | 'reformist'
+  | 'silver_tongue' | 'righteous_judge'
   // 复合天赋（江湖-朝廷跨界）
   | 'warlord' | 'benevolent_ruler' | 'martial_scholar' | 'hidden_potential'
   // 🆕 P8 绝世天赋（3个）
@@ -97,10 +99,12 @@ export const TALENT_TIER: Record<TalentId, TalentTier> = {
   dragon_vein: 'legendary', sword_heart_frost: 'legendary',
   strategist: 'superior', eloquent_orator: 'superior', born_leader: 'superior',
   erudite_scholar: 'superior', political_veteran: 'superior', ambitious_official: 'inferior',
+  iron_face: 'superior', mastermind: 'superior', governance: 'superior',
+  reformist: 'common', silver_tongue: 'common', righteous_judge: 'superior',
   warlord: 'superior', benevolent_ruler: 'superior', martial_scholar: 'common', hidden_potential: 'common',
 };
 
-/** NPC 随机天赋池（排除主角/女主专属 + 朝堂天赋） */
+/** NPC 随机天赋池（排除主角/女主专属；朝堂+复合天赋纳入随机池） */
 export const NPC_TALENT_POOL: TalentId[] = [
   'sword_saint', 'dragon_awakened', 'innate_dao_body',
   'battle_genius', 'iron_fortress', 'wind_chaser',
@@ -111,6 +115,13 @@ export const NPC_TALENT_POOL: TalentId[] = [
   'normal', 'lazy', 'clumsy', 'weak_constitution', 'coward', 'forgetful',
   'reckless', 'greedy', 'plain',
   'sickly', 'qi_deviation', 'waste',
+  // P8 朝堂天赋纳入随机池
+  'strategist', 'eloquent_orator', 'born_leader', 'erudite_scholar',
+  'political_veteran', 'ambitious_official',
+  'iron_face', 'mastermind', 'governance', 'reformist',
+  'silver_tongue', 'righteous_judge',
+  // P8 复合天赋纳入随机池
+  'warlord', 'benevolent_ruler', 'martial_scholar', 'hidden_potential',
 ];
 
 /** NPC 天赋权重（按层级比例分配） */
@@ -188,6 +199,42 @@ export const TALENTS: Record<TalentId, TalentData> = {
     name: '野心勃勃', desc: '影响力获取+40%，魅力-5（树敌过多）',
     cultivationMul: 1.0, skillLearnBonus: 0.0,
     courtBonus: { charisma: -5, influenceGainMul: 1.40 },
+    category: 'court',
+  },
+  iron_face: {
+    name: '铁面无私', desc: '口才+20，魅力+15，智谋+10，影响力获取+20%',
+    cultivationMul: 1.0, skillLearnBonus: 0.0,
+    courtBonus: { eloquence: 20, charisma: 15, strategy: 10, influenceGainMul: 1.20 },
+    category: 'court',
+  },
+  mastermind: {
+    name: '运筹帷幄', desc: '智谋+25，影响力获取+20%',
+    cultivationMul: 1.0, skillLearnBonus: 0.0,
+    courtBonus: { strategy: 25, influenceGainMul: 1.20 },
+    category: 'court',
+  },
+  governance: {
+    name: '经世之才', desc: '四维各+10，影响力获取+25%',
+    cultivationMul: 1.0, skillLearnBonus: 0.0,
+    courtBonus: { strategy: 10, eloquence: 10, charisma: 10, scholarship: 10, influenceGainMul: 1.25 },
+    category: 'court',
+  },
+  reformist: {
+    name: '革新派', desc: '学识+20，智谋+10，影响力获取+15%',
+    cultivationMul: 1.0, skillLearnBonus: 0.0,
+    courtBonus: { scholarship: 20, strategy: 10, influenceGainMul: 1.15 },
+    category: 'court',
+  },
+  silver_tongue: {
+    name: '唇枪舌剑', desc: '口才+25，魅力+10，影响力获取+10%',
+    cultivationMul: 1.0, skillLearnBonus: 0.0,
+    courtBonus: { eloquence: 25, charisma: 10, influenceGainMul: 1.10 },
+    category: 'court',
+  },
+  righteous_judge: {
+    name: '明镜高悬', desc: '学识+15，口才+15，魅力+15，影响力获取+15%',
+    cultivationMul: 1.0, skillLearnBonus: 0.0,
+    courtBonus: { scholarship: 15, eloquence: 15, charisma: 15, influenceGainMul: 1.15 },
     category: 'court',
   },
 

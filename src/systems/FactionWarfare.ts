@@ -37,9 +37,41 @@ const SIEGE_COOLDOWN = 10;
 const SIEGE_RESULT_TEXT: Record<string, { win: string; lose: string }> = {
   righteous:  { win: '大获全胜', lose: '铩羽而归' },
   neutral:    { win: '成功攻占', lose: '无功而返' },
-  unorthodox: { win: '毒计得逞', lose: '狼狈逃窜' },
   chaotic:    { win: '血洗城池', lose: '溃不成军' },
 };
+
+/** 波次标签 */
+type WaveId = 'gate' | 'street' | 'final';
+
+const WAVE_NAMES: Record<WaveId, string> = {
+  gate:   '第一波 · 城门鏖战',
+  street: '第二波 · 街巷厮杀',
+  final:  '第三波 · 大殿决战',
+};
+
+// ──── 多波次攻城状态 ────
+
+interface MultiWaveSiegeState {
+  attackerSect: SectId;
+  defenderSect: SectId;
+  targetLocation: LocationId;
+  /** 当前波次 */
+  currentWave: WaveId;
+  /** 已完成的波次结果 */
+  waveResults: Array<{ wave: WaveId; attackerWin: boolean }>;
+  /** 攻击方士气加成（胜波 +20%，即攻+10%） */
+  attackerMorale: number;
+  /** 防守方士气加成 */
+  defenderMorale: number;
+  /** 攻击方参战 NPC IDs */
+  attackerNpcIds: string[];
+  /** 防守方参战 NPC IDs */
+  defenderNpcIds: string[];
+  /** 攻击方精英队（用于第三波，含 leader） */
+  attackerElites: string[];
+  /** 防守方精英队（用于第三波） */
+  defenderElites: string[];
+}
 
 // ──── 领土初始化 ────
 
@@ -222,27 +254,51 @@ export function tryTriggerSiege(): SiegeResult {
   if (Math.random() > chance) return { happened: false };
 
   // 6. 选兵将
-  const attackerNpcs = pickTeam(attackerSect, 4);
-  const defenderNpcs = pickTeam(defenderSect, 4);
+  const attackerNpcs = pickTeam(attackerSect, 8); // 3 波需 8 人（4+4 for 前两波轮换）
+  const defenderNpcs = pickTeam(defenderSect, 8);
+  const attackerElites = pickLeaderTeam(attackerSect, 4);
+  const defenderElites = pickLeaderTeam(defenderSect, 4);
 
   if (attackerNpcs.length < 2 || defenderNpcs.length < 2) return { happened: false };
 
   // 消耗资源
   spendSiegeCost(attackerSect);
 
-  // 7. 战力判定（含门派稳定度加成）
+  // 7. 三波车轮战判定
   const defenderMult = getSectDefenseMultiplier(defenderSect);
-  const attackerPower = calcTeamPower(attackerNpcs);
-  const defenderPower = calcTeamPower(defenderNpcs) * defenderMult;
+  let attWins = 0;
+  let defWins = 0;
+  let attMorale = 0;
+  let defMorale = 0;
 
-  let attackerWin: boolean;
-  if (attackerPower > defenderPower * 1.1) {
-    attackerWin = Math.random() < 0.80;
-  } else if (defenderPower > attackerPower * 1.1) {
-    attackerWin = Math.random() < 0.20;
+  // 第一波：城门战（各出 4 人）
+  const wave1AttPower = calcTeamPower(attackerNpcs.slice(0, 4));
+  const wave1DefPower = calcTeamPower(defenderNpcs.slice(0, 4)) * defenderMult;
+  if (resolveWave(wave1AttPower, wave1DefPower)) {
+    attWins++; attMorale = 20;
   } else {
-    attackerWin = Math.random() < 0.50;
+    defWins++; defMorale = 20;
   }
+
+  // 第二波：街道战（各出 4 人，含士气加成）
+  const wave2AttPower = calcTeamPower(attackerNpcs.slice(4, 8)) * (1 + attMorale / 200);
+  const wave2DefPower = calcTeamPower(defenderNpcs.slice(4, 8)) * defenderMult * (1 + defMorale / 200);
+  if (resolveWave(wave2AttPower, wave2DefPower)) {
+    attWins++;
+  } else {
+    defWins++;
+  }
+
+  // 第三波：决战（精英队，含士气加成）
+  const wave3AttPower = calcTeamPower(attackerElites) * (1 + attMorale / 200);
+  const wave3DefPower = calcTeamPower(defenderElites) * defenderMult * (1 + defMorale / 200);
+  if (resolveWave(wave3AttPower, wave3DefPower)) {
+    attWins++;
+  } else {
+    defWins++;
+  }
+
+  const attackerWin = attWins >= 2;
 
   // 8. 更新领土
   const newTc = { ...tc };
@@ -296,12 +352,35 @@ export function tryTriggerSiege(): SiegeResult {
 
 // ──── 选将逻辑 ────
 
-/** 从某势力中选 N 个 NPC（优先高等级、在该势力据点附近） */
+/** 从某势力中选 N 个 NPC（优先高等级） */
 function pickTeam(sectId: SectId, count: number): NpcStats[] {
   const npcs = getNpcsOfSect(sectId);
-  // 按等级降序
   const sorted = [...npcs].sort((a, b) => b.level - a.level);
   return sorted.slice(0, count);
+}
+
+/** 从某势力中选精英队（含掌门 + 前3高等级 NPC） */
+function pickLeaderTeam(sectId: SectId, count: number): NpcStats[] {
+  const npcs = getNpcsOfSect(sectId);
+  const sorted = [...npcs].sort((a, b) => {
+    // 掌门/长老优先
+    const rankOrder: Record<string, number> = { leader: 100, vice_leader: 80, elder: 60, true: 40, inner: 20, outer: 0 };
+    const aRank = rankOrder[a.discipleRank ?? 'outer'] ?? 0;
+    const bRank = rankOrder[b.discipleRank ?? 'outer'] ?? 0;
+    if (bRank !== aRank) return bRank - aRank;
+    return b.level - a.level;
+  });
+  return sorted.slice(0, count);
+}
+
+/**
+ * 单波次战力判定。
+ * @returns true = 攻击方胜
+ */
+function resolveWave(attPower: number, defPower: number): boolean {
+  if (attPower > defPower * 1.1) return Math.random() < 0.80;
+  if (defPower > attPower * 1.1) return Math.random() < 0.20;
+  return Math.random() < 0.50;
 }
 
 // ──── 显示名称 ────
@@ -357,9 +436,9 @@ export function getLocationAffectionMultiplier(locationId: LocationId): number {
   return 1.0;
 }
 
-// ──── 玩家参与攻城战 ────
+// ──── 玩家参与攻城战（三波车轮战）────
 
-/** NPC 等级 → EnemyId 映射（用于把 NPC 转为战斗敌方单位） */
+/** NPC 等级 → EnemyId 映射 */
 function mapNpcLevelToEnemyId(level: number): string {
   if (level >= 51) return 'ancient_master';
   if (level >= 41) return 'ancient_master';
@@ -369,18 +448,11 @@ function mapNpcLevelToEnemyId(level: number): string {
   return 'rogue_thug';
 }
 
-interface SiegeMeta {
-  attackerSect: SectId;
-  defenderSect: SectId;
-  targetLocation: LocationId;
-  attackerNpcs: string[];
-  defenderNpcs: string[];
-}
-
 /**
- * 玩家加入攻城队，进入 4v4 团队战。
- * 攻击方：玩家 + 3 名本门 NPC
- * 防守方：4 名敌方 NPC（映射为 EnemyId）
+ * 玩家加入攻城队，进入三波车轮战。
+ * 第一波（城门）：玩家 + 3 NPC vs 4 敌方 NPC
+ * 第二波（街道）：玩家 + 3 NPC vs 4 敌方 NPC（新部队）
+ * 第三波（决战）：玩家 + 3 精英 vs 敌方 leader + 3 精英
  */
 export function playerJoinSiege(
   attackerSect: SectId,
@@ -392,74 +464,145 @@ export function playerJoinSiege(
   // 消耗资源
   spendSiegeCost(attackerSect);
 
-  // 选攻击方 NPC（掌门优先，按等级降序，取前3）
-  const attackerNpcs = getNpcsOfSect(attackerSect)
-    .sort((a, b) => b.level - a.level)
-    .slice(0, 3);
+  // 选攻击方 NPC（取前 6 用于前两波轮换 + 精英 3 用于决战）
+  const attackerPool = getNpcsOfSect(attackerSect)
+    .sort((a, b) => b.level - a.level);
+  const attackerWave1 = attackerPool.slice(0, 3);
+  const attackerWave2 = attackerPool.slice(3, 6);
+  const attackerElites = pickLeaderTeam(attackerSect, 3);
 
-  // 选防守方 NPC（按等级降序，取前4）
-  const defenderNpcs = getNpcsOfSect(defenderSect)
-    .sort((a, b) => b.level - a.level)
-    .slice(0, 4);
+  // 选防守方 NPC
+  const defenderPool = getNpcsOfSect(defenderSect)
+    .sort((a, b) => b.level - a.level);
+  const defenderWave1 = defenderPool.slice(0, 4);
+  const defenderWave2 = defenderPool.slice(4, 8);
+  const defenderElites = pickLeaderTeam(defenderSect, 3);
 
-  // 构建友方单位
+  // 保存多波次状态
+  const siegeState: MultiWaveSiegeState = {
+    attackerSect,
+    defenderSect,
+    targetLocation,
+    currentWave: 'gate',
+    waveResults: [],
+    attackerMorale: 0,
+    defenderMorale: 0,
+    attackerNpcIds: attackerPool.slice(0, 8).map(n => n.id),
+    defenderNpcIds: defenderPool.slice(0, 8).map(n => n.id),
+    attackerElites: attackerElites.map(n => n.id),
+    defenderElites: defenderElites.map(n => n.id),
+  };
+  (window as any).__siegeState = siegeState;
+
+  // 启动第一波
+  startPlayerWave(siegeState, 'gate', attackerWave1, defenderWave1);
+}
+
+/** 启动单波玩家参与战斗 */
+function startPlayerWave(
+  state: MultiWaveSiegeState,
+  wave: WaveId,
+  attackerNpcs: NpcStats[],
+  defenderNpcs: NpcStats[],
+): void {
+  const p = getPlayer();
+  state.currentWave = wave;
+
+  // 构建友方单位（士气加成：攻+10% per morale）
+  const attBonus = 1 + state.attackerMorale / 200;
   const allyDefs = [
     {
       name: p.name,
-      hp: p.hp, maxHp: p.maxHp,
+      hp: Math.round(p.hp * attBonus), maxHp: p.maxHp,
       mp: p.mp, maxMp: p.maxMp,
-      atk: p.atk, def: p.def, agi: p.agi, crit: p.crit,
+      atk: Math.round(p.atk * attBonus), def: p.def, agi: p.agi, crit: p.crit,
       charImg: p.charImg,
       skills: p.skills as SkillId[],
       isPlayer: true,
     },
     ...attackerNpcs.map(n => ({
       name: n.name,
-      hp: n.hp, maxHp: n.maxHp,
+      hp: Math.round(n.hp * attBonus), maxHp: n.maxHp,
       mp: n.mp, maxMp: n.maxMp,
-      atk: n.atk, def: n.def, agi: n.agi, crit: n.crit,
+      atk: Math.round(n.atk * attBonus), def: n.def, agi: n.agi, crit: n.crit,
       icon: undefined,
       skills: n.skills,
       isPlayer: false,
     })),
   ];
 
-  // 防守方映射为 EnemyId
   const enemyIds = defenderNpcs.map(n => mapNpcLevelToEnemyId(n.level));
 
-  // 保存攻城上下文，供战斗结束后回调
-  const siegeMeta: SiegeMeta = {
-    attackerSect,
-    defenderSect,
-    targetLocation,
-    attackerNpcs: attackerNpcs.map(n => n.id),
-    defenderNpcs: defenderNpcs.map(n => n.id),
-  };
+  // 显示波次提示
+  import('../ui/toast').then(m => {
+    m.showToast(`⚔️ ${WAVE_NAMES[wave]} — ${wave === 'final' ? '决胜时刻！' : '准备迎战！'}`);
+  });
 
-  (window as any).__siegeMeta = siegeMeta;
-
-  // 动态导入 BattleEngine 并启动团队战
   import('./BattleEngine').then(m => {
     m.initTeamBattle(allyDefs, enemyIds as any);
 
-    // 监听战斗结束
     import('../ui/events').then(ev => {
       const handler = (data: { result: string; expGain: number; goldGain: number }) => {
         ev.bus.off('battle:end', handler);
-        onSiegeBattleEnd(data.result === 'win');
+        const playerWin = data.result === 'win';
+        onPlayerWaveEnd(state, playerWin);
       };
       ev.bus.on('battle:end', handler);
     });
   });
 }
 
-/** 攻城战斗结束后的回调 */
-function onSiegeBattleEnd(playerWin: boolean): void {
-  const meta = (window as any).__siegeMeta as SiegeMeta | undefined;
-  if (!meta) return;
-  delete (window as any).__siegeMeta;
+/** 单波结束处理：判定是否进入下一波或结束战斗 */
+function onPlayerWaveEnd(state: MultiWaveSiegeState, playerWin: boolean): void {
+  state.waveResults.push({ wave: state.currentWave, attackerWin: playerWin });
 
+  if (playerWin) {
+    state.attackerMorale = Math.min(40, state.attackerMorale + 20);
+  } else {
+    state.defenderMorale = Math.min(40, state.defenderMorale + 20);
+  }
+
+  const currentWave = state.currentWave;
+  const playerWins = state.waveResults.filter(r => r.attackerWin).length;
+  const playerLosses = state.waveResults.filter(r => !r.attackerWin).length;
+
+  // 判断是否需要继续
+  if (currentWave === 'gate') {
+    // 进入第二波
+    const p = getPlayer();
+    const attackerPool = getNpcsOfSect(state.attackerSect)
+      .sort((a, b) => b.level - a.level);
+    const defenderPool = getNpcsOfSect(state.defenderSect)
+      .sort((a, b) => b.level - a.level);
+    startPlayerWave(state, 'street', attackerPool.slice(3, 6), defenderPool.slice(4, 8));
+  } else if (currentWave === 'street') {
+    // 进入第三波（精英决战）
+    const attElites = getNpcsByIds(state.attackerElites);
+    const defElites = getNpcsByIds(state.defenderElites);
+    startPlayerWave(state, 'final', attElites, defElites);
+  } else {
+    // 第三波结束，判定最终胜负
+    const finalWin = playerWins >= 2;
+    onMultiWaveSiegeEnd(state, finalWin);
+  }
+}
+
+/** 通过 ID 列表获取 NPC */
+function getNpcsByIds(ids: string[]): NpcStats[] {
   const p = getPlayer();
+  const db = p.npcDatabase;
+  if (!db) return [];
+  return ids.map(id => db[id]).filter(Boolean) as NpcStats[];
+}
+
+/** 多波次攻城结束 */
+function onMultiWaveSiegeEnd(state: MultiWaveSiegeState, playerWin: boolean): void {
+  const p = getPlayer();
+  const meta = state;
+  delete (window as any).__siegeState;
+
+  const playerWins = state.waveResults.filter(r => r.attackerWin).length;
+  const playerLosses = state.waveResults.filter(r => !r.attackerWin).length;
 
   if (playerWin) {
     // 领土变更
@@ -467,35 +610,31 @@ function onSiegeBattleEnd(playerWin: boolean): void {
     tc[meta.targetLocation] = meta.attackerSect;
     setPlayer({ ...p, territoryControl: tc });
 
-    // 门派状态影响
     applySiegeResult(meta.attackerSect, meta.defenderSect, true);
-
-    // 势力关系恶化
     worsenFactionRelation(meta.attackerSect, meta.defenderSect, 15);
 
-    // 冷却
     const currentTurn = (p.worldState?.turn ?? 0) + 1;
     const cooldowns = { ...(p.siegeCooldown ?? {}), [meta.targetLocation]: currentTurn + SIEGE_COOLDOWN };
     setPlayer({ ...getPlayer(), siegeCooldown: cooldowns });
 
-    // 玩家奖励
+    const rewardMult = playerWins === 3 ? 1.5 : 1.0; // 三连胜额外奖励
     const updated = {
       ...getPlayer(),
-      exp: p.exp + 80,
-      gold: p.gold + 200,
-      sectContribution: (p.sectContribution ?? 0) + 50,
+      exp: p.exp + Math.round(120 * rewardMult),
+      gold: p.gold + Math.round(300 * rewardMult),
+      sectContribution: (p.sectContribution ?? 0) + Math.round(80 * rewardMult),
     };
     setPlayer(updated);
 
-    // NPC 日志
-    for (const npcId of [...meta.attackerNpcs, ...meta.defenderNpcs]) {
-      appendNpcLog(npcId, `参与了对${WORLD_MAP[meta.targetLocation]?.name ?? meta.targetLocation}的攻城战（玩家参战，攻击方胜）`);
+    for (const npcId of [...meta.attackerNpcIds, ...meta.defenderNpcIds]) {
+      appendNpcLog(npcId, `参与了${WORLD_MAP[meta.targetLocation]?.name ?? meta.targetLocation}的三波攻城战（玩家参战，${playerWins}:${playerLosses} 胜）`);
     }
 
-    // 新闻
     const locName = WORLD_MAP[meta.targetLocation]?.name ?? meta.targetLocation;
     const newsItem: WorldNewsItem = {
-      text: `听闻${getSectName(meta.attackerSect)}在玩家协助下攻占了${getSectName(meta.defenderSect)}掌控的${locName}！`,
+      text: playerWins === 3
+        ? `听闻${getSectName(meta.attackerSect)}在玩家率领下横扫${getSectName(meta.defenderSect)}，三战全胜攻占${locName}！`
+        : `听闻${getSectName(meta.attackerSect)}在玩家协助下苦战三局，以${playerWins}:${playerLosses}攻占${locName}！`,
       turn: currentTurn,
       leftTime: 5,
     };
@@ -504,24 +643,18 @@ function onSiegeBattleEnd(playerWin: boolean): void {
     setPlayer({ ...getPlayer(), worldNews: updatedNews });
 
     import('../ui/toast').then(m => {
-      m.showToast('🎉 攻城大捷！你率队攻占了' + locName + '！获得 80 修为、200 金币、50 贡献！');
+      m.showToast(`🎉 攻城大捷！${playerWins}:${playerLosses} 攻占${locName}！${playerWins === 3 ? '完美三连胜！' : ''}`);
     });
   } else {
-    // 战败
     applySiegeResult(meta.attackerSect, meta.defenderSect, false);
-
-    // 势力关系恶化
     worsenFactionRelation(meta.attackerSect, meta.defenderSect, 10);
-
-    // 玩家存活但受伤
     setPlayer({ ...getPlayer(), hp: 1 });
 
-    // 安慰奖励
-    const updated = { ...getPlayer(), exp: p.exp + 20, sectContribution: (p.sectContribution ?? 0) + 10 };
+    const updated = { ...getPlayer(), exp: p.exp + 30, sectContribution: (p.sectContribution ?? 0) + 15 };
     setPlayer(updated);
 
     import('../ui/toast').then(m => {
-      m.showToast('💔 攻城失利……你身受重伤，但获得了 20 修为的经验。');
+      m.showToast(`💔 攻城失利……${playerWins}:${playerLosses} 未能夺下城池。获得 30 修为。`);
     });
   }
 

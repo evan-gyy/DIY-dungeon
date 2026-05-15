@@ -12,8 +12,9 @@
 
 import type { NpcStats, NpcPersonality } from '../data/npcStats';
 import { NPC_STATS_INIT } from '../data/npcStats';
-import type { SectId, SkillId, FabaoId } from '../data/types';
+import type { SectId, SkillId, FabaoId, NpcAmbition } from '../data/types';
 import { SECT_SKILL_TABLES } from '../data/sectSkillTables';
+import { SECTS } from '../data/sects';
 import type { TalentId } from '../data/realmConfig';
 import type { CourtStats, CourtPath, DiscipleRank, CourtRank } from '../data/sandboxTypes';
 import type { LocationId } from '../data/worldMap';
@@ -65,9 +66,10 @@ const FEMALE_NAMES = [
 // ═════════════════════════════════════════════════════════════
 
 /**
- * 从天赋池中无放回抽取 3 个天赋。
+ * 从天赋池中无放回抽取天赋。
  * 权重按 TALENT_TIER_CONFIG 层级比例分配 -> 层内均分。
- * 天骄模式：跳过随机，强制 2 绝世 + 1 上等。
+ * 天骄模式：强制 2 绝世 + 1 上等。
+ * 标准 NPC：~50% 1个天赋，~30% 2个天赋，~20% 3个天赋。
  */
 function pickTalents(rng: () => number, isTianjiao: boolean): TalentId[] {
   if (isTianjiao) {
@@ -87,13 +89,16 @@ function pickTalents(rng: () => number, isTianjiao: boolean): TalentId[] {
     return [...pick(legendary, 2, rng), ...pick(superior, 1, rng)];
   }
 
-  // 标准 NPC：加权无放回抽取 3 个天赋
+  // 标准 NPC：确定天赋数量（~50% 1个，~30% 2个，~20% 3个）
+  const countRoll = rng();
+  const talentCount = countRoll < 0.50 ? 1 : countRoll < 0.80 ? 2 : 3;
+
+  // 加权无放回抽取
   const result: TalentId[] = [];
   const remaining = [...NPC_TALENT_POOL];
 
-  for (let draw = 0; draw < 3; draw++) {
+  for (let draw = 0; draw < talentCount; draw++) {
     if (remaining.length === 0) break;
-    // 计算剩余池子的总权重
     const weights = remaining.map(t => getTalentWeight(t));
     const totalW = weights.reduce((s, w) => s + w, 0);
     let roll = rng() * totalW;
@@ -124,6 +129,12 @@ const PERSONALITY_POOL: NpcPersonality[] = [
 /** 性格权重 */
 const PERSONALITY_WEIGHTS: Record<NpcPersonality, number> = {
   aloof: 12, kind: 18, cunning: 10, upright: 15, gentle: 25, bold: 20,
+};
+
+/** P8: NPC志向列表及权重 */
+const AMBITION_POOL: NpcAmbition[] = ['content', 'master', 'power', 'rebel', 'avenger'];
+const AMBITION_WEIGHTS: Record<NpcAmbition, number> = {
+  content: 40, master: 30, power: 18, rebel: 10, avenger: 2,
 };
 
 /** 金字塔职级比例（掌门由手写 NPC 独占，随机生成器不产出 leader/vice_leader） */
@@ -448,11 +459,19 @@ function _generateNpc(config: NpcGenConfig, presetRank?: DiscipleRank): NpcStats
     level = Math.max(level, Math.min(11, maxLv));
   }
 
-  // 🆕 P8: 天赋（每人3个，无放回抽取；天骄强制2绝世+1上等）
+  // 🆕 P8: 天赋（~50% 1个，~30% 2个，~20% 3个；天骄强制2绝世+1上等）
   const talents = pickTalents(rng, isTianjiao);
 
   // 性格
   const personality = weightedPick(PERSONALITY_POOL, PERSONALITY_WEIGHTS, rng, 10);
+
+  // 🆕 P8: NPC志向（加权随机，邪道/叛军势力提高 rebel 概率）
+  let ambitionWeights = { ...AMBITION_WEIGHTS };
+  const sectAlign = SECTS[sect]?.alignment;
+  if (sectAlign === 'chaotic' || sect === 'rebels') {
+    ambitionWeights = { ...ambitionWeights, rebel: ambitionWeights.rebel + 15, content: ambitionWeights.content - 10, master: ambitionWeights.master - 5 };
+  }
+  const ambition = weightedPick(AMBITION_POOL, ambitionWeights, rng, 5);
 
   // 朝廷四维（根据路径偏重）
   const courtStats: CourtStats = generateCourtStats(rng, courtPath, level);
@@ -507,6 +526,7 @@ function _generateNpc(config: NpcGenConfig, presetRank?: DiscipleRank): NpcStats
     courtPath,
     gender,
     portraitIndex,
+    ambition,
   };
 }
 
@@ -570,10 +590,10 @@ const SECT_HUBS: SectHubConfig[] = [
   // ── 顶尖大派 (supreme): 人数多，顶尖高手可达大乘 ──
   { locationId: 'wudang_mountain',    sect: 'wudang',     countRange: [10, 14], levelRange: [1, 70] },
   { locationId: 'shaolin_temple',     sect: 'shaolin',    countRange: [16, 24], levelRange: [1, 65] },
-  { locationId: 'heimu_cliff',        sect: 'riyue',      countRange: [14, 20], levelRange: [1, 60] },
   // ── 一流门派 (first_rate): 人数中上，顶尖高手可达渡劫 ──
   { locationId: 'emei_mountain',      sect: 'emei',       countRange: [14, 20], levelRange: [1, 55] },
   { locationId: 'beggar_hq',          sect: 'beggar',     countRange: [18, 24], levelRange: [1, 55] },
+  { locationId: 'heimu_cliff',        sect: 'riyue',      countRange: [12, 18], levelRange: [1, 55] },
   { locationId: 'zhongnan_mountain',  sect: 'quanzhen',   countRange: [12, 18], levelRange: [1, 55] },
   { locationId: 'kunlun_mountain',    sect: 'kunlun',     countRange: [10, 16], levelRange: [1, 55] },
   { locationId: 'tangmen_estate',     sect: 'tangmen',    countRange: [10, 16], levelRange: [1, 55] },
@@ -588,8 +608,13 @@ const SECT_HUBS: SectHubConfig[] = [
   { locationId: 'dali_city',         sect: 'wudu',       countRange: [10, 16], levelRange: [1, 35] },
   { locationId: 'liangzhou_city',    sect: 'xuedao',     countRange: [8, 14],  levelRange: [1, 35] },
   { locationId: 'mingzhou_city',     sect: 'haisha',     countRange: [8, 14],  levelRange: [1, 35] },
-  // ── 特殊: 逍遥派精锐少但层次高，魔教无固定据点（在城市中生成）──
+  // ── 特殊: 逍遥派精锐少但层次高 ──
   { locationId: 'xiaoyao_valley',     sect: 'xiaoyao',    countRange: [5, 10],  levelRange: [15, 55] },
+  // ── P7 朝廷与叛军 ──
+  { locationId: 'kaifeng_city',      sect: 'imperial_court', countRange: [12, 18], levelRange: [1, 55] },
+  { locationId: 'yanjing_city',      sect: 'rebels',         countRange: [5, 9],   levelRange: [15, 55] },
+  // ── 黑月教暗桩（秘密据点，扬州的隐蔽联络点）──
+  { locationId: 'yangzhou_city',     sect: 'demon',          countRange: [4, 8],   levelRange: [15, 45] },
 ];
 
 /** 城市配置 */
@@ -635,6 +660,7 @@ const ALL_SECTS: SectId[] = [
   'maoshan', 'kunlun', 'qingcheng', 'tangmen', 'xiaoyao',
   'quanzhen', 'kongtong', 'diancang',
   'riyue', 'tiezhang', 'wudu', 'xuedao', 'haisha',
+  'imperial_court', 'rebels',
 ];
 
 // ═════════════════════════════════════════════════════════════

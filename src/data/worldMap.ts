@@ -366,6 +366,7 @@ export const WORLD_MAP: Record<LocationId, MapLocation> = {
       { id: 'court_handle_affairs', icon: '📜', name: '处理政务', desc: '在开封府衙批阅公文，积累朝堂影响力', exp: 25, gold: 15, influence: 10, requireCourtRank: 'xiucai', unlockChapter: 2, unlockLevel: 0 },
       { id: 'court_attend_meeting', icon: '🏛️', name: '参加朝会', desc: '早朝议事，在六部中露脸', exp: 20, gold: 10, influence: 15, requireCourtRank: 'juren', unlockChapter: 2, unlockLevel: 0 },
       { id: 'court_judge_case', icon: '⚖️', name: '审理案件', desc: '审理民间纠纷，树立官声', exp: 30, gold: 20, influence: 12, requireCourtRank: 'xiucai', unlockChapter: 2, unlockLevel: 0 },
+      { id: 'sect_learn_skill', icon: '📖', name: '习武学功', desc: '在开封禁军武库修习朝廷武学，消耗贡献值', exp: 0, gold: 0, contribution: 0, sectTarget: 'imperial_court', unlockChapter: 2 },
     ],
   },
 
@@ -380,6 +381,7 @@ export const WORLD_MAP: Record<LocationId, MapLocation> = {
     connections: ['kaifeng_city', 'suzhou_city', 'jiangzhou_city', 'jinling_city'],
     actions: [
       { id: 'join_sect', icon: '🌑', name: '投身魔教', desc: '献上投名状，拜入黑月教门下。魔道之路，虽万千人吾往矣', exp: 0, gold: 0, sectTarget: 'demon', requireNoSect: true, unlockChapter: 2 },
+      { id: 'sect_learn_skill', icon: '📖', name: '习武学功', desc: '在扬州密室修习魔教功法，消耗贡献值', exp: 0, gold: 0, contribution: 0, sectTarget: 'demon', unlockChapter: 2 },
       { id: 'city_meditate', icon: '🧘', name: '城中静修', desc: '在客栈中静心打坐，感悟天地', exp: 30, gold: 0, contribution: 0, unlockChapter: 2, unlockLevel: 0 },
       { id: 'city_fabao_shop', icon: '🏬', name: '灵宝阁',   desc: '随机出售法宝，淘到就是赚到',     exp: 0, gold: 0, contribution: 0, unlockChapter: 2, unlockLevel: 0 },
       { id: 'merchant_invest', icon: '💰', name: '商行投资', desc: '扬州商行林立，投一笔买卖或有厚报', exp: 20, gold: 30, contribution: 0, unlockChapter: 2, unlockLevel: 0 },
@@ -448,6 +450,8 @@ export const WORLD_MAP: Record<LocationId, MapLocation> = {
       { id: 'city_meditate', icon: '🧘', name: '城中静修', desc: '在客栈中静心打坐，感悟天地', exp: 30, gold: 0, contribution: 0, unlockChapter: 4, unlockLevel: 0 },
       { id: 'city_fabao_shop', icon: '🏬', name: '灵宝阁',   desc: '随机出售法宝，淘到就是赚到',     exp: 0, gold: 0, contribution: 0, unlockChapter: 4, unlockLevel: 0 },
       { id: 'buddha_pilgrimage', icon: '🛕', name: '佛国朝拜', desc: '大理崇圣寺三塔之下，虔诚礼佛静心', exp: 38, gold: 0, contribution: 0, unlockChapter: 4, unlockLevel: 0 },
+      { id: 'join_sect', icon: '🐍', name: '投身五毒教', desc: '在五毒密林献上血祭，修习蛊毒之术', exp: 0, gold: 0, sectTarget: 'wudu', requireNoSect: true, unlockChapter: 3 },
+      { id: 'sect_learn_skill', icon: '📖', name: '习武学功', desc: '在五毒密坛修习蛊毒秘术，消耗贡献值', exp: 0, gold: 0, contribution: 0, sectTarget: 'wudu', unlockChapter: 3 },
     ],
   },
 
@@ -581,6 +585,8 @@ export const WORLD_MAP: Record<LocationId, MapLocation> = {
       { id: 'city_meditate', icon: '🧘', name: '城中静修', desc: '在客栈中静心打坐，感悟天地', exp: 30, gold: 0, contribution: 0, unlockChapter: 3 },
       { id: 'city_fabao_shop', icon: '🏬', name: '灵宝阁', desc: '随机出售法宝，淘到就是赚到', exp: 0, gold: 0, contribution: 0, unlockChapter: 3 },
       { id: 'border_patrol', icon: '🛡️', name: '边境巡逻', desc: '随北境守军巡逻，练就铁血武功', exp: 45, gold: 15, contribution: 3, unlockChapter: 3 },
+      { id: 'join_sect', icon: '⚔️', name: '投身叛军', desc: '在燕京誓师，加入前朝残余，一腔热血光复旧国', exp: 0, gold: 0, sectTarget: 'rebels', requireNoSect: true, unlockChapter: 3 },
+      { id: 'sect_learn_skill', icon: '📖', name: '习武学功', desc: '在燕京叛军营修习实战武学，消耗贡献值', exp: 0, gold: 0, contribution: 0, sectTarget: 'rebels', unlockChapter: 3 },
     ],
   },
 
@@ -649,6 +655,8 @@ export const WORLD_MAP: Record<LocationId, MapLocation> = {
       { id: 'city_meditate', icon: '🧘', name: '城中静修', desc: '在客栈中静心打坐，感悟天地', exp: 30, gold: 0, contribution: 0, unlockChapter: 3 },
       { id: 'city_fabao_shop', icon: '🏬', name: '灵宝阁', desc: '随机出售法宝，淘到就是赚到', exp: 0, gold: 0, contribution: 0, unlockChapter: 3 },
       { id: 'gorge_explore', icon: '⛰️', name: '峡谷探险', desc: '在三峡峭壁之间修行，险地磨砺武功', exp: 45, gold: 10, contribution: 0, unlockChapter: 3 },
+      { id: 'join_sect', icon: '✊', name: '投身铁掌帮', desc: '在铁掌峰下叩拜入帮，修习裂石铁掌功', exp: 0, gold: 0, sectTarget: 'tiezhang', requireNoSect: true, unlockChapter: 3 },
+      { id: 'sect_learn_skill', icon: '📖', name: '习武学功', desc: '在铁掌帮修习裂石功铁掌绝学，消耗贡献值', exp: 0, gold: 0, contribution: 0, sectTarget: 'tiezhang', unlockChapter: 3 },
     ],
   },
 
@@ -666,6 +674,8 @@ export const WORLD_MAP: Record<LocationId, MapLocation> = {
       { id: 'city_meditate', icon: '🧘', name: '城中静修', desc: '在客栈中静心打坐，感悟天地', exp: 30, gold: 0, contribution: 0, unlockChapter: 3 },
       { id: 'city_fabao_shop', icon: '🏬', name: '灵宝阁', desc: '随机出售法宝，淘到就是赚到', exp: 0, gold: 0, contribution: 0, unlockChapter: 3 },
       { id: 'overseas_goods', icon: '⛵', name: '海外珍品', desc: '与海外商人交易，获取东瀛和高丽奇珍', exp: 25, gold: 30, contribution: 0, unlockChapter: 3 },
+      { id: 'join_sect', icon: '🏴‍☠️', name: '投身海沙派', desc: '在明州码头叩拜入派，修习海沙功', exp: 0, gold: 0, sectTarget: 'haisha', requireNoSect: true, unlockChapter: 3 },
+      { id: 'sect_learn_skill', icon: '📖', name: '习武学功', desc: '在海沙派修习潮汐功法，消耗贡献值', exp: 0, gold: 0, contribution: 0, sectTarget: 'haisha', unlockChapter: 3 },
     ],
   },
 
@@ -683,6 +693,8 @@ export const WORLD_MAP: Record<LocationId, MapLocation> = {
       { id: 'city_meditate', icon: '🧘', name: '城中静修', desc: '在客栈中静心打坐，感悟天地', exp: 30, gold: 0, contribution: 0, unlockChapter: 3 },
       { id: 'city_fabao_shop', icon: '🏬', name: '灵宝阁', desc: '随机出售法宝，淘到就是赚到', exp: 0, gold: 0, contribution: 0, unlockChapter: 3 },
       { id: 'silk_road_west', icon: '🐪', name: '西域商道', desc: '踏上丝绸之路，向西域商人购置奇珍', exp: 30, gold: 40, contribution: 0, unlockChapter: 3 },
+      { id: 'join_sect', icon: '🩸', name: '投身血刀门', desc: '在凉州血刀门叩拜入派，修习血刀大法', exp: 0, gold: 0, sectTarget: 'xuedao', requireNoSect: true, unlockChapter: 3 },
+      { id: 'sect_learn_skill', icon: '📖', name: '习武学功', desc: '在血刀门修习血刀秘法，消耗贡献值', exp: 0, gold: 0, contribution: 0, sectTarget: 'xuedao', unlockChapter: 3 },
     ],
   },
 
@@ -775,23 +787,25 @@ export function getLocationDisplayName(id: LocationId): string {
   return `${regionPrefix[loc.region] ?? ''}${loc.name}`;
 }
 
-export function isLocationUnlocked(id: LocationId, currentChapter: number): boolean {
+export function isLocationUnlocked(id: LocationId, currentChapter: number, isSandbox = false): boolean {
   const loc = WORLD_MAP[id];
   if (!loc) return false;
+  if (isSandbox) return true;
   if (!loc.unlockChapter) return true;
   return currentChapter >= loc.unlockChapter;
 }
 
 export function getAvailableDestinations(
   currentLocationId: LocationId,
-  currentChapter: number
+  currentChapter: number,
+  isSandbox = false
 ): MapLocation[] {
   const current = WORLD_MAP[currentLocationId];
   if (!current) return [];
 
   return current.connections
     .map(id => WORLD_MAP[id])
-    .filter(loc => isLocationUnlocked(loc.id, currentChapter));
+    .filter(loc => isLocationUnlocked(loc.id, currentChapter, isSandbox));
 }
 
 export function getLocationBackground(locationId: LocationId): string {

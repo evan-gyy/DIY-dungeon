@@ -109,6 +109,35 @@ export const HAISHA_SKILL_TABLE: Array<[number, SkillId]> = [
   [11, 'haisha_wave_palm'], [12, 'haisha_sea_guard'], [13, 'haisha_tsunami'], [14, 'haisha_whirlpool'],
 ];
 
+// ═══════════════════════════════════════════════════════════
+//  P7 补齐：叛军 / 朝廷 / 魔教 / 逍遥派 专属技能表
+// ═══════════════════════════════════════════════════════════
+
+export const REBEL_SKILL_TABLE: Array<[number, SkillId]> = [
+  [1, 'rebel_fist'], [2, 'rebel_war_qi'], [3, 'rebel_scout_step'], [4, 'rebel_spear'],
+  [11, 'rebel_iron_bone'], [12, 'rebel_siege'], [13, 'rebel_counter'], [14, 'rebel_beacon'],
+  [21, 'rebel_blood_war'], [22, 'rebel_flanking'], [23, 'rebel_rearguard'], [24, 'rebel_war_sweep'],
+];
+
+export const IMPERIAL_COURT_SKILL_TABLE: Array<[number, SkillId]> = [
+  [1, 'court_fist'], [2, 'court_authority_qi'], [3, 'court_cane'], [4, 'court_ritual_step'],
+  [11, 'court_censor'], [12, 'court_silk_guard'], [13, 'court_arrest'], [14, 'court_spear'],
+  [21, 'court_gold_seal'], [22, 'court_envoy'], [23, 'court_iron_shield'], [24, 'court_grace'],
+  [31, 'court_dragon_roar'], [32, 'court_six_strike'], [33, 'court_royal_blade'], [34, 'court_heaven_sword'],
+];
+
+export const DEMON_SKILL_TABLE: Array<[number, SkillId]> = [
+  [1, 'demon_claw'], [2, 'demon_heart'], [3, 'demon_soul_gaze'], [4, 'demon_shadow_dodge'],
+  [11, 'demon_drain'], [12, 'demon_body'], [13, 'demon_slash'], [14, 'demon_confuse'],
+  [21, 'demon_devour'], [22, 'demon_realm'], [23, 'demon_soul_enhance'], [24, 'demon_purgatory'],
+];
+
+export const XIAOYAO_SKILL_TABLE: Array<[number, SkillId]> = [
+  [1, 'xiaoyao_fist'], [2, 'xiaoyao_free_qi'], [3, 'xiaoyao_wind_walk'], [4, 'xiaoyao_flower_hand'],
+  [11, 'xiaoyao_absorb'], [12, 'xiaoyao_snow_palm'], [13, 'xiaoyao_wander'], [14, 'xiaoyao_void_heart'],
+  [21, 'xiaoyao_silk_step'], [22, 'xiaoyao_sun_palm'], [23, 'xiaoyao_fate_seal'], [24, 'xiaoyao_unity'],
+];
+
 export const SECT_SKILL_TABLES: Partial<Record<SectId, Array<[number, SkillId]>>> = {
   wudang:   WUDANG_SKILL_TABLE,
   shaolin:  SHAOLIN_SKILL_TABLE,
@@ -127,6 +156,10 @@ export const SECT_SKILL_TABLES: Partial<Record<SectId, Array<[number, SkillId]>>
   wudu:     WUDU_SKILL_TABLE,
   xuedao:   XUEDAO_SKILL_TABLE,
   haisha:   HAISHA_SKILL_TABLE,
+  demon:    DEMON_SKILL_TABLE,
+  xiaoyao:  XIAOYAO_SKILL_TABLE,
+  imperial_court: IMPERIAL_COURT_SKILL_TABLE,
+  rebels:   REBEL_SKILL_TABLE,
 };
 
 /** 获取技能所在的境界层（用于学习费用计算） */

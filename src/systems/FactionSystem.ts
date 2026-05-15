@@ -20,6 +20,8 @@ import {
 } from '../data/sandboxTypes';
 import { getPlayer, setPlayer } from '../state/GameState';
 import { saveGame } from '../state/SaveSystem';
+import { computeSectPower } from './SectManagement';
+import { SECTS } from '../data/sects';
 
 // ──── 外交事件类型 ────
 
@@ -128,6 +130,9 @@ const BASE_TRUST: Record<string, Record<string, number>> = {
   qingcheng:{ wudang: 40, shaolin: 35, emei: 55, beggar: 40, huashan: 45, demon: 25, maoshan: 45, kunlun: 40, tangmen: 35, xiaoyao: 35 },
   tangmen: { wudang: 30, shaolin: 25, emei: 40, beggar: 30, huashan: 35, demon: 40, maoshan: 30, kunlun: 30, qingcheng: 35, xiaoyao: 25 },
   xiaoyao: { wudang: 50, shaolin: 45, emei: 40, beggar: 35, huashan: 30, demon: 15, maoshan: 45, kunlun: 40, qingcheng: 35, tangmen: 25 },
+  // 🆕 P7 朝廷与叛军
+  imperial_court: { wudang: 70, shaolin: 65, emei: 55, beggar: 50, huashan: 50, demon: 5, maoshan: 55, kunlun: 45, qingcheng: 45, tangmen: 35, xiaoyao: 30, quanzhen: 60, kongtong: 40, diancang: 45, riyue: 10, tiezhang: 35, wudu: 15, xuedao: 10, haisha: 20, rebels: 10 },
+  rebels:         { wudang: 20, shaolin: 15, emei: 20, beggar: 25, huashan: 25, demon: 40, maoshan: 15, kunlun: 20, qingcheng: 25, tangmen: 30, xiaoyao: 20, quanzhen: 15, kongtong: 20, diancang: 25, riyue: 35, tiezhang: 30, wudu: 35, xuedao: 40, haisha: 30, imperial_court: 10 },
 };
 
 /** 所有势力 ID 列表（排除 'none'） */
@@ -136,6 +141,7 @@ export const ALL_FACTIONS: SectId[] = [
   'maoshan', 'kunlun', 'qingcheng', 'tangmen', 'xiaoyao',
   'quanzhen', 'kongtong', 'diancang',
   'riyue', 'tiezhang', 'wudu', 'xuedao', 'haisha',
+  'imperial_court', 'rebels',
 ];
 
 // ──── 内部工具函数 ────
@@ -152,6 +158,7 @@ function factionName(id: SectId): string {
     tangmen: '唐门', xiaoyao: '逍遥派',
     quanzhen: '全真教', kongtong: '崆峒派', diancang: '点苍派',
     riyue: '日月教', tiezhang: '铁掌帮', wudu: '五毒教', xuedao: '血刀门', haisha: '海沙派',
+    imperial_court: '朝廷', rebels: '叛军',
     none: '散修',
   };
   return names[id] ?? id;
@@ -468,4 +475,123 @@ export function getTrustColor(trust: number): string {
   if (trust >= 30) return 'trust-neutral';
   if (trust >= 15) return 'trust-tense';
   return 'trust-hostile';
+}
+
+// ──── P7 势力联盟系统 ────
+
+export interface Coalition {
+  name: string;
+  targetSect: SectId;
+  members: SectId[];
+  formedMonth: number;
+  expireMonth: number;
+}
+
+/** 霸权阈值：超过此比例触发反霸联盟 */
+const HEGEMONY_THRESHOLD = 0.35;
+/** 联盟解散阈值：目标力量降至低于此比例 */
+const DISSOLVE_THRESHOLD = 0.25;
+/** 联盟默认持续月数 */
+const COALITION_DURATION = 6;
+
+/**
+ * 每月检查是否需要组建联盟。
+ * 当任一势力力量超过全图 35%，其他势力自动形成反霸联盟。
+ */
+export function tickCoalitions(): void {
+  const p = getPlayer();
+  const month = p.gameMonth ?? 1;
+  let coalitions = (p.coalitions ?? []) as Array<{
+    name: string; targetSect: string; members: string[];
+    formedMonth: number; expireMonth: number;
+  }>;
+
+  // 1. 清理已过期或已失效的联盟
+  coalitions = coalitions.filter(c => {
+    if (month >= c.expireMonth) return false;
+    const targetPower = computeSectPower(c.targetSect as SectId);
+    const totalPower = computeTotalWorldPower();
+    if (totalPower > 0 && targetPower / totalPower < DISSOLVE_THRESHOLD) return false;
+    return true;
+  });
+
+  // 2. 检查是否需要组建新联盟
+  const allSects = Object.keys(FACTION_DEFS).filter(s => s !== 'none' && s !== 'imperial_court' && s !== 'rebels') as SectId[];
+  const totalPower = computeTotalWorldPower();
+
+  for (const sectId of allSects) {
+    const power = computeSectPower(sectId);
+    if (totalPower === 0 || power / totalPower < HEGEMONY_THRESHOLD) continue;
+
+    // 检查是否已有针对该势力的联盟
+    const existing = coalitions.find(c => c.targetSect === sectId);
+    if (existing) continue;
+
+    // 组建联盟：挑选 3-5 个其他势力
+    const candidates = allSects
+      .filter(s => s !== sectId)
+      .map(s => ({ id: s, power: computeSectPower(s) }))
+      .sort((a, b) => b.power - a.power);
+
+    const memberCount = Math.min(5, Math.max(3, Math.floor(candidates.length * 0.4)));
+    const members = candidates.slice(0, memberCount).map(c => c.id);
+
+    const sectName = SECTS[sectId]?.name ?? sectId;
+    coalitions.push({
+      name: `反${sectName}盟`,
+      targetSect: sectId,
+      members,
+      formedMonth: month,
+      expireMonth: month + COALITION_DURATION,
+    });
+
+    // 改善联盟成员间关系
+    for (let i = 0; i < members.length; i++) {
+      for (let j = i + 1; j < members.length; j++) {
+        modifyFactionTrust(members[i]!, members[j]!, 10, '联盟缔结');
+      }
+    }
+  }
+
+  setPlayer({ ...getPlayer(), coalitions });
+}
+
+/** 计算全图总力量值 */
+function computeTotalWorldPower(): number {
+  const allSects = Object.keys(FACTION_DEFS).filter(s => s !== 'none') as SectId[];
+  return allSects.reduce((sum, s) => sum + computeSectPower(s), 0);
+}
+
+/** 获取针对某势力的活跃联盟 */
+export function getActiveCoalitionTargeting(targetSect: SectId): Coalition | null {
+  const p = getPlayer();
+  const coalitions = (p.coalitions ?? []) as Coalition[];
+  const month = p.gameMonth ?? 1;
+  return coalitions.find(c => c.targetSect === targetSect && month < c.expireMonth) ?? null;
+}
+
+/** 检查某势力是否在活跃联盟中 */
+export function isInCoalition(sectId: SectId): boolean {
+  const p = getPlayer();
+  const coalitions = (p.coalitions ?? []) as Coalition[];
+  const month = p.gameMonth ?? 1;
+  return coalitions.some(c => month < c.expireMonth &&
+    ((c.members as string[]).includes(sectId)));
+}
+
+/** 获取某势力所属联盟（可能是成员或目标） */
+export function getSectCoalition(sectId: SectId): Coalition | null {
+  const p = getPlayer();
+  const coalitions = (p.coalitions ?? []) as Coalition[];
+  const month = p.gameMonth ?? 1;
+  return coalitions.find(c => month < c.expireMonth &&
+    ((c.members as string[]).includes(sectId) || c.targetSect === sectId)) ?? null;
+}
+
+/** 获取所有活跃联盟 */
+export function getActiveCoalitions(): Coalition[] {
+  const p = getPlayer();
+  const coalitions = (p.coalitions ?? []) as Coalition[];
+  const month = p.gameMonth ?? 1;
+  return coalitions.filter(c => month < c.expireMonth);
 }

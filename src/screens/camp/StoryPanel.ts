@@ -156,17 +156,19 @@ function doDailyTask(action: LocationAction): void {
 
 function renderDailyTasks(): string {
   const p = getPlayer();
+  const isSandbox = p.gameMode === 'sandbox';
   const locId = p.currentLocationId ?? 'wudang_mountain';
   const location = WORLD_MAP[locId];
   const actions = location?.actions ?? [];
-  
+
   // 朝廷品阶索引（用于过滤朝廷专属行动）
   const courtRankOrder: string[] = COURT_RANK_ORDER as string[];
   const playerCourtIdx = courtRankOrder.indexOf(p.courtRank ?? 'commoner');
 
   // 过滤：解锁条件满足 + 未超过 maxLevel + 朝廷品阶满足
+  // 沙盒模式：章节限制不生效
   const availableTasks = actions.filter(t => {
-    if (p.chapter < (t.unlockChapter ?? 0)) return false;
+    if (!isSandbox && p.chapter < (t.unlockChapter ?? 0)) return false;
     if (p.level < (t.unlockLevel ?? 0)) return false;
     if (t.maxLevel !== undefined && p.level > t.maxLevel) return false;
     if (t.requireCourtRank) {
@@ -182,8 +184,9 @@ function renderDailyTasks(): string {
     return true;
   });
   // 锁定任务：不满足解锁条件，或已超过 maxLevel，或朝廷品阶不足
+  // 沙盒模式：章节限制不生效
   const lockedTasks = actions.filter(t => {
-    const chapterUnlocked = p.chapter >= (t.unlockChapter ?? 0);
+    const chapterUnlocked = isSandbox || p.chapter >= (t.unlockChapter ?? 0);
     const levelUnlocked = p.level >= (t.unlockLevel ?? 0);
     const outleveled = t.maxLevel !== undefined && p.level > t.maxLevel;
     if (!chapterUnlocked || !levelUnlocked || outleveled) return true;

@@ -259,6 +259,9 @@ export const FACTION_DEFS: Record<SectId, { alignment: FactionAlignment; culture
   diancang: { alignment: 'neutral',   culture: ['sword', 'mountain', 'remote', 'southern'] },
   // 无门派（散修/朝堂纯文官）
   none:     { alignment: 'neutral',   culture: [] },
+  // 🆕 P7 朝廷与叛军
+  imperial_court: { alignment: 'neutral',   culture: ['imperial', 'order', 'power', 'bureaucracy'] },
+  rebels:         { alignment: 'chaotic',  culture: ['rebel', 'restoration', 'loyalty', 'frontier'] },
   // 🆕 P9 五大新势力
   riyue:    { alignment: 'chaotic',     culture: ['moon', 'sun', 'forbidden', 'power', 'shadow'] },
   tiezhang: { alignment: 'neutral', culture: ['fist', 'clan', 'water', 'brute-force'] },

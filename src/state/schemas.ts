@@ -117,6 +117,8 @@ export const PlayerStateSchema = z.object({
     portraitIndex: z.number().optional(),
     // 🆕 近期经历日志
     recentLog: z.array(z.string()).default([]),
+    // 🆕 P8: NPC志向（驱动自主行为）
+    ambition: z.enum(['content','master','power','rebel','avenger']).default('content'),
   })).default({}),
 
   // 🆕 NPC 好感度字典
@@ -230,7 +232,29 @@ export const PlayerStateSchema = z.object({
   sectState: z.record(z.string(), z.object({
     resources: z.number().default(200),
     stability: z.number().default(50),
+    prosperity: z.number().default(30),
   })).default({}),
+
+  // 🆕 P7 城池繁荣度
+  cityProsperity: z.record(z.string(), z.number()).default({}),
+  // 🆕 P7 势力力量分
+  sectPower: z.record(z.string(), z.number()).default({}),
+  // 🆕 P7 江湖大事件冷却
+  grandEventCooldown: z.number().default(0),
+  // 🆕 P7 玩家大事件选择历史
+  grandEventHistory: z.array(z.object({
+    eventId: z.string(),
+    choice: z.string(),
+    month: z.number(),
+  })).default([]),
+  // 🆕 P7 势力联盟
+  coalitions: z.array(z.object({
+    name: z.string(),
+    targetSect: z.string(),
+    members: z.array(z.string()),
+    formedMonth: z.number(),
+    expireMonth: z.number(),
+  })).default([]),
 
   _slot:    z.number().default(1),
   _savedAt: z.string().optional(),

@@ -3797,3 +3797,239 @@ body {
 }
 .encounter-btn.go:hover { filter: brightness(1.2); }
 .encounter-btn.ignore:hover { border-color: var(--border-gold); color: var(--text-gold); }
+
+/* ===== P7 江湖大事件弹窗 ===== */
+
+.grand-event-overlay {
+  position: fixed; inset: 0; z-index: 1100;
+  display: flex; align-items: center; justify-content: center;
+  animation: ge-fadein 0.6s ease;
+  overflow-y: auto;
+}
+@keyframes ge-fadein {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.grand-event-bg {
+  position: fixed; inset: 0;
+  background: linear-gradient(160deg, #0d0a1a 0%, #1a1030 30%, #16213e 60%, #0a0a15 100%);
+  z-index: 0;
+}
+.grand-event-vignette {
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse at 50% 30%, rgba(232,200,122,0.08) 0%, transparent 60%),
+              radial-gradient(ellipse at 50% 100%, rgba(0,0,0,0.8) 0%, transparent 70%);
+  pointer-events: none;
+}
+.grand-event-particles {
+  position: absolute; inset: 0;
+  background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='30' cy='30' r='0.5' fill='rgba(232,200,122,0.3)'/%3E%3C/svg%3E");
+  background-size: 120px 120px;
+  opacity: 0.4; pointer-events: none;
+  animation: ge-particles 20s linear infinite;
+}
+@keyframes ge-particles {
+  from { background-position: 0 0; }
+  to   { background-position: 120px 120px; }
+}
+
+.grand-event-stage {
+  position: relative; z-index: 1;
+  width: 100%; max-width: 600px;
+  padding: 40px 28px;
+  display: flex; flex-direction: column;
+  align-items: center; gap: 24px;
+  animation: ge-rise 0.8s ease;
+}
+@keyframes ge-rise {
+  from { opacity: 0; transform: translateY(30px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── 标题 ── */
+.ge-header { text-align: center; }
+.ge-type-badge {
+  display: inline-block; padding: 4px 16px;
+  border-radius: 20px; font-size: 12px; letter-spacing: 2px;
+  background: rgba(232,200,122,0.12); color: var(--text-gold);
+  border: 1px solid rgba(232,200,122,0.25); margin-bottom: 10px;
+}
+.ge-title {
+  font-size: 28px; font-weight: 700; letter-spacing: 6px;
+  background: linear-gradient(180deg, #ffd700 0%, #c9a84c 100%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 8px;
+}
+.ge-location {
+  font-size: 13px; color: var(--text-dim); letter-spacing: 1px;
+}
+.ge-loc-icon { margin-right: 2px; }
+.ge-loc-name { color: var(--text-light); }
+.ge-sects { color: var(--accent-cyan); }
+
+/* ── 叙事文本 ── */
+.ge-description-box {
+  width: 100%; padding: 20px 24px;
+  background: rgba(255,255,255,0.03); border-radius: 10px;
+  border-left: 3px solid var(--border-gold);
+}
+.ge-description-text {
+  font-size: 14px; color: var(--text-light); line-height: 2;
+  letter-spacing: 1px; text-indent: 2em;
+}
+
+/* ── 选项区 ── */
+.ge-choices {
+  width: 100%; display: flex; flex-direction: column; gap: 10px;
+}
+.ge-choices-title {
+  text-align: center; font-size: 13px; color: var(--text-dim);
+  letter-spacing: 2px; margin-bottom: 6px;
+}
+
+.grand-event-choice-btn {
+  width: 100%; padding: 14px 18px;
+  border-radius: 8px; cursor: pointer;
+  border: 1px solid var(--border-dim);
+  background: linear-gradient(135deg, rgba(26,26,46,0.9) 0%, rgba(18,18,28,0.9) 100%);
+  display: flex; align-items: center; gap: 12px;
+  color: var(--text-light); font-family: var(--font-cn);
+  font-size: 14px; letter-spacing: 1px;
+  transition: all 0.2s ease;
+  animation: ge-rise 0.5s ease backwards;
+  position: relative; overflow: hidden;
+}
+.grand-event-choice-btn::before {
+  content: ''; position: absolute; left: 0; top: 0;
+  width: 3px; height: 100%;
+  background: var(--choice-glow, #ffd700);
+  border-radius: 0 2px 2px 0;
+  transition: all 0.2s;
+}
+.grand-event-choice-btn:not(:disabled):hover {
+  border-color: var(--choice-glow, #ffd700);
+  background: linear-gradient(135deg, rgba(30,30,56,0.9) 0%, rgba(20,20,38,0.9) 100%);
+  transform: translateX(4px);
+  box-shadow: 0 0 20px rgba(from var(--choice-glow) r g b / 0.15);
+}
+.grand-event-choice-btn:not(:disabled):hover::before {
+  width: 5px;
+}
+
+.ge-choice-risk {
+  font-size: 12px; white-space: nowrap;
+  min-width: 80px; text-align: center;
+}
+.ge-choice-label {
+  flex: 1; font-size: 15px;
+}
+.ge-choice-arrow {
+  color: var(--text-dim); font-size: 12px;
+  transition: transform 0.2s;
+}
+.grand-event-choice-btn:not(:disabled):hover .ge-choice-arrow {
+  transform: translateX(3px);
+}
+
+.choice-locked {
+  opacity: 0.35; cursor: not-allowed;
+}
+.ge-choice-lock-reason {
+  font-size: 11px; color: var(--accent-red);
+  white-space: nowrap;
+}
+
+.choice-selected {
+  border-color: #ffd700 !important;
+  box-shadow: 0 0 30px rgba(255,215,0,0.3) !important;
+  background: linear-gradient(135deg, rgba(40,30,10,0.9) 0%, rgba(20,15,5,0.9) 100%) !important;
+}
+
+/* ── 结果面板 ── */
+.ge-result-panel {
+  width: 100%; padding-top: 16px;
+  display: flex; flex-direction: column; gap: 18px;
+  animation: ge-rise 0.6s ease;
+}
+.ge-result-divider {
+  width: 60%; height: 1px; margin: 0 auto;
+  background: linear-gradient(90deg, transparent, var(--border-gold), transparent);
+}
+.ge-result-narrative {
+  font-size: 15px; color: var(--text-light); line-height: 2.2;
+  letter-spacing: 1px; text-indent: 2em;
+  background: rgba(255,215,0,0.04); padding: 16px 20px;
+  border-radius: 8px; border: 1px solid rgba(255,215,0,0.1);
+}
+
+.ge-result-rewards {
+  text-align: center; padding: 12px;
+}
+.ge-reward-label {
+  font-size: 13px; color: var(--text-gold); letter-spacing: 2px; margin-bottom: 6px;
+}
+.ge-reward-items {
+  font-size: 14px; color: var(--accent-green); letter-spacing: 1px;
+}
+
+.ge-result-effects {
+  padding: 12px 16px;
+  background: rgba(0,0,0,0.2); border-radius: 6px;
+}
+.ge-effect-label {
+  font-size: 12px; color: var(--text-dim); letter-spacing: 2px; margin-bottom: 8px;
+}
+.ge-effect-item {
+  font-size: 13px; color: var(--accent-cyan); padding: 3px 0;
+  letter-spacing: 1px;
+}
+
+.ge-result-close-btn {
+  width: 100%; padding: 14px; margin-top: 10px;
+  border-radius: 8px; cursor: pointer;
+  font-family: var(--font-cn); font-size: 16px;
+  letter-spacing: 3px;
+  border: 1px solid var(--border-gold);
+  background: linear-gradient(135deg, rgba(232,200,122,0.15) 0%, rgba(201,168,76,0.08) 100%);
+  color: var(--text-gold);
+  transition: all 0.3s ease;
+}
+.ge-result-close-btn:hover {
+  background: linear-gradient(135deg, rgba(232,200,122,0.25) 0%, rgba(201,168,76,0.15) 100%);
+  box-shadow: 0 0 30px rgba(232,200,122,0.2);
+}
+
+/* ===== P7 联盟展示 ===== */
+
+.wp-coalition-section {
+  margin: 12px 0;
+}
+.wp-section-title {
+  font-size: 15px; color: var(--text-gold); letter-spacing: 2px;
+  margin-bottom: 10px; padding-bottom: 6px;
+  border-bottom: 1px solid var(--border-dim);
+}
+.wp-coalition-card {
+  background: linear-gradient(135deg, rgba(220,20,60,0.08), rgba(180,0,0,0.04));
+  border: 1px solid rgba(220,20,60,0.2);
+  border-radius: 8px; padding: 12px 14px; margin-bottom: 8px;
+}
+.wp-coalition-header {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 6px;
+}
+.wp-coalition-icon { font-size: 16px; }
+.wp-coalition-name {
+  font-size: 15px; color: #ff6b6b; letter-spacing: 2px; font-weight: 700;
+}
+.wp-coalition-target {
+  font-size: 12px; color: var(--accent-red);
+  background: rgba(220,20,60,0.15); padding: 2px 8px; border-radius: 10px;
+}
+.wp-coalition-members {
+  font-size: 12px; color: var(--text-dim); letter-spacing: 1px;
+}
+.wp-coalition-expire {
+  font-size: 11px; color: var(--text-dim); margin-top: 4px;
+}

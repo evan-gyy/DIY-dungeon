@@ -15,6 +15,8 @@ export type SectId =
   | 'demon' | 'riyue' | 'wudu' | 'xuedao' | 'haisha'
   // 逍遥/特殊
   | 'xiaoyao'
+  // 官府 & 叛军
+  | 'imperial_court' | 'rebels'
   // 无门派
   | 'none';
 
@@ -169,6 +171,36 @@ export type SkillId =
   | 'haisha_palm_basic' | 'haisha_tide_qi' | 'haisha_sand_palm' | 'haisha_water_step'
   // 筑基
   | 'haisha_wave_palm' | 'haisha_sea_guard' | 'haisha_tsunami' | 'haisha_whirlpool'
+  // ── 叛军（P7 补齐）──
+  // 炼气
+  | 'rebel_fist' | 'rebel_war_qi' | 'rebel_scout_step' | 'rebel_spear'
+  // 筑基
+  | 'rebel_iron_bone' | 'rebel_siege' | 'rebel_counter' | 'rebel_beacon'
+  // 结丹
+  | 'rebel_blood_war' | 'rebel_flanking' | 'rebel_rearguard' | 'rebel_war_sweep'
+  // ── 朝廷（P7 补齐）──
+  // 炼气
+  | 'court_fist' | 'court_authority_qi' | 'court_cane' | 'court_ritual_step'
+  // 筑基
+  | 'court_censor' | 'court_silk_guard' | 'court_arrest' | 'court_spear'
+  // 结丹
+  | 'court_gold_seal' | 'court_envoy' | 'court_iron_shield' | 'court_grace'
+  // 元婴
+  | 'court_dragon_roar' | 'court_six_strike' | 'court_royal_blade' | 'court_heaven_sword'
+  // ── 魔教（P7 补齐）──
+  // 炼气
+  | 'demon_claw' | 'demon_heart' | 'demon_soul_gaze' | 'demon_shadow_dodge'
+  // 筑基
+  | 'demon_drain' | 'demon_body' | 'demon_slash' | 'demon_confuse'
+  // 结丹
+  | 'demon_devour' | 'demon_realm' | 'demon_soul_enhance' | 'demon_purgatory'
+  // ── 逍遥派（P7 补齐）──
+  // 炼气
+  | 'xiaoyao_fist' | 'xiaoyao_free_qi' | 'xiaoyao_wind_walk' | 'xiaoyao_flower_hand'
+  // 筑基
+  | 'xiaoyao_absorb' | 'xiaoyao_snow_palm' | 'xiaoyao_wander' | 'xiaoyao_void_heart'
+  // 结丹
+  | 'xiaoyao_silk_step' | 'xiaoyao_sun_palm' | 'xiaoyao_fate_seal' | 'xiaoyao_unity'
   ;
 
 export type EnemyId =
@@ -647,9 +679,28 @@ export interface PlayerState {
   councilCooldown: number;   // 下次议事可触发的 month 数（防止重复触发）
   // 🆕 门派经营：每个门派的资源与稳定度
   sectState: Record<string, SectStateData>;
+  // 🆕 P7 城池繁荣度
+  cityProsperity?: Record<string, number>;
+  // 🆕 P7 势力力量分
+  sectPower?: Record<string, number>;
+  // 🆕 P7 江湖大事件冷却
+  grandEventCooldown?: number;
+  // 🆕 P7 玩家大事件选择历史
+  grandEventHistory?: Array<{ eventId: string; choice: string; month: number }>;
+  // 🆕 P7 势力联盟
+  coalitions?: Array<{
+    name: string;
+    targetSect: string;
+    members: string[];
+    formedMonth: number;
+    expireMonth: number;
+  }>;
   _slot: number;
   _savedAt?: string;
 }
+
+/** NPC 志向类型（P8：驱动 NPC 自主行为） */
+export type NpcAmbition = 'content' | 'master' | 'power' | 'rebel' | 'avenger';
 
 /** 主角与 NPC 的关系类型 */
 export type PlayerNpcRelation = 'lover' | 'sworn_brother' | 'master' | 'student' | 'friend' | 'enemy';
@@ -668,6 +719,7 @@ export const PLAYER_NPC_RELATION_LABEL: Record<PlayerNpcRelation, { label: strin
 export interface SectStateData {
   resources: number;  // 经济资源 0-1000
   stability: number;  // 稳定度 0-100
+  prosperity: number; // 繁荣度 0-100（P7 新增）
 }
 
 /** 江湖传闻条目 */

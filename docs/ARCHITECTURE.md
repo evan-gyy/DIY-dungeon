@@ -1,7 +1,7 @@
 # DIY-Dungeon 项目架构文档
 
 > 本文档面向开发者和 AI Agent，描述当前项目的完整架构、各模块职责，以及接下来的开发方向。
-> 最后更新：2026-05-14（v2.1 P6全宗门技能树 / v2.0五问题修复 / 随机遭遇系统 / 月度CG / 门派属性可视化）
+> 最后更新：2026-05-15（v2.2 21势力全技能树 / 叛军+朝廷+魔教+逍遥 52新技 / 三文档同步）
 
 ---
 
@@ -655,7 +655,7 @@ interface LocationAction {
 | 黑木崖（日月教） | riyue | 3 |
 | 华山 | huashan | 2 |
 
-> ⚠️ **黑月教（demon）** 位于扬州城，有 `join_sect` 行动但**无** `sect_learn_skill`，`SECT_SKILL_TABLES` 中亦无其技能表。宗门习武对黑月教成员暂不支持，是已知待填充缺口。
+> ✅ **魔教（demon）** 已实装独立技能树（12技），与日月教（riyue）同为邪道但技能体系独立。
 
 **当前各地点标准行动**：
 
@@ -681,31 +681,18 @@ interface LocationAction {
 
 ```typescript
 // 每条记录：[所需等级, SkillId]（等级≥该值可学/可使用）
+// 21 个势力全部拥有独立技能表（~324 技能），SECT_SKILL_TABLES 已全覆盖
 export const WUDANG_SKILL_TABLE: Array<[number, SkillId]> = [
   [1, 'wudang_changquan'], [1, 'yangqi_jue'], [1, 'wudang_jianfa_basic'], [1, 'wudang_qinggong'],
   [11, 'mianzhang'], [11, 'wudang_sword'], [11, 'zixiao'], [11, 'wudang_huti'], [11, 'wudang_lianjian'],
   // ... 结丹/元婴/化神/渡劫各4技
 ];
 
-export const SHAOLIN_SKILL_TABLE: Array<[number, SkillId]>;
-export const RIYUE_SKILL_TABLE: Array<[number, SkillId]>;  // 日月教（黑木崖）
-export const EMEI_SKILL_TABLE: Array<[number, SkillId]>;
-export const BEGGAR_SKILL_TABLE: Array<[number, SkillId]>;
-export const QUANZHEN_SKILL_TABLE: Array<[number, SkillId]>;
-export const KUNLUN_SKILL_TABLE: Array<[number, SkillId]>;
-export const TANGMEN_SKILL_TABLE: Array<[number, SkillId]>;
-
-// 按宗门 ID 索引，供 SkillLearnOverlay 查表
+// 共 21 张技能表：19宗门 + 叛军(rebel) + 朝廷(imperial_court) +
+//                魔教(demon) + 逍遥派(xiaoyao)
 export const SECT_SKILL_TABLES: Partial<Record<SectId, Array<[number, SkillId]>>> = {
-  wudang: WUDANG_SKILL_TABLE,
-  shaolin: SHAOLIN_SKILL_TABLE,
-  riyue: RIYUE_SKILL_TABLE,
-  emei: EMEI_SKILL_TABLE,
-  beggar: BEGGAR_SKILL_TABLE,
-  quanzhen: QUANZHEN_SKILL_TABLE,
-  kunlun: KUNLUN_SKILL_TABLE,
-  tangmen: TANGMEN_SKILL_TABLE,
-  // 华山/崆峒/青城/点苍/铁掌帮/茅山/五毒/血刀/海沙 待填充
+  wudang: WUDANG_SKILL_TABLE, shaolin: SHAOLIN_SKILL_TABLE,
+  // ... 共21项，全部已实装
 };
 
 // 根据等级返回境界信息（用于分层渲染）
@@ -1489,7 +1476,7 @@ second_meet: {
 
 23. **🆕 单敌自动选中（0510 新增）**：战斗中若场上只有1个存活敌人，点击普通攻击或攻击/控制技能时自动选中该敌人并立即触发攻击，无需额外点击。多敌情况仍需手动点击选目标。实现位于 `BattleScreen.ts` 的 `basicBtn` 和装备技能按钮 click handler 中。
 
-24. **黑月教（demon）宗门习武缺口（已知问题）**：`worldMap.ts` 中扬州城（`yangzhou_city`）的黑月教只有 `join_sect` 行动，**无** `sect_learn_skill`。`SECT_SKILL_TABLES` 中也无 `demon` 键。日月教（`riyue`，黑木崖）已完整实装，但黑月教技能学习是已知待填充缺口，后续补充需同时：① 在 `sectSkillTables.ts` 添加技能表 ② 在 `worldMap.ts` 的 `yangzhou_city` 添加 `sect_learn_skill` 行动。
+24. **魔教（demon）宗门习武（已实装）**：魔教已拥有独立技能树（12技：`demon_claw` ~ `demon_purgatory`），`SECT_SKILL_TABLES` 已含 `demon` 键。叛军（rebels）/朝廷（imperial_court）/逍遥派（xiaoyao）亦已实装完整技能表。21 势力全技能树覆盖完成。
 
 25. **🆕 NPC 详情弹窗横版重设计（0513）**：`RelationPanel.ts` 的 `showNpcStatsOverlay()` 和 `style.css` 的 `.npc-stats-overlay-inner` 从竖版（380px）改为鬼谷八荒式横版布局（720px、flex row）。左侧 240px 固定宽度立绘面板（`.npc-stats-left`），右侧属性面板（`.npc-stats-right`）包含六大区块。境界光晕通过 CSS `--realm-glow` 变量传递（8 境界→8 颜色），天骄 NPC 新增金色增强光效（`.tianjiao` 类）。身份标签横向排列（`.npc-stats-identity-tag.sect` 金色 + `.court` 绿色）。天赋标签按品质分色（`.legendary`/`.superior`/`.common`/`.inferior`/`.cursed`）。响应式断点 600px 回退竖版。
 
@@ -1501,19 +1488,20 @@ second_meet: {
 
 ### 10.1 P6：宗门技能树扩展（✅ 已完成）
 
-**当前状态**：17 宗门全部拥有独立技能树，总计 ~272 个专属技能。`SECT_SKILL_TABLES` 已包含全部17宗门的完整映射。NPCGenerator 已导入全局技能表，所有宗门 NPC 均可获得本门技能。
+**当前状态**：21 个势力（19 宗门 + 叛军 + 朝廷）全部拥有独立技能树，总计 ~324 个专属技能。`SECT_SKILL_TABLES` 已包含全部21势力的完整映射。NPCGenerator 已导入全局技能表，所有势力 NPC 均可获得本门技能。
 
 **已完成批次**：
 1. **Batch 1**：少林（25技）+ 日月教（25技）—— 50技能 ✅
 2. **Batch 2**：峨眉 + 丐帮 + 全真 + 昆仑 + 唐门（各16技）—— 80技能 ✅
 3. **Batch 3**：华山 + 崆峒 + 青城 + 点苍 + 铁掌帮（各12技）—— 60技能 ✅
 4. **Batch 4**：茅山 + 五毒 + 血刀 + 海沙（各8技）—— 32技能 ✅
+5. **Batch 5**：叛军（12技）+ 朝廷（16技）+ 魔教（12技）+ 逍遥派（12技）—— 52技能 ✅
 
-**涉及文件**：`src/data/skills.ts`、`src/data/types.ts`、`src/data/sectSkillTables.ts`、`src/systems/NPCGenerator.ts`
+**涉及文件**：`src/data/skills.ts`、`src/data/types.ts`、`src/data/sectSkillTables.ts`、`src/systems/NPCGenerator.ts`、`src/data/npcStats.ts`
 
 ### 10.2 P7：地图扩展（✅ 已完成）
 
-**当前状态（0510）**：`src/data/worldMap.ts` 已扩展至 ~35 个地点，`Camp.ts` 的 POS 坐标表覆盖全部35地点。所有宗门据点已添加 `sect_learn_skill` 行动（日月教已添加并标记 unlockChapter: 3，黑月教扬州城无此行动）。
+**当前状态（0510）**：`src/data/worldMap.ts` 已扩展至 ~35 个地点，`Camp.ts` 的 POS 坐标表覆盖全部35地点。所有宗门据点已添加 `sect_learn_skill` 行动。
 
 **已完成内容**：
 
@@ -1561,4 +1549,4 @@ second_meet: {
 
 4. **TypeScript strict mode**：所有新增 ID 必须先在 `src/data/types.ts` 的联合类型中声明，再在其他文件中使用。`tsc --noEmit` 会验证所有引用。
 
-5. **开发顺序建议**：P6 ✅ → P7 ✅ → P8 ✅ → v2.0修复 ✅ → P9（势力17宗门全量外交+可视化）→ P4系列（事件介入/外交图/秘境/夺权）→ P5系列（偷师/悬赏/NPC间高级关系）
+5. **开发顺序建议**：P6 ✅ → P7 ✅ → P8 ✅ → v2.0修复 ✅ → P9（势力21方全量激活）→ 势力AI自主行动 → 世界事件介入 → 外交可视化。详细优先级和方案见 [SANDBOX_PLAN.md §七](./SANDBOX_PLAN.md)。

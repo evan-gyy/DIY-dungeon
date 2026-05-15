@@ -19,24 +19,25 @@ import { WORLD_MAP, type LocationId } from '../data/worldMap';
 type SectTier = 'supreme' | 'first_rate' | 'second_rate' | 'fringe' | 'special';
 
 const SECT_TIERS: Record<SectId, SectTier> = {
-  wudang: 'supreme', shaolin: 'supreme', riyue: 'supreme',
+  wudang: 'supreme', shaolin: 'supreme',
   emei: 'first_rate', beggar: 'first_rate', quanzhen: 'first_rate',
-  kunlun: 'first_rate', tangmen: 'first_rate',
+  kunlun: 'first_rate', tangmen: 'first_rate', riyue: 'first_rate',
   huashan: 'second_rate', kongtong: 'second_rate', qingcheng: 'second_rate',
   diancang: 'second_rate', tiezhang: 'second_rate',
   maoshan: 'fringe', wudu: 'fringe', xuedao: 'fringe', haisha: 'fringe',
   xiaoyao: 'special', demon: 'special',
+  imperial_court: 'supreme', rebels: 'first_rate',
   none: 'second_rate',
 };
 
 // ──── 初始值 ────
 
 const INITIAL_SECT_STATE: Record<SectTier, SectStateData> = {
-  supreme:     { resources: 500, stability: 70 },
-  first_rate:  { resources: 350, stability: 60 },
-  second_rate: { resources: 200, stability: 50 },
-  fringe:      { resources: 100, stability: 40 },
-  special:     { resources: 300, stability: 45 },
+  supreme:     { resources: 500, stability: 70, prosperity: 50 },
+  first_rate:  { resources: 350, stability: 60, prosperity: 40 },
+  second_rate: { resources: 200, stability: 50, prosperity: 30 },
+  fringe:      { resources: 100, stability: 40, prosperity: 15 },
+  special:     { resources: 300, stability: 45, prosperity: 25 },
 };
 
 // ──── 每门派的掌门 NPC ID ────
@@ -61,6 +62,8 @@ const SECT_LEADER_ID: Partial<Record<SectId, string>> = {
   wudu: 'wudu_leader',
   xuedao: 'xuedao_leader',
   haisha: 'haisha_leader',
+  imperial_court: 'prime_minister',
+  rebels: 'zhao_qinwei',
 };
 
 // ──── 门派状态管理 ────
@@ -84,7 +87,7 @@ export function initSectState(): Record<string, SectStateData> {
 /** 获取某门派的状态 */
 export function getSectState(sectId: SectId): SectStateData {
   const p = getPlayer();
-  return p.sectState?.[sectId] ?? { resources: 200, stability: 50 };
+  return p.sectState?.[sectId] ?? { resources: 200, stability: 50, prosperity: 30 };
 }
 
 /** 更新某门派的状态 */
@@ -94,6 +97,7 @@ export function updateSectState(sectId: SectId, delta: Partial<SectStateData>): 
   const updated = {
     resources: Math.max(0, Math.min(1000, current.resources + (delta.resources ?? 0))),
     stability: Math.max(0, Math.min(100, current.stability + (delta.stability ?? 0))),
+    prosperity: Math.max(0, Math.min(100, (current.prosperity ?? 30) + (delta.prosperity ?? 0))),
   };
   setPlayer({ ...p, sectState: { ...p.sectState, [sectId]: updated } });
 }
@@ -122,9 +126,14 @@ export function tickSectNaturalChange(): void {
     // 自然衰退
     const sDecay = Math.random() < 0.3 ? 1 : 0; // 30% 概率 -1
 
+    // 🆕 P7 繁荣度自然增长
+    const pGain = 2 + Math.floor(Math.random() * 4); // +2~5/月
+    const currentProsperity = (current as any).prosperity ?? 30;
+
     updated[sectId] = {
       resources: Math.max(0, Math.min(1000, current.resources + rGain)),
       stability: Math.max(0, Math.min(100, current.stability - sDecay)),
+      prosperity: Math.max(0, Math.min(100, currentProsperity + pGain)),
     };
   }
 
@@ -374,6 +383,84 @@ export function getCouncilContext(sectId: SectId): CouncilContext {
 /** 获取某门派的掌门 NPC ID */
 export function getSectLeaderId(sectId: SectId): string {
   return SECT_LEADER_ID[sectId] ?? '';
+}
+
+// ──── P7 势力力量值 ────
+
+/** 城市力量加成 */
+const CITY_POWER_BONUS: Partial<Record<LocationId, number>> = {
+  kaifeng_city: 200, changan_city: 200, luoyang_city: 200,
+  xiangyang_city: 100, chengdu_city: 100, yangzhou_city: 100,
+  jiangling_city: 50, suzhou_city: 50, hangzhou_city: 50,
+  dali_city: 50, jiangzhou_city: 50, tanzhou_city: 50,
+  guangzhou_city: 50, wuchang_city: 50, chongqing_city: 50,
+  mingzhou_city: 50, liangzhou_city: 50, fuzhou_city: 50,
+  yanjing_city: 50, taiyuan_city: 50, jinling_city: 50,
+};
+
+/** 宗门据点力量加成 */
+const SECT_BASE_BONUS: Record<SectTier, number> = {
+  supreme: 150, first_rate: 100, second_rate: 50, fringe: 25, special: 75,
+};
+
+/**
+ * 计算某个势力的综合力量值。
+ * sectPower = territories * 100 + resources * 0.5 + stability * 2
+ *           + prosperity * 3 + totalDiscipleLevels * 0.1 + cityBonuses
+ */
+export function computeSectPower(sectId: SectId): number {
+  const p = getPlayer();
+  if (sectId === 'none') return 0;
+
+  const state = getSectState(sectId);
+  const tier = SECT_TIERS[sectId] ?? 'second_rate';
+  const tc = (p.territoryControl ?? {}) as Record<string, string>;
+
+  // 领土数量
+  let territoryCount = 0;
+  let cityBonus = 0;
+  for (const [locId, controller] of Object.entries(tc)) {
+    if (controller === sectId) {
+      territoryCount++;
+      cityBonus += CITY_POWER_BONUS[locId as LocationId] ?? 0;
+    }
+  }
+
+  // 门派据点加成
+  for (const [locId, ownerSect] of Object.entries(SECT_BASES)) {
+    if (ownerSect === sectId) {
+      cityBonus += SECT_BASE_BONUS[tier] ?? 50;
+    }
+  }
+
+  // NPC 总等级加成
+  const npcDb = p.npcDatabase ?? {};
+  let totalLevels = 0;
+  for (const npc of Object.values(npcDb)) {
+    if (npc.sect === sectId) totalLevels += npc.level;
+  }
+
+  const power =
+    territoryCount * 100 +
+    state.resources * 0.5 +
+    state.stability * 2 +
+    (state.prosperity ?? 30) * 3 +
+    totalLevels * 0.1 +
+    cityBonus;
+
+  return Math.floor(power);
+}
+
+/** 计算所有势力的力量值并缓存 */
+export function refreshAllSectPower(): Record<string, number> {
+  const powers: Record<string, number> = {};
+  for (const sectId of Object.keys(SECTS) as SectId[]) {
+    if (sectId === 'none') continue;
+    powers[sectId] = computeSectPower(sectId);
+  }
+  const p = getPlayer();
+  setPlayer({ ...p, sectPower: powers } as any);
+  return powers;
 }
 
 /** 获取所有门派据点 */

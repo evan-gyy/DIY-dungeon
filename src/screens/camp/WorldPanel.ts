@@ -20,6 +20,7 @@ import {
   getFactionRelationLabel,
   getFactionTrust,
   getAlignmentLabel,
+  getActiveCoalitions,
 } from '../../systems/FactionSystem';
 import { SECTS } from '../../data/sects';
 import { WORLD_MAP } from '../../data/worldMap';
@@ -65,6 +66,7 @@ export function renderWorldPanel(container: HTMLElement): void {
     <div class="world-panel">
       ${renderToolbar(currentTurn)}
       ${renderSectCards()}
+      ${renderCoalitionSection()}
       <div class="world-panel-grid">
         <div class="world-panel-left">
           ${renderEventHistory()}
@@ -164,6 +166,36 @@ function renderOneSectCard(r: FactionScore, p: ReturnType<typeof getPlayer>): st
       ${sectData.culture ? `<div class="wp-sect-culture">${sectData.culture.map((c: string) => `<span class="wp-culture-tag">#${c}</span>`).join(' ')}</div>` : ''}
     </div>
   </div>`;
+}
+
+// ──── P7 联盟展示 ────
+
+function renderCoalitionSection(): string {
+  const coalitions = getActiveCoalitions();
+  if (coalitions.length === 0) return '';
+
+  const items = coalitions.map(c => {
+    const targetName = SECTS[c.targetSect]?.name ?? c.targetSect;
+    const memberNames = c.members.map(m => SECTS[m as SectId]?.name ?? m).join('、');
+    return `
+      <div class="wp-coalition-card">
+        <div class="wp-coalition-header">
+          <span class="wp-coalition-icon">⚔️</span>
+          <span class="wp-coalition-name">${c.name}</span>
+          <span class="wp-coalition-target">→ ${targetName}</span>
+        </div>
+        <div class="wp-coalition-members">盟员：${memberNames}</div>
+        <div class="wp-coalition-expire">⏳ 剩余 ${Math.max(0, c.expireMonth - (getPlayer().gameMonth ?? 1))} 个月</div>
+      </div>
+    `;
+  }).join('');
+
+  return `
+    <div class="wp-coalition-section">
+      <div class="wp-section-title">🛡️ 天下联盟</div>
+      ${items}
+    </div>
+  `;
 }
 
 // ──── 世界事件历史 ────

@@ -2414,6 +2414,506 @@ export const SKILLS: Record<SkillId, SkillData> = {
     cost: { exp: 600 }, sect: 'haisha',
     battleTip: '中伤害+长眩晕',
   },
+
+  // ═══════════════════════════════════════════════════════════
+  //  叛军（rebels）—— 军阵实战武学
+  //  定位：强攻 · 防守 · 游击
+  // ═══════════════════════════════════════════════════════════
+
+  // ── 叛军 · 炼气期 ──
+  rebel_fist: {
+    id: 'rebel_fist', name: '军体拳', icon: '👊', type: 'attack', target: 'enemy',
+    mp: 8, hit: 1, powerMul: 1.7, defPen: 0.7,
+    cooldown: 0, effect: null, healPct: 0,
+    desc: '军中基础拳法，简洁凌厉，造成170%攻击伤害。千锤百炼，不花哨但致命。',
+    cost: { exp: 0 }, sect: 'rebels',
+    battleTip: '基础攻击·低消耗',
+  },
+  rebel_war_qi: {
+    id: 'rebel_war_qi', name: '战气诀', icon: '⚔️', type: 'passive', target: 'self',
+    mp: 0, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 0, effect: { type: 'regen_mp', value: 4, duration: 99 },
+    healPct: 0,
+    desc: '【被动】沙场杀意凝聚成气，每回合恢复4点内力。越战越勇，死战不退。',
+    cost: { exp: 0 }, sect: 'rebels',
+    battleTip: '被动·内力续航',
+  },
+  rebel_scout_step: {
+    id: 'rebel_scout_step', name: '斥候步', icon: '👣', type: 'support', target: 'self',
+    mp: 14, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 2, effect: { type: 'evade', value: 0.40, duration: 1 },
+    healPct: 0,
+    desc: '斥候潜行之术，身法轻灵，提升40%闪避率1回合。游击战之根基。',
+    cost: { exp: 80 }, sect: 'rebels',
+    battleTip: '闪避·游击核心',
+  },
+  rebel_spear: {
+    id: 'rebel_spear', name: '破阵枪', icon: '🔱', type: 'attack', target: 'enemy',
+    mp: 18, hit: 1, powerMul: 1.5, defPen: 0.85,
+    cooldown: 1, effect: null, healPct: 0,
+    desc: '长枪破阵，专克重甲。造成150%攻击伤害，极高破防。',
+    cost: { exp: 120 }, sect: 'rebels',
+    battleTip: '破甲·克制重防',
+  },
+
+  // ── 叛军 · 筑基期 ──
+  rebel_iron_bone: {
+    id: 'rebel_iron_bone', name: '铁骨功', icon: '🦴', type: 'passive', target: 'self',
+    mp: 0, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 0, effect: { type: 'def_boost', value: 12, duration: 99 },
+    healPct: 0,
+    desc: '【被动】经年征战铸就钢筋铁骨，永久提升12点防御。',
+    cost: { exp: 250 }, sect: 'rebels',
+    battleTip: '被动·铁壁',
+  },
+  rebel_siege: {
+    id: 'rebel_siege', name: '攻城术', icon: '🏰', type: 'support', target: 'self',
+    mp: 20, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 3, effect: { type: 'buff_atk', value: 18, duration: 3 },
+    healPct: 0,
+    desc: '攻城略地之势，攻击力提升18点持续3回合。',
+    cost: { exp: 300 }, sect: 'rebels',
+    battleTip: '攻击增益',
+  },
+  rebel_counter: {
+    id: 'rebel_counter', name: '反击拳', icon: '💢', type: 'attack', target: 'enemy',
+    mp: 22, hit: 1, powerMul: 1.4, defPen: 0.65,
+    cooldown: 1, effect: { type: 'def_boost', value: 8, duration: 2 },
+    healPct: 0,
+    desc: '防守反击，造成140%伤害并获得8点防御2回合。',
+    cost: { exp: 280 }, sect: 'rebels',
+    battleTip: '反击·攻守兼备',
+  },
+  rebel_beacon: {
+    id: 'rebel_beacon', name: '烽火令', icon: '🔥', type: 'support', target: 'self',
+    mp: 24, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 3, effect: { type: 'buff_atk', value: 25, duration: 2 },
+    healPct: 0,
+    desc: '烽火为号，众志一心。攻击力提升25点持续2回合。',
+    cost: { exp: 350 }, sect: 'rebels',
+    battleTip: '强力攻击增益',
+  },
+
+  // ── 叛军 · 结丹期 ──
+  rebel_blood_war: {
+    id: 'rebel_blood_war', name: '血战诀', icon: '🩸', type: 'passive', target: 'self',
+    mp: 0, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 0, effect: { type: 'regen_mp', value: 10, duration: 99 },
+    healPct: 0,
+    desc: '【被动】浴血奋战，愈战愈强。每回合恢复10点内力，气血恢复+15%。',
+    cost: { exp: 500 }, sect: 'rebels',
+    battleTip: '被动·高阶内力引擎',
+  },
+  rebel_flanking: {
+    id: 'rebel_flanking', name: '合围掌', icon: '🤝', type: 'attack', target: 'enemy',
+    mp: 28, hit: 3, powerMul: 0.55, defPen: 0.6,
+    cooldown: 1, effect: null, healPct: 0,
+    desc: '左右夹击，三连击各55%攻击伤害。围点打援，逐一击破。',
+    cost: { exp: 550 }, sect: 'rebels',
+    battleTip: '三连击·压制',
+  },
+  rebel_rearguard: {
+    id: 'rebel_rearguard', name: '断后诀', icon: '🛡️', type: 'support', target: 'self',
+    mp: 30, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 3, effect: { type: 'def_boost', value: 25, duration: 3 },
+    healPct: 0,
+    desc: '断后死守之志，防御提升25点持续3回合。一夫当关，万夫莫开。',
+    cost: { exp: 600 }, sect: 'rebels',
+    battleTip: '强力防御增益',
+  },
+  rebel_war_sweep: {
+    id: 'rebel_war_sweep', name: '横扫千军', icon: '⚔️', type: 'attack', target: 'enemy',
+    mp: 40, hit: 1, powerMul: 2.4, defPen: 0.55,
+    cooldown: 3, effect: { type: 'weaken_def', value: 12, duration: 2 },
+    healPct: 0,
+    desc: '横扫之势不可挡，造成240%攻击伤害并降低敌方防御12点2回合。',
+    cost: { exp: 800 }, sect: 'rebels',
+    battleTip: '爆发·破防连招',
+  },
+
+  // ═══════════════════════════════════════════════════════════
+  //  朝廷（imperial_court）—— 官威正法
+  //  定位：正统 · 控制 · 刚猛
+  // ═══════════════════════════════════════════════════════════
+
+  // ── 朝廷 · 炼气期 ──
+  court_fist: {
+    id: 'court_fist', name: '正步拳', icon: '👊', type: 'attack', target: 'enemy',
+    mp: 8, hit: 1, powerMul: 1.6, defPen: 0.7,
+    cooldown: 0, effect: null, healPct: 0,
+    desc: '正步出拳，堂堂正正。造成160%攻击伤害。官家武学之入门根基。',
+    cost: { exp: 0 }, sect: 'imperial_court',
+    battleTip: '基础攻击',
+  },
+  court_authority_qi: {
+    id: 'court_authority_qi', name: '官气诀', icon: '📜', type: 'passive', target: 'self',
+    mp: 0, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 0, effect: { type: 'regen_mp', value: 5, duration: 99 },
+    healPct: 0,
+    desc: '【被动】官威化气，每回合恢复5点内力。身在庙堂，气运加身。',
+    cost: { exp: 0 }, sect: 'imperial_court',
+    battleTip: '被动·内力回复',
+  },
+  court_cane: {
+    id: 'court_cane', name: '廷杖术', icon: '🦯', type: 'attack', target: 'enemy',
+    mp: 16, hit: 1, powerMul: 1.4, defPen: 0.5,
+    cooldown: 1, effect: { type: 'stun', value: 1, duration: 1 },
+    healPct: 0,
+    desc: '廷杖问责，杖下伏法。造成140%伤害，50%概率眩晕1回合。',
+    cost: { exp: 100 }, sect: 'imperial_court',
+    battleTip: '控制·眩晕概率',
+  },
+  court_ritual_step: {
+    id: 'court_ritual_step', name: '朝礼步', icon: '🚶', type: 'support', target: 'self',
+    mp: 14, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 2, effect: { type: 'evade', value: 0.42, duration: 1 },
+    healPct: 0,
+    desc: '朝堂进退有度，化为步法。提升42%闪避率1回合。',
+    cost: { exp: 80 }, sect: 'imperial_court',
+    battleTip: '闪避',
+  },
+
+  // ── 朝廷 · 筑基期 ──
+  court_censor: {
+    id: 'court_censor', name: '御史令', icon: '📋', type: 'control', target: 'enemy',
+    mp: 20, hit: 1, powerMul: 0.6, defPen: 0.5,
+    cooldown: 2, effect: { type: 'weaken_def', value: 15, duration: 3 },
+    healPct: 0,
+    desc: '御史弹劾，威严难当。造成60%伤害并降低敌方防御15点3回合。',
+    cost: { exp: 250 }, sect: 'imperial_court',
+    battleTip: '控制·大幅减防',
+  },
+  court_silk_guard: {
+    id: 'court_silk_guard', name: '锦袍功', icon: '👘', type: 'passive', target: 'self',
+    mp: 0, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 0, effect: { type: 'def_boost', value: 14, duration: 99 },
+    healPct: 0,
+    desc: '【被动】锦袍护体，内劲暗藏。永久提升14点防御。',
+    cost: { exp: 280 }, sect: 'imperial_court',
+    battleTip: '被动·防御',
+  },
+  court_arrest: {
+    id: 'court_arrest', name: '锁拿术', icon: '🔗', type: 'control', target: 'enemy',
+    mp: 24, hit: 1, powerMul: 0.8, defPen: 0.5,
+    cooldown: 2, effect: { type: 'stun', value: 2, duration: 1 },
+    healPct: 0,
+    desc: '刑部锁拿之法，造成80%伤害并60%概率眩晕2回合。',
+    cost: { exp: 320 }, sect: 'imperial_court',
+    battleTip: '强控制·长眩晕',
+  },
+  court_spear: {
+    id: 'court_spear', name: '禁军枪', icon: '🔱', type: 'attack', target: 'enemy',
+    mp: 26, hit: 1, powerMul: 1.9, defPen: 0.7,
+    cooldown: 1, effect: null, healPct: 0,
+    desc: '禁军制式枪法，大开大合。造成190%攻击伤害。',
+    cost: { exp: 350 }, sect: 'imperial_court',
+    battleTip: '高伤害·低冷却',
+  },
+
+  // ── 朝廷 · 结丹期 ──
+  court_gold_seal: {
+    id: 'court_gold_seal', name: '金印掌', icon: '🔱', type: 'attack', target: 'enemy',
+    mp: 32, hit: 1, powerMul: 2.2, defPen: 0.6,
+    cooldown: 2, effect: { type: 'weaken_def', value: 10, duration: 2 },
+    healPct: 0,
+    desc: '金印落掌，如圣旨降临。造成220%伤害并降低防御10点2回合。',
+    cost: { exp: 550 }, sect: 'imperial_court',
+    battleTip: '高爆发·减防',
+  },
+  court_envoy: {
+    id: 'court_envoy', name: '钦差令', icon: '🎖️', type: 'support', target: 'self',
+    mp: 30, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 3, effect: { type: 'buff_atk', value: 22, duration: 3 },
+    healPct: 0.1,
+    desc: '钦差代天巡狩之威，攻击力提升22点3回合并恢复10%气血。',
+    cost: { exp: 600 }, sect: 'imperial_court',
+    battleTip: '增益+恢复',
+  },
+  court_iron_shield: {
+    id: 'court_iron_shield', name: '铁券功', icon: '🛡️', type: 'support', target: 'self',
+    mp: 28, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 3, effect: { type: 'def_boost', value: 30, duration: 3 },
+    healPct: 0,
+    desc: '丹书铁券，免死之誓。防御提升30点持续3回合。',
+    cost: { exp: 580 }, sect: 'imperial_court',
+    battleTip: '大防御增益',
+  },
+  court_grace: {
+    id: 'court_grace', name: '皇恩术', icon: '✨', type: 'support', target: 'self',
+    mp: 30, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 3, effect: null,
+    healPct: 0.25,
+    desc: '皇恩浩荡，天赐生机。恢复25%最大气血。',
+    cost: { exp: 600 }, sect: 'imperial_court',
+    battleTip: '大回复',
+  },
+
+  // ── 朝廷 · 元婴期 ──
+  court_dragon_roar: {
+    id: 'court_dragon_roar', name: '金殿龙吟', icon: '🐉', type: 'attack', target: 'enemy',
+    mp: 38, hit: 1, powerMul: 2.5, defPen: 0.5,
+    cooldown: 3, effect: { type: 'stun', value: 1, duration: 1 },
+    healPct: 0,
+    desc: '龙吟金殿，天子震怒。造成250%伤害并55%概率眩晕1回合。',
+    cost: { exp: 800 }, sect: 'imperial_court',
+    battleTip: '爆发·控制',
+  },
+  court_six_strike: {
+    id: 'court_six_strike', name: '六部连击', icon: '⚔️', type: 'attack', target: 'enemy',
+    mp: 42, hit: 3, powerMul: 0.75, defPen: 0.55,
+    cooldown: 2, effect: null, healPct: 0,
+    desc: '六部协同，三连击各75%攻击伤害。吏户礼兵刑工，环环相扣。',
+    cost: { exp: 900 }, sect: 'imperial_court',
+    battleTip: '三连击·高总伤',
+  },
+  court_royal_blade: {
+    id: 'court_royal_blade', name: '尚方斩', icon: '🗡️', type: 'attack', target: 'enemy',
+    mp: 45, hit: 1, powerMul: 2.8, defPen: 0.65,
+    cooldown: 3, effect: { type: 'weaken_def', value: 18, duration: 2 },
+    healPct: 0,
+    desc: '尚方宝剑，先斩后奏。造成280%攻击伤害并削弱防御18点2回合。',
+    cost: { exp: 1000 }, sect: 'imperial_court',
+    battleTip: '终极爆发·大破防',
+  },
+  court_heaven_sword: {
+    id: 'court_heaven_sword', name: '天子剑', icon: '⚔️', type: 'attack', target: 'enemy',
+    mp: 55, hit: 1, powerMul: 3.2, defPen: 0.7,
+    cooldown: 4, effect: null, healPct: 0,
+    desc: '天子一怒，伏尸百万。造成320%攻击伤害的超绝一击。',
+    cost: { exp: 1200 }, sect: 'imperial_court',
+    battleTip: '最强单体·长冷却',
+  },
+
+  // ═══════════════════════════════════════════════════════════
+  //  魔教/黑月教（demon）—— 黑暗诡秘
+  //  定位：吸血 · 削弱 · 暗杀
+  // ═══════════════════════════════════════════════════════════
+
+  // ── 魔教 · 炼气期 ──
+  demon_claw: {
+    id: 'demon_claw', name: '暗月爪', icon: '🌑', type: 'attack', target: 'enemy',
+    mp: 9, hit: 1, powerMul: 1.65, defPen: 0.7,
+    cooldown: 0, effect: null, healPct: 0,
+    desc: '五指如钩，如暗月划空。造成165%攻击伤害。魔教入门杀招。',
+    cost: { exp: 0 }, sect: 'demon',
+    battleTip: '基础攻击',
+  },
+  demon_heart: {
+    id: 'demon_heart', name: '魔心诀', icon: '🖤', type: 'passive', target: 'self',
+    mp: 0, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 0, effect: { type: 'regen_mp', value: 5, duration: 99 },
+    healPct: 0,
+    desc: '【被动】魔心暗种，每回合恢复5点内力。魔道根基，以心入武。',
+    cost: { exp: 0 }, sect: 'demon',
+    battleTip: '被动·内力回复',
+  },
+  demon_soul_gaze: {
+    id: 'demon_soul_gaze', name: '摄魂眼', icon: '👁️', type: 'control', target: 'enemy',
+    mp: 16, hit: 1, powerMul: 0.4, defPen: 0.5,
+    cooldown: 2, effect: { type: 'weaken_def', value: 12, duration: 3 },
+    healPct: 0,
+    desc: '双目如电，摄人心魄。造成40%伤害并降低敌方防御12点3回合。',
+    cost: { exp: 100 }, sect: 'demon',
+    battleTip: '控制·大幅减防',
+  },
+  demon_shadow_dodge: {
+    id: 'demon_shadow_dodge', name: '影遁步', icon: '🌑', type: 'support', target: 'self',
+    mp: 15, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 2, effect: { type: 'evade', value: 0.45, duration: 1 },
+    healPct: 0,
+    desc: '化影而行，诡异难测。提升45%闪避率1回合。',
+    cost: { exp: 80 }, sect: 'demon',
+    battleTip: '高闪避',
+  },
+
+  // ── 魔教 · 筑基期 ──
+  demon_drain: {
+    id: 'demon_drain', name: '噬血掌', icon: '🩸', type: 'attack', target: 'enemy',
+    mp: 22, hit: 1, powerMul: 1.5, defPen: 0.6,
+    cooldown: 1, effect: null, healPct: 0.15,
+    desc: '掌力透体，噬血夺元。造成150%伤害并恢复自身15%气血。',
+    cost: { exp: 280 }, sect: 'demon',
+    battleTip: '吸血攻击',
+  },
+  demon_body: {
+    id: 'demon_body', name: '魔体功', icon: '💪', type: 'passive', target: 'self',
+    mp: 0, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 0, effect: { type: 'def_boost', value: 12, duration: 99 },
+    healPct: 0,
+    desc: '【被动】魔气淬体，筋骨变异。永久提升12点防御。',
+    cost: { exp: 300 }, sect: 'demon',
+    battleTip: '被动·防御',
+  },
+  demon_slash: {
+    id: 'demon_slash', name: '黑月斩', icon: '🌙', type: 'attack', target: 'enemy',
+    mp: 28, hit: 1, powerMul: 2.0, defPen: 0.55,
+    cooldown: 2, effect: null, healPct: 0,
+    desc: '月光漆黑如墨，斩破长空。造成200%攻击伤害。简洁而致命。',
+    cost: { exp: 350 }, sect: 'demon',
+    battleTip: '高爆发',
+  },
+  demon_confuse: {
+    id: 'demon_confuse', name: '惑心术', icon: '🌀', type: 'control', target: 'enemy',
+    mp: 24, hit: 1, powerMul: 0.6, defPen: 0.4,
+    cooldown: 2, effect: { type: 'stun', value: 2, duration: 1 },
+    healPct: 0,
+    desc: '惑乱心神，令敌自乱阵脚。造成60%伤害并65%概率眩晕2回合。',
+    cost: { exp: 320 }, sect: 'demon',
+    battleTip: '强控制·长眩晕',
+  },
+
+  // ── 魔教 · 结丹期 ──
+  demon_devour: {
+    id: 'demon_devour', name: '万魔噬', icon: '👹', type: 'attack', target: 'enemy',
+    mp: 34, hit: 3, powerMul: 0.5, defPen: 0.5,
+    cooldown: 1, effect: null, healPct: 0.08,
+    desc: '魔影万千，三连击各50%攻击伤害，每击恢复8%气血。',
+    cost: { exp: 550 }, sect: 'demon',
+    battleTip: '三连吸血',
+  },
+  demon_realm: {
+    id: 'demon_realm', name: '黑月领域', icon: '🖤', type: 'control', target: 'enemy',
+    mp: 32, hit: 1, powerMul: 0.7, defPen: 0.45,
+    cooldown: 3, effect: { type: 'weaken_def', value: 20, duration: 3 },
+    healPct: 0,
+    desc: '黑月降世，领域笼罩。造成70%伤害并大幅降低敌方防御20点3回合。',
+    cost: { exp: 600 }, sect: 'demon',
+    battleTip: '极大减防',
+  },
+  demon_soul_enhance: {
+    id: 'demon_soul_enhance', name: '魔魂附', icon: '💀', type: 'support', target: 'self',
+    mp: 30, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 3, effect: { type: 'buff_atk', value: 28, duration: 3 },
+    healPct: 0,
+    desc: '魔魂附体，战力飙升。攻击力提升28点持续3回合。',
+    cost: { exp: 580 }, sect: 'demon',
+    battleTip: '强力攻击增益',
+  },
+  demon_purgatory: {
+    id: 'demon_purgatory', name: '魔狱斩', icon: '🔥', type: 'attack', target: 'enemy',
+    mp: 48, hit: 1, powerMul: 2.6, defPen: 0.5,
+    cooldown: 3, effect: { type: 'stun', value: 1, duration: 1 },
+    healPct: 0,
+    desc: '魔狱降临，焚尽万物。造成260%伤害并50%概率眩晕1回合。',
+    cost: { exp: 800 }, sect: 'demon',
+    battleTip: '终极爆发+控制',
+  },
+
+  // ═══════════════════════════════════════════════════════════
+  //  逍遥派（xiaoyao）—— 飘逸灵动
+  //  定位：闪避 · 吸内 · 莫测
+  // ═══════════════════════════════════════════════════════════
+
+  // ── 逍遥派 · 炼气期 ──
+  xiaoyao_fist: {
+    id: 'xiaoyao_fist', name: '凌波拳', icon: '🌊', type: 'attack', target: 'enemy',
+    mp: 9, hit: 1, powerMul: 1.6, defPen: 0.65,
+    cooldown: 0, effect: null, healPct: 0,
+    desc: '拳如波浪起伏，飘逸无常。造成160%攻击伤害。',
+    cost: { exp: 0 }, sect: 'xiaoyao',
+    battleTip: '基础攻击',
+  },
+  xiaoyao_free_qi: {
+    id: 'xiaoyao_free_qi', name: '逍遥气', icon: '🍃', type: 'passive', target: 'self',
+    mp: 0, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 0, effect: { type: 'regen_mp', value: 5, duration: 99 },
+    healPct: 0,
+    desc: '【被动】逍遥天地，真气自生。每回合恢复5点内力。',
+    cost: { exp: 0 }, sect: 'xiaoyao',
+    battleTip: '被动·内力回复',
+  },
+  xiaoyao_wind_walk: {
+    id: 'xiaoyao_wind_walk', name: '御风步', icon: '💨', type: 'support', target: 'self',
+    mp: 14, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 2, effect: { type: 'evade', value: 0.45, duration: 1 },
+    healPct: 0,
+    desc: '御风而行，飘忽无定。提升45%闪避率1回合。',
+    cost: { exp: 80 }, sect: 'xiaoyao',
+    battleTip: '高闪避',
+  },
+  xiaoyao_flower_hand: {
+    id: 'xiaoyao_flower_hand', name: '折梅手', icon: '🌸', type: 'attack', target: 'enemy',
+    mp: 16, hit: 2, powerMul: 0.65, defPen: 0.6,
+    cooldown: 0, effect: null, healPct: 0,
+    desc: '轻巧如折梅，两连击各65%攻击伤害。出手看似轻柔实则暗藏劲力。',
+    cost: { exp: 100 }, sect: 'xiaoyao',
+    battleTip: '二连击',
+  },
+
+  // ── 逍遥派 · 筑基期 ──
+  xiaoyao_absorb: {
+    id: 'xiaoyao_absorb', name: '吞海功', icon: '🌊', type: 'attack', target: 'enemy',
+    mp: 18, hit: 1, powerMul: 1.4, defPen: 0.5,
+    cooldown: 1, effect: { type: 'regen_mp', value: 12, duration: 1 },
+    healPct: 0,
+    desc: '海纳百川，吸敌内力。造成140%伤害并回复12点内力。',
+    cost: { exp: 280 }, sect: 'xiaoyao',
+    battleTip: '吸内攻击',
+  },
+  xiaoyao_snow_palm: {
+    id: 'xiaoyao_snow_palm', name: '天山掌', icon: '❄️', type: 'attack', target: 'enemy',
+    mp: 26, hit: 1, powerMul: 2.0, defPen: 0.55,
+    cooldown: 2, effect: { type: 'weaken_def', value: 10, duration: 2 },
+    healPct: 0,
+    desc: '天山寒气凝于掌，造成200%伤害并降低防御10点2回合。',
+    cost: { exp: 350 }, sect: 'xiaoyao',
+    battleTip: '高伤害·减防',
+  },
+  xiaoyao_wander: {
+    id: 'xiaoyao_wander', name: '逍遥游', icon: '🦅', type: 'support', target: 'self',
+    mp: 22, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 3, effect: { type: 'evade', value: 0.55, duration: 2 },
+    healPct: 0,
+    desc: '天地任逍遥，提升55%闪避率2回合。敌招落空，自在从容。',
+    cost: { exp: 320 }, sect: 'xiaoyao',
+    battleTip: '极限闪避',
+  },
+  xiaoyao_void_heart: {
+    id: 'xiaoyao_void_heart', name: '虚谷心', icon: '🏔️', type: 'passive', target: 'self',
+    mp: 0, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 0, effect: { type: 'def_boost', value: 10, duration: 99 },
+    healPct: 0,
+    desc: '【被动】虚怀若谷，心空如镜。永久提升10点防御，受击时内力额外恢复2点。',
+    cost: { exp: 300 }, sect: 'xiaoyao',
+    battleTip: '被动·防御',
+  },
+
+  // ── 逍遥派 · 结丹期 ──
+  xiaoyao_silk_step: {
+    id: 'xiaoyao_silk_step', name: '凌波微步', icon: '🦋', type: 'support', target: 'self',
+    mp: 28, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 3, effect: { type: 'evade', value: 0.65, duration: 2 },
+    healPct: 0,
+    desc: '步法精妙绝伦，身如飘絮，提升65%闪避率2回合。',
+    cost: { exp: 600 }, sect: 'xiaoyao',
+    battleTip: '极限闪避',
+  },
+  xiaoyao_sun_palm: {
+    id: 'xiaoyao_sun_palm', name: '六阳掌', icon: '☀️', type: 'attack', target: 'enemy',
+    mp: 36, hit: 1, powerMul: 2.4, defPen: 0.6,
+    cooldown: 2, effect: null, healPct: 0,
+    desc: '六阳真气凝聚一掌，造成240%攻击伤害。阳刚之势，无可阻挡。',
+    cost: { exp: 700 }, sect: 'xiaoyao',
+    battleTip: '高爆发',
+  },
+  xiaoyao_fate_seal: {
+    id: 'xiaoyao_fate_seal', name: '生死符', icon: '🔮', type: 'control', target: 'enemy',
+    mp: 34, hit: 1, powerMul: 1.0, defPen: 0.5,
+    cooldown: 3, effect: { type: 'stun', value: 2, duration: 1 },
+    healPct: 0,
+    desc: '阴阳生死尽在符中，造成100%伤害并60%概率眩晕2回合。',
+    cost: { exp: 650 }, sect: 'xiaoyao',
+    battleTip: '控制·长眩晕',
+  },
+  xiaoyao_unity: {
+    id: 'xiaoyao_unity', name: '八荒功', icon: '☯️', type: 'support', target: 'self',
+    mp: 38, hit: 0, powerMul: 0, defPen: 0,
+    cooldown: 4, effect: { type: 'buff_atk', value: 30, duration: 3 },
+    healPct: 0.15,
+    desc: '八荒六合唯我独尊，攻击力提升30点3回合，恢复15%气血。',
+    cost: { exp: 800 }, sect: 'xiaoyao',
+    battleTip: '终极增益+恢复',
+  },
 };
 
 // 保留 ELDERS 导出（向后兼容，虽然 LearnScreen 已移除）
