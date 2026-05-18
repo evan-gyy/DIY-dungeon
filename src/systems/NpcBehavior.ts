@@ -150,6 +150,7 @@ export interface NpcTickResult {
   npcId: string;
   npcName: string;
   action: 'buy_fabao' | 'learn_skill' | 'cultivate' | 'move' | 'npc_interact' | 'heal' | 'sect_task';
+
   outcome: string;
   detail: string;
 }
@@ -165,6 +166,25 @@ export interface NpcTickResult {
  *
  * @returns 所有 NPC 本回合的行为结果
  */
+function npcActivityLabel(result: NpcTickResult): string {
+  if (result.action === 'heal') return '🩹 运功疗伤';
+  if (result.action === 'cultivate') return result.detail.includes('突破') ? '🧘 境界突破！' : '🧘 修炼';
+  if (result.action === 'npc_interact') return '💬 游走交流';
+  if (result.action === 'sect_task') return `📋 ${result.outcome}`;
+  if (result.action === 'move') {
+    const dest = result.detail.split('前往')[1]?.replace('。', '') ?? '';
+    return dest ? `🚶 前往${dest}` : '🚶 游历';
+  }
+  return '';
+}
+
+function writeActivityLog(n: NpcStats, entry: string): void {
+  if (!entry) return;
+  const old = n.recentLog ?? [];
+  if (old.length > 0 && old[old.length - 1] === entry) return;
+  n.recentLog = [...old, entry].slice(-20);
+}
+
 export function tickNpcBehaviors(): NpcTickResult[] {
   const p = getPlayer();
   if (!p.npcDatabase) return [];
@@ -194,6 +214,7 @@ export function tickNpcBehaviors(): NpcTickResult[] {
         outcome: '运功疗伤',
         detail: `${n.name}运功疗伤，恢复 ${healAmount} 点气血。`,
       };
+      writeActivityLog(n, '🩹 运功疗伤');
       updatedDb[id] = n;
       results.push(result);
 
@@ -363,6 +384,7 @@ export function tickNpcBehaviors(): NpcTickResult[] {
       }
     }
 
+    writeActivityLog(n, npcActivityLabel(result));
     updatedDb[id] = n;
     results.push(result);
 

@@ -31,8 +31,8 @@
 | **P6** | **宗门技能树扩展（21势力）** 🆕 | ✅ 已完成 | Batch 1-5 全部完成，21势力 × ~324 专属技能 |
 | **P7** | **地图扩展（14→~40地点）** 🆕 | ✅ 已完成 | 35 地点 + 拓扑连接（0510） |
 | **P8** | **NPC天赋池 + 天骄 + 三角金字塔 + NPC友好度** 🆕 | ✅ | 36 天赋 / 5 层权重 / 0.5% 天骄 / NPC间友好度地基 |
-| **P9** | **势力倾向更新（6→21势力）** 🆕 | 🔄 部分完成 | FACTION_DEFS/SECTS 已含 21 条目；WorldPanel/NPCGenerator 待扩展 |
-| P4 系列 | 世界事件介入 / 行为深化 / 外交图 / 秘境 / 势力交替 | 🔄 部分完成 | 见下方各节状态更新 |
+| **P9** | **势力倾向更新（6→21势力）** 🆕 | ✅ 已完成 | ALL_FACTIONS 21势力全量、WorldPanel/NPCGenerator/WorldState 全覆盖 |
+| P4 系列 | 世界事件介入 / 行为深化 / 外交图 / 秘境 / 势力交替 | 🔄 部分完成（C+I 已完成）| 见下方各节状态更新 |
 | P5 系列 | 偷师 / NPC 深度互动 | 🔄 部分完成 | 见下方各节状态更新 |
 
 > **已完成系统的详细架构和 API 见 [ARCHITECTURE.md](./ARCHITECTURE.md) §3.5**（沙盒模块职责、数据流、文件索引）。
@@ -347,9 +347,9 @@
 
 ### 当前开发状态
 
-- **已完成**：沙盒核心循环 / v1.9 / v2.0 / v2.0五问题修复（势力3值化+NPC全覆盖+遭遇系统+议事修复+月度CG）/ P6 Batch 1-5（21势力~324专属技能）/ P7（35地点）/ P8（36天赋+天骄+金字塔+NPC友好度），22 个系统文件 + 11 个面板文件
+- **已完成**：沙盒核心循环 / v1.9 / v2.0 / v2.0五问题修复 / P6（21势力~324专属技能）/ P7（35地点）/ P8（36天赋+天骄+金字塔+NPC友好度）/ P9（21势力全量激活）/ Direction C（世界事件玩家介入）/ Direction I（NPC行为可见性），22 个系统文件 + 11 个面板文件
 - **进行中**：无
-- **下一步（按优先级）**：见 §七
+- **下一步（按优先级）**：方向 B（势力AI自主行动）→ 方向 D（外交可视化）→ 方向 E（城池繁荣度）
 
 ---
 
@@ -358,24 +358,9 @@
 > 当前地基已完成（21势力技能 / 35地点 / NPC行为树 / 月度议事 / 攻城战）。
 > 以下是按**玩家体验影响力**排序的优化方向，每个方向标注了**当前痛点**、**建议方案**、**涉及文件**、**预估复杂度**。
 
-### 方向 A：势力全量激活（P9 完成）⭐⭐⭐⭐⭐
+### 方向 A：势力全量激活（P9）⭐⭐⭐⭐⭐ ✅ 已完成
 
-**当前痛点**：`FactionSystem.ts` 和 `WorldState.ts` 只管理 6 个势力。其余 15 个势力虽有完整数据和技能树，但在世界模拟中是"死"的——无资源演化、无外交行为、无领土争夺。
-
-**建议方案**：
-1. `WorldState.ts` 的 `initWorldState()` 扩展为 21 势力初始化
-2. `FactionSystem.ts` 的 `tickFactionDiplomacy()` 遍历全部 21 势力
-3. `FactionWarfare.ts` 的 `tryTriggerSiege()` 覆盖全部势力
-4. `WorldPanel.ts` 势力排行/详情卡片适配 21 条目
-
-| 文件 | 改动 |
-|------|------|
-| `src/systems/WorldState.ts` | `initWorldState()` / `tickWorldState()` 6→21 |
-| `src/systems/FactionSystem.ts` | `tickFactionDiplomacy()` 6→21 |
-| `src/systems/FactionWarfare.ts` | `tryTriggerSiege()` 全势力覆盖 |
-| `src/screens/camp/WorldPanel.ts` | 排行/详情卡片适配 21 |
-
-**预估**：~150 行改动，中等复杂度（数据已有，主要是循环范围扩展）。
+**已完成**：`ALL_FACTIONS` 扩展至 21 势力；`FactionSystem.ts` 的 `tickFactionDiplomacy()` 遍历全部 21 势力；`WorldState.ts` 的 `getFactionRankings()` 按层级+最高修为展示全部势力；`NPCGenerator.ts` 的 `SECT_HUBS` 全覆盖；`WorldPanel.ts` 按宗门层级分组展示（顶尖/一流/二流/旁门/特殊）。
 
 ---
 
@@ -399,21 +384,9 @@
 
 ---
 
-### 方向 C：世界事件玩家介入 ⭐⭐⭐⭐
+### 方向 C：世界事件玩家介入 ⭐⭐⭐⭐ ✅ 已完成
 
-**当前痛点**：`WorldState.ts` 有 10 种世界事件（匪患/瘟疫/商路/天灾等），触发后只发 toast 播报，玩家只能被动观看。
-
-**建议方案**：
-- 事件触发时在 WorldPanel 显示「⚔️ 前往助战」/「💰 捐赠物资」/「📜 了解更多」按钮
-- 前往助战 → 进入战斗（复用 `BattleEngine`），胜利后势力好感+、声望+、事件标记为"已解决"
-- 忽略 → 势力资源微降
-
-| 文件 | 改动 |
-|------|------|
-| `src/systems/WorldState.ts` | 事件结构新增 `intervenable` + `interventionBattle` 字段 |
-| `src/screens/camp/WorldPanel.ts` | 事件卡片新增介入按钮 |
-
-**预估**：~80 行，低复杂度（复用现有战斗和好感系统）。
+**已完成**：`WorldEvent` 接口新增 `interactable?: boolean` / `acceptLabel?: string`，5 种事件（武林大会/匪患侵扰/疫病蔓延/魔教渗透/古墓出土）标记可介入。`WorldStateData` 新增 `pendingWorldEvent?` 字段。`tickWorldState()` 对可介入事件挂起不立即生效，已有 pending 时跳过新触发。`resolveWorldEvent(accept)` 消费事件并决定奖励。`WorldPanel.ts` 顶部渲染急讯横幅（`.wp-pending-event`），含「参与」/「置之不理」按钮。`StoryPanel.ts` 在触发 pending 事件时 Toast 提示玩家前往 WorldPanel。
 
 ---
 
@@ -518,19 +491,9 @@ sectPower = (territories × 100) + (resources × 0.5) + (stability × 2)
 
 ---
 
-### 方向 I：NPC 行为可见性 ⭐⭐⭐
+### 方向 I：NPC 行为可见性 ⭐⭐⭐ ✅ 已完成
 
-**当前痛点**：NPC 执行复杂的 5 级优先级行为树 + 16 种互动，但玩家在 sidebar 只能看到 NPC 立绘和名字。不知道他们在做什么。
-
-**建议方案**：在 sidebar NPC 卡片上显示当前行为提示：
-- "🧘 正在修炼" / "💬 与xxx交谈" / "📋 执行门派巡逻" / "🚶 前往襄阳城"
-- 从 `npcDatabase[id].recentLog` 取最新一条显示
-
-| 文件 | 改动 |
-|------|------|
-| `src/screens/Camp.ts` | `renderSidebar()` NPC 卡片新增行为文本 |
-
-**预估**：~30 行，极低复杂度（已有数据，仅 UI 展示）。
+**已完成**：`NpcBehavior.ts` 新增 `npcActivityLabel(result)` 和 `writeActivityLog(n, entry)` 两个内部函数。每次 `tickNpcBehaviors()` 的疗伤/主流程分支执行完毕，将行为结果（🩹 运功疗伤/🧘 修炼/💬 游走交流/📋 门派任务/🚶 前往xxx）写入 NPC 的 `recentLog`（最多 20 条，相邻重复去重）。`Camp.ts` 的 `renderSidebar()` 读取 `npc.recentLog?.at(-1)` 并在 NPC 卡片底部展示（`.nearby-npc-activity` 样式：绿色斜体小字）。
 
 ---
 
@@ -576,11 +539,12 @@ sectPower = (territories × 100) + (resources × 0.5) + (stability × 2)
 已完成地基 ──────────────────────────────────────────────
   P0~P8 / v1.9 / v2.0 / 21势力技能 / 35地点 / NPC天赋+行为树
   月度议事 / 攻城战 / 朝廷系统
+  P9势力全量激活 ✅ / Direction C 事件介入 ✅ / Direction I 行为可见 ✅
 
 当前优先（让世界"活"起来）──────────────────────────────
-  A. P9 势力全量激活（6→21）  ⭐⭐⭐⭐⭐  中等  ~150行
+  A. P9 势力全量激活（6→21）  ⭐⭐⭐⭐⭐  中等  ~150行  ✅ 已完成
   B. 势力 AI 自主行动          ⭐⭐⭐⭐⭐  中等  ~300行
-  C. 世界事件玩家介入          ⭐⭐⭐⭐   低    ~80行
+  C. 世界事件玩家介入          ⭐⭐⭐⭐   低    ~80行   ✅ 已完成
   D. 外交可视化（关系图）      ⭐⭐⭐⭐   中等  ~200行
 
 体验深化（让玩家"有选择"）──────────────────────────────
@@ -590,12 +554,12 @@ sectPower = (territories × 100) + (resources × 0.5) + (stability × 2)
   H. 大地图随机遭遇            ⭐⭐⭐     中等  ~150行
 
 细节打磨 ─────────────────────────────────────────────────
-  I. NPC 行为可见性            ⭐⭐⭐     极低  ~30行
+  I. NPC 行为可见性            ⭐⭐⭐     极低  ~30行   ✅ 已完成
   J. 三波制攻城战              ⭐⭐⭐     中等  ~200行
   K. 技能平衡验证              ⭐⭐       低    ~60行
 ```
 
-> **给新 AI 的建议**：从 A→E 依序推进。A+B 组合能让世界从"静态数据"变成"动态演算"，是投入产出比最高的方向。C+I 是最小代价换取最大体验提升的速赢项。
+> **给新 AI 的建议**：A+C+I 已完成。下一个最高优先级是 B（势力AI自主行动），能让世界从"静态数据"变成真正的"动态演算"，是投入产出比最高的方向。
 
 ---
 

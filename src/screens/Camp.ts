@@ -418,6 +418,8 @@ export function renderSidebar(): void {
     const tianjiaoClass = isTianjiao ? 'npc-tianjiao' : '';
     const tianjiaoStar = isTianjiao ? ' 🌟' : '';
 
+    const lastActivity = npc.recentLog?.at(-1) ?? '';
+
     return `<div class="nearby-npc-card ${tianjiaoClass}" data-npc-db-id="${npc.id}" data-npc-name="${npc.name}" data-npc-img="${imgPath}">
       <div class="nearby-npc-img-wrap">
         <img src="${imgPath}" alt="${npc.name}" onerror="this.style.display='none'">
@@ -427,6 +429,7 @@ export function renderSidebar(): void {
         <div class="nearby-npc-name">${npc.name}${tianjiaoStar}</div>
         <div class="nearby-npc-realm">${realm}</div>
         <div class="nearby-npc-status ${statusClass}">${statusText}</div>
+        ${lastActivity ? `<div class="nearby-npc-activity">${lastActivity}</div>` : ''}
         <div class="nearby-npc-location">📍 ${locName}</div>
       </div>
     </div>`;

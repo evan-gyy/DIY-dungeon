@@ -1,7 +1,7 @@
 # DIY-Dungeon 项目架构文档
 
 > 本文档面向开发者和 AI Agent，描述当前项目的完整架构、各模块职责，以及接下来的开发方向。
-> 最后更新：2026-05-15（v2.2 21势力全技能树 / 叛军+朝廷+魔教+逍遥 52新技 / 三文档同步）
+> 最后更新：2026-05-18（v2.3 P9全量激活 ✅ / Direction C 世界事件介入 / Direction I NPC行为可见性）
 
 ---
 
@@ -62,7 +62,7 @@ DIY-dungeon/
 │   │   ├── BattleEngine.ts        4v4 团队战引擎（initBattle / playerUseSkill / playerBasicAttack / 队友AI / 回合交替）
 │   │   ├── StatusEffects.ts       applyStatus / tickStatus / getStatusValue
 │   │   ├── EnemyAI.ts             enemyTurn / weightedRandom / predictAction
-│   │   ├── NpcBehavior.ts         NPC 行为引擎（5级优先级：疗伤→修炼60%→社交15%→门派任务15%→移动10%，含阵营加权移动 + NPC间16种互动动作池）
+│   │   ├── NpcBehavior.ts         NPC 行为引擎（5级优先级：疗伤→修炼60%→社交15%→门派任务15%→移动10%，行为结果写入 recentLog，含阵营加权移动 + NPC间16种互动动作池）
 │   │   ├── NPCGenerator.ts        随机 NPC 生成器（门派中枢 + 城市游荡者 + 京城官员，三角金字塔 + 36天赋 + 天骄）
 │   │   ├── NPCInteraction.ts      NPC 互动（对话/切磋/送礼）
 │   │   ├── NPCManager.ts          NPC 槽位管理 / 指派任务
@@ -1480,6 +1480,12 @@ second_meet: {
 
 25. **🆕 NPC 详情弹窗横版重设计（0513）**：`RelationPanel.ts` 的 `showNpcStatsOverlay()` 和 `style.css` 的 `.npc-stats-overlay-inner` 从竖版（380px）改为鬼谷八荒式横版布局（720px、flex row）。左侧 240px 固定宽度立绘面板（`.npc-stats-left`），右侧属性面板（`.npc-stats-right`）包含六大区块。境界光晕通过 CSS `--realm-glow` 变量传递（8 境界→8 颜色），天骄 NPC 新增金色增强光效（`.tianjiao` 类）。身份标签横向排列（`.npc-stats-identity-tag.sect` 金色 + `.court` 绿色）。天赋标签按品质分色（`.legendary`/`.superior`/`.common`/`.inferior`/`.cursed`）。响应式断点 600px 回退竖版。
 
+26. **🆕 P9 势力全量激活（0518）**：`ALL_FACTIONS` 扩展至 21 势力（含 riyue/tiezhang/wudu/xuedao/haisha/imperial_court/rebels）。`FactionSystem.ts` 的 `tickFactionDiplomacy()` 遍历全部 21 势力；`WorldState.ts` 的 `getFactionRankings()` 按层级+最高修为排序展示 21 势力；`NPCGenerator.ts` 的 `SECT_HUBS` 全部 21 势力有据点。`SECT_TIER` 记录 22 条（含 none）。`sects.ts` 的 `SECTS` 对象含全部 22 个键，每个势力有 `alignment`/`culture` 属性。
+
+27. **🆕 世界事件玩家介入 Direction C（0518）**：`WorldEvent` 接口新增 `interactable?: boolean`/`acceptLabel?: string` 字段，5 种事件（武林大会/匪患侵扰/疫病蔓延/魔教渗透/古墓出土）标记为 `interactable: true`。`WorldStateData` 新增 `pendingWorldEvent?: { eventId, turn }` 字段（`schemas.ts` 同步）。`tickWorldState()` 对可介入事件不立即生效，改为写入 `pendingWorldEvent` 并返回 `{ isPending: true }`；已有 pending 事件时跳过新触发。`resolveWorldEvent(accept)` 消费 pending 事件并按 accept 决定是否给予奖励。`getPendingWorldEventDef()` 供 UI 查询完整事件定义。`WorldPanel.ts` 渲染顶部急讯横幅（`.wp-pending-event`），含「参与」/「置之不理」按钮；`StoryPanel.ts` 在 `isPending` 时提示玩家前往 WorldPanel 查看。
+
+28. **🆕 NPC 行为可见性 Direction I（0518）**：`NpcBehavior.ts` 新增 `npcActivityLabel(result)` 和 `writeActivityLog(n, entry)` 两个内部函数。每次 `tickNpcBehaviors()` 执行后将行为结果写入对应 NPC 的 `recentLog` 数组（最多 20 条，相同相邻条去重）。`Camp.ts` 的 `renderSidebar()` 读取 `npc.recentLog?.at(-1)` 并在 NPC 卡片底部展示（`.nearby-npc-activity` CSS 类，绿色斜体小字）。
+
 ---
 
 ## 十、待扩展模块 🆕 0510
@@ -1549,4 +1555,4 @@ second_meet: {
 
 4. **TypeScript strict mode**：所有新增 ID 必须先在 `src/data/types.ts` 的联合类型中声明，再在其他文件中使用。`tsc --noEmit` 会验证所有引用。
 
-5. **开发顺序建议**：P6 ✅ → P7 ✅ → P8 ✅ → v2.0修复 ✅ → P9（势力21方全量激活）→ 势力AI自主行动 → 世界事件介入 → 外交可视化。详细优先级和方案见 [SANDBOX_PLAN.md §七](./SANDBOX_PLAN.md)。
+5. **开发顺序建议**：P6 ✅ → P7 ✅ → P8 ✅ → v2.0修复 ✅ → P9 ✅ → Direction C ✅ → Direction I ✅ → 势力AI自主行动 → 外交可视化。详细优先级和方案见 [SANDBOX_PLAN.md §七](./SANDBOX_PLAN.md)。

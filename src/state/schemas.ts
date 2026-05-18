@@ -189,6 +189,9 @@ export const PlayerStateSchema = z.object({
     })).default([]),
     turn: z.number().default(0),
     lastEvolveTurn: z.number().default(0),
+    pendingWorldEvent: z.object({
+      eventId: z.string(), turn: z.number(),
+    }).optional(),
   }).optional(),
 
   // 🆕 沙盒：个人日志系统

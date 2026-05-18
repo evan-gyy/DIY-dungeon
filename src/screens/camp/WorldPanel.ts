@@ -8,6 +8,8 @@ import { getPlayer } from '../../state/GameState';
 import {
   getFactionRankings,
   tickWorldState,
+  resolveWorldEvent,
+  getPendingWorldEventDef,
   joinSect,
   canJoinSect,
   getChronicle,
@@ -15,6 +17,7 @@ import {
   getWorldEventHistory,
   type FactionScore,
   type ChronicleEntry,
+  type WorldEvent,
 } from '../../systems/WorldState';
 import {
   getFactionRelationLabel,
@@ -61,10 +64,12 @@ export function renderWorldPanel(container: HTMLElement): void {
   }
 
   const currentTurn = p.worldState?.turn ?? 0;
+  const pendingEvent = getPendingWorldEventDef();
 
   container.innerHTML = `
     <div class="world-panel">
       ${renderToolbar(currentTurn)}
+      ${pendingEvent ? renderPendingEventBanner(pendingEvent) : ''}
       ${renderSectCards()}
       ${renderCoalitionSection()}
       <div class="world-panel-grid">
@@ -79,6 +84,22 @@ export function renderWorldPanel(container: HTMLElement): void {
   `;
 
   bindButtons(container);
+}
+
+// ──── 可介入事件横幅 ────
+
+function renderPendingEventBanner(event: WorldEvent): string {
+  const acceptLabel = event.acceptLabel ?? '⚔️ 参与';
+  return `<div class="wp-pending-event">
+    <div class="wp-pending-event-header">⚡ 江湖急讯</div>
+    <div class="wp-pending-event-title">${event.title}</div>
+    <div class="wp-pending-event-desc">${event.description}</div>
+    <div class="wp-pending-event-reward">🎁 奖励：${event.playerEffect?.flavorText ?? '（无奖励）'}</div>
+    <div class="wp-pending-event-btns">
+      <button class="wp-pending-accept" id="wp-pending-accept">${acceptLabel}</button>
+      <button class="wp-pending-skip" id="wp-pending-skip">⏩ 置之不理</button>
+    </div>
+  </div>`;
 }
 
 // ──── 顶部工具栏 ────
@@ -305,6 +326,30 @@ function renderChronicleSection(): string {
 // ──── 绑定按钮 ────
 
 function bindButtons(container: HTMLElement): void {
+  // 可介入事件：参与
+  const acceptBtn = container.querySelector('#wp-pending-accept');
+  if (acceptBtn) {
+    acceptBtn.addEventListener('click', () => {
+      const ev = getPendingWorldEventDef();
+      resolveWorldEvent(true);
+      import('../../ui/toast').then(m => {
+        const reward = ev?.playerEffect?.flavorText ?? '';
+        m.showToast(`✅ 已参与！${reward ? `\n🎁 ${reward}` : ''}`);
+      });
+      renderWorldPanel(container);
+    });
+  }
+
+  // 可介入事件：跳过
+  const skipBtn = container.querySelector('#wp-pending-skip');
+  if (skipBtn) {
+    skipBtn.addEventListener('click', () => {
+      resolveWorldEvent(false);
+      import('../../ui/toast').then(m => m.showToast('⏩ 你袖手旁观，事件就此过去。'));
+      renderWorldPanel(container);
+    });
+  }
+
   // 拜入宗门
   container.querySelectorAll<HTMLElement>('[data-join-sect]').forEach(btn => {
     btn.addEventListener('click', () => {

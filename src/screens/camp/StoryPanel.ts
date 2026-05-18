@@ -95,7 +95,9 @@ function doDailyTask(action: LocationAction): void {
   // 🆕 沙盒：世界演算 & 个人日志
   if (p.gameMode === 'sandbox') {
     const worldResult = tickWorldState();
-    if (worldResult.worldEvent?.showToPlayer) {
+    if (worldResult.isPending) {
+      setTimeout(() => showToast(`⚡ 江湖有事待处理！前往【江湖态势】查看。`), 2000);
+    } else if (worldResult.worldEvent?.showToPlayer) {
       setTimeout(() => showToast(`🌍 江湖要闻：${worldResult.worldEvent!.title}`), 2000);
     }
     addChronicleEntry({
