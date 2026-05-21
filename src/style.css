@@ -808,6 +808,12 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.daily-task-meta {
+  margin-top: 3px;
+}
+.daily-task-meta .mission-track {
+  font-size: 9px; padding: 1px 5px;
+}
 .daily-task-reward {
   font-size: 11px;
   color: var(--text-gold);
@@ -828,6 +834,12 @@ body {
   border-top: 1px dashed rgba(255,255,255,0.06);
   margin-top: 4px;
 }
+.faction-ctx-tag {
+  font-size: 11px; letter-spacing: 1px; margin-left: 8px;
+}
+.faction-ctx-tag.friendly { color: #2ecc71; }
+.faction-ctx-tag.neutral  { color: #f1c40f; }
+.faction-ctx-tag.hostile  { color: #e74c3c; }
 
 /* ── 任务战斗卡片 ── */
 .mission-fight-card {
@@ -2960,6 +2972,13 @@ body {
 .difficulty-hard    { background: rgba(192,57,43,0.2);  color: #e74c3c; }
 .difficulty-legendary { background: rgba(142,68,173,0.3); color: #9b59b6; }
 .mission-loc { color: var(--text-dim); font-size: 11px; }
+.mission-track {
+  padding: 1px 7px; border-radius: 8px; font-size: 10px; letter-spacing: 1px; margin-right: 4px;
+}
+.track-jianghu   { background: rgba(46,204,113,0.2); color: #2ecc71; }
+.track-court_wen { background: rgba(52,152,219,0.2); color: #3498db; }
+.track-court_wu  { background: rgba(231,76,60,0.2);  color: #e74c3c; }
+.track-universal { background: rgba(149,165,166,0.2); color: #95a5a6; }
 
 .mission-ready-badge {
   font-size: 11px; color: var(--accent-green); letter-spacing: 1px;
@@ -3797,6 +3816,21 @@ body {
   background: rgba(201,168,76,0.1); border: 1px solid rgba(201,168,76,0.2); border-radius: 12px;
 }
 
+/* ===== 身份徽章（地图栏） ===== */
+.map-rank-badge {
+  font-size: 12px; letter-spacing: 1px;
+  margin-left: 8px; padding: 2px 10px;
+  border-radius: 12px; cursor: pointer;
+}
+.court-rank-badge {
+  background: rgba(155,89,182,0.15); border: 1px solid rgba(155,89,182,0.35);
+  color: #c39bd3;
+}
+.sect-rank-badge {
+  background: rgba(231,76,60,0.12); border: 1px solid rgba(231,76,60,0.3);
+  color: #e87d72;
+}
+
 /* ===== 月度过渡 CG ===== */
 .month-transition {
   position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
@@ -4081,4 +4115,435 @@ body {
 }
 .wp-coalition-expire {
   font-size: 11px; color: var(--text-dim); margin-top: 4px;
+}
+
+/* ===== 外交关系图 (Direction D) ===== */
+
+.dg-container {
+  position: relative;
+  background: linear-gradient(135deg, rgba(10,15,28,0.6) 0%, rgba(20,25,40,0.4) 100%);
+  border: 1px solid var(--border-dim);
+  border-radius: 10px;
+  overflow: hidden;
+  margin: 8px 0 16px;
+}
+
+.dg-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.dg-node {
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.dg-node:hover {
+  transform: scale(1.15);
+}
+
+.dg-node-circle {
+  transition: all 0.2s ease;
+}
+
+.dg-node:hover .dg-node-circle {
+  filter: brightness(1.4);
+  stroke-width: 2;
+}
+
+.dg-player .dg-node-circle {
+  filter: drop-shadow(0 0 6px rgba(255,215,0,0.6));
+  animation: dg-pulse 2s ease-in-out infinite;
+}
+
+@keyframes dg-pulse {
+  0%, 100% { filter: drop-shadow(0 0 6px rgba(255,215,0,0.6)); }
+  50%      { filter: drop-shadow(0 0 12px rgba(255,215,0,0.9)); }
+}
+
+.dg-node-label {
+  pointer-events: none;
+  user-select: none;
+}
+
+.dg-tooltip {
+  position: absolute;
+  min-width: 180px;
+  max-width: 240px;
+  background: rgba(20,20,36,0.97);
+  border: 1px solid var(--border-gold);
+  border-radius: 10px;
+  padding: 12px;
+  z-index: 50;
+  box-shadow: 0 6px 32px rgba(0,0,0,0.6);
+  animation: dg-fadein 0.2s ease;
+}
+
+@keyframes dg-fadein {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.dg-tooltip-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-gold);
+  letter-spacing: 2px;
+  margin-bottom: 6px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(255,215,0,0.15);
+}
+
+.dg-tooltip-body {
+  font-size: 12px;
+  color: var(--text-light);
+  letter-spacing: 1px;
+  margin-bottom: 10px;
+  line-height: 1.6;
+}
+
+.dg-tooltip-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.dg-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border-dim);
+  background: rgba(255,255,255,0.04);
+  color: var(--text-light);
+  font-family: var(--font-cn);
+  font-size: 12px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.dg-action-btn:not(:disabled):hover {
+  background: rgba(255,255,255,0.1);
+  border-color: var(--border-gold);
+  transform: translateX(2px);
+}
+
+.dg-action-disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.dg-action-cost {
+  margin-left: auto;
+  font-size: 10px;
+  color: var(--text-dim);
+  font-family: monospace;
+}
+
+/* ===== 指令进行中 UI (Direction B v3) ===== */
+
+.directive-progress-section {
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: rgba(201, 168, 76, 0.04);
+  border: 1px solid rgba(201, 168, 76, 0.15);
+  border-radius: 10px;
+}
+
+.directive-progress-header {
+  font-size: 12px;
+  color: var(--text-gold);
+  margin-bottom: 8px;
+  letter-spacing: 1px;
+}
+
+.dd-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dd-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.dd-card-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 180px;
+  flex-shrink: 0;
+}
+
+.dd-card-icon {
+  font-size: 14px;
+  width: 20px;
+  text-align: center;
+}
+
+.dd-card-label {
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+.dd-card-npc {
+  color: #c9a84c;
+  font-weight: 500;
+  margin-left: auto;
+}
+
+.dd-progress-wrap {
+  flex: 1;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+  overflow: hidden;
+  min-width: 60px;
+}
+
+.dd-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #c9a84c, #e6c860);
+  border-radius: 2px;
+  transition: width 0.3s;
+}
+
+.dd-progress-pct {
+  font-size: 10px;
+  color: var(--text-dim);
+  min-width: 32px;
+  text-align: right;
+  font-family: monospace;
+}
+
+/* ── 政务任务检定弹窗 ── */
+
+.court-task-panel {
+  max-width: 460px;
+  width: 90%;
+  padding: 24px;
+  text-align: center;
+  animation: fadeInUp 0.25s ease;
+}
+
+.court-task-header {
+  font-size: 13px;
+  color: var(--text-gold);
+  letter-spacing: 4px;
+  margin-bottom: 4px;
+}
+
+.court-task-name {
+  font-size: 18px;
+  color: var(--text-light);
+  font-weight: bold;
+  margin-bottom: 14px;
+}
+
+.court-task-narrative {
+  font-size: 13px;
+  color: var(--text-dim);
+  line-height: 1.7;
+  margin-bottom: 18px;
+  text-align: left;
+  padding: 0 4px;
+}
+
+.court-task-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.court-choice-btn {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 11px 14px;
+  background: var(--card-bg);
+  border: 1px solid rgba(201, 168, 76, 0.2);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  color: var(--text-light);
+  font-family: inherit;
+}
+
+.court-choice-btn:hover {
+  border-color: rgba(201, 168, 76, 0.6);
+  background: rgba(201, 168, 76, 0.08);
+}
+
+.court-choice-label {
+  font-size: 14px;
+  font-weight: bold;
+  color: var(--text-light);
+  margin-bottom: 2px;
+}
+
+.court-choice-stat {
+  font-size: 11px;
+  color: var(--text-gold);
+  margin-bottom: 2px;
+}
+
+.court-choice-tag {
+  font-size: 10px;
+  margin-bottom: 4px;
+}
+
+.court-choice-desc {
+  font-size: 11px;
+  color: var(--text-dim);
+  font-style: italic;
+}
+
+.court-task-rewards {
+  font-size: 11px;
+  color: var(--text-dim);
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   职业路线选择 叠加层
+   ═══════════════════════════════════════════════════════════ */
+
+.career-overlay {
+  position: fixed; inset: 0; z-index: 1100;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(0, 0, 0, 0.75);
+  animation: career-fadein 0.4s ease;
+}
+
+@keyframes career-fadein {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.career-dialog {
+  width: 720px; max-width: 95vw; max-height: 90vh; overflow-y: auto;
+  background: linear-gradient(160deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  border: 2px solid rgba(201, 168, 76, 0.4);
+  border-radius: 14px;
+  padding: 28px 24px 20px;
+  box-shadow: 0 0 60px rgba(201, 168, 76, 0.15);
+}
+
+.career-title {
+  font-size: 20px; color: #c9a84c; text-align: center;
+  letter-spacing: 3px; margin-bottom: 6px;
+}
+
+.career-subtitle {
+  font-size: 12px; color: var(--text-dim); text-align: center;
+  margin-bottom: 10px;
+}
+
+.career-warning {
+  font-size: 11px; color: #f0b27a; text-align: center;
+  margin-bottom: 20px; letter-spacing: 1px;
+  padding: 6px 12px; background: rgba(230, 126, 34, 0.08);
+  border-radius: 4px; display: inline-block; width: 100%; box-sizing: border-box;
+}
+
+.career-cards {
+  display: flex; gap: 16px; justify-content: center;
+  margin-bottom: 16px;
+}
+
+.career-card {
+  flex: 1; max-width: 330px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 2px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px; padding: 20px 16px;
+  text-align: center;
+  transition: border-color 0.25s, box-shadow 0.25s, transform 0.25s;
+}
+
+.career-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.3);
+}
+
+.career-card-wen:hover {
+  border-color: rgba(74, 111, 165, 0.7);
+  box-shadow: 0 8px 28px rgba(74, 111, 165, 0.25);
+}
+
+.career-card-wu:hover {
+  border-color: rgba(192, 57, 43, 0.7);
+  box-shadow: 0 8px 28px rgba(192, 57, 43, 0.25);
+}
+
+.career-card-icon {
+  font-size: 42px; margin-bottom: 8px;
+}
+
+.career-card-name {
+  font-size: 17px; color: #c9a84c; letter-spacing: 2px;
+  margin-bottom: 4px;
+}
+
+.career-card-path {
+  font-size: 11px; color: var(--text-dim); margin-bottom: 10px;
+  font-style: italic;
+}
+
+.career-card-stats {
+  display: flex; gap: 8px; justify-content: center;
+  margin-bottom: 10px;
+}
+
+.career-stat-tag {
+  font-size: 10px; color: #f0b27a;
+  padding: 3px 10px; background: rgba(230, 126, 34, 0.1);
+  border: 1px solid rgba(230, 126, 34, 0.2);
+  border-radius: 12px;
+}
+
+.career-card-rank {
+  font-size: 10px; color: var(--text-dim);
+  margin-bottom: 10px; letter-spacing: 1px;
+  opacity: 0.75;
+}
+
+.career-card-desc {
+  font-size: 11px; color: var(--text-dim);
+  margin-bottom: 14px; line-height: 1.6;
+}
+
+.career-choose-btn {
+  width: 100%; padding: 12px; font-size: 14px;
+  letter-spacing: 2px; border: none; border-radius: 8px;
+  cursor: pointer; transition: filter 0.2s, transform 0.2s;
+}
+
+.career-choose-btn:hover {
+  filter: brightness(1.15); transform: scale(1.03);
+}
+
+.career-card-wen .career-choose-btn {
+  background: linear-gradient(135deg, #4a6fa5, #6b8dbe);
+  color: #fff;
+}
+
+.career-card-wu .career-choose-btn {
+  background: linear-gradient(135deg, #c0392b, #e74c3c);
+  color: #fff;
+}
+
+.career-note {
+  font-size: 10px; color: var(--text-dim); text-align: center;
+  opacity: 0.6; line-height: 1.5;
 }

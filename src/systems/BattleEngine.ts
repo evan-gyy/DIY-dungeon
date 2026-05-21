@@ -14,6 +14,69 @@ import {
 } from './StatusEffects';
 import { selectEnemyAction } from './EnemyAI';
 import { bus } from '../ui/events';
+import type { PlayerNpcRelation } from '../data/types';
+import { generateBondDialog, showBondDialogOverlay } from './BattleBondDialog';
+
+/** 羁绊战斗加成 — 与高好感/特殊关系的 NPC 并肩作战时获得属性加成 */
+function applyBondBonus<T extends { name: string; atk: number; def: number; agi: number; crit: number; isPlayer: boolean }>(
+  allyDefs: T[],
+): { modifiedDefs: T[]; bondCount: number } {
+  const p = getPlayer();
+  const db = p.npcDatabase ?? {};
+  const affection = p.npcAffection ?? {};
+  const relations = p.npcRelations ?? {};
+
+  let bondCount = 0;
+  const modifiedDefs = allyDefs.map(def => {
+    if (def.isPlayer) return def;
+
+    // 通过名字匹配 npcDatabase
+    const npcEntry = Object.entries(db).find(([, n]) => n.name === def.name);
+    if (!npcEntry) return def;
+    const [npcId] = npcEntry;
+    const aff = affection[npcId] ?? 0;
+    const rels = relations[npcId] ?? [];
+
+    if (aff < 20 && rels.length === 0) return def;
+
+    // 羁绊倍率
+    let bondMul = 1.0;
+    if (aff >= 80) bondMul = 1.20;
+    else if (aff >= 50) bondMul = 1.12;
+    else if (aff >= 20) bondMul = 1.06;
+
+    // 特殊关系额外加成
+    const specialRels: PlayerNpcRelation[] = ['lover', 'sworn_brother', 'master', 'student'];
+    if (rels.some(r => specialRels.includes(r))) {
+      bondMul += 0.10;
+    }
+
+    if (bondMul > 1.0) bondCount++;
+
+    return {
+      ...def,
+      atk: Math.round(def.atk * bondMul),
+      def: Math.round(def.def * bondMul),
+      agi: Math.round(def.agi * bondMul),
+      crit: Math.round(def.crit * bondMul),
+    };
+  });
+
+  // 团队羁绊：≥3 名高好感战友 → 主角获得鼓舞
+  if (bondCount >= 3) {
+    const playerIdx = modifiedDefs.findIndex(d => d.isPlayer);
+    if (playerIdx >= 0) {
+      const pd = modifiedDefs[playerIdx]!;
+      modifiedDefs[playerIdx] = {
+        ...pd,
+        atk: Math.round(pd.atk * 1.10),
+        def: Math.round(pd.def * 1.10),
+      };
+    }
+  }
+
+  return { modifiedDefs, bondCount };
+}
 
 // ── module-level battle context ──
 let _ctx: BattleContext | null = null;
@@ -127,6 +190,7 @@ function _endBattle(result: BattleResult): void {
       exp: player.exp + totalExp,
       gold: player.gold + totalGold,
       inventory: updatedInventory,
+      killCount: (player.killCount ?? 0) + _ctx.enemies.length,
     };
 
     // apply wudang flags from any enemy
@@ -520,7 +584,10 @@ export function initTeamBattle(
   const player = getPlayer();
   const hasPrevision = player.skills.includes('yi_li_xin_jing' as SkillId);
 
-  const allies: BattleUnit[] = allyDefs.map((def, i) => ({
+  // 羁绊加成
+  const { modifiedDefs } = applyBondBonus(allyDefs);
+
+  const allies: BattleUnit[] = modifiedDefs.map((def, i) => ({
     id: def.isPlayer ? 'player_main' : `ally_${i}`,
     name: def.name,
     side: 'ally' as const,
@@ -598,14 +665,20 @@ export function initTeamBattle(
     enemyStatuses,
   };
 
-  bus.emit('battle:started', {
-    allies,
-    enemies,
-    teamBattle: true,
-  });
-
-  _log(`── 第 1 回合 ──`);
-  _notifyUpdate();
+  // 战前羁绊对话
+  const allyNames = allyDefs.filter(d => !d.isPlayer).map(d => d.name);
+  const bondLines = generateBondDialog(allyNames);
+  if (bondLines.length > 0) {
+    showBondDialogOverlay(bondLines).then(() => {
+      bus.emit('battle:started', { allies, enemies, teamBattle: true });
+      _log(`── 第 1 回合 ──`);
+      _notifyUpdate();
+    });
+  } else {
+    bus.emit('battle:started', { allies, enemies, teamBattle: true });
+    _log(`── 第 1 回合 ──`);
+    _notifyUpdate();
+  }
 }
 
 function buildTurnOrderFrom(allies: BattleUnit[], enemies: BattleEnemyUnit[]): BattleUnit[] {
@@ -776,6 +849,71 @@ export function playerBasicAttack(targetId?: string): void {
     return;
   }
   setTimeout(() => _advanceTurn(), 600);
+}
+
+/**
+ * 初始化自定义战斗（用于任务战斗等动态敌人生成场景）。
+ * 接收预构建的敌方单位和友方单位，直接启动战斗。
+ */
+export function initCustomBattle(
+  enemies: BattleEnemyUnit[],
+  allies: BattleUnit[],
+): void {
+  const player = getPlayer();
+  const hasPrevision = player.skills.includes('yi_li_xin_jing' as SkillId);
+
+  const allyStatuses: Record<string, StatusEffect[]> = {};
+  const enemyStatuses: Record<string, StatusEffect[]> = {};
+
+  for (const ally of allies) {
+    const statuses: StatusEffect[] = [];
+    if (ally.isPlayer) {
+      const passiveSkills = player.skills.filter(id => {
+        const sk = SKILLS[id];
+        return sk?.type === 'passive';
+      });
+      if (passiveSkills.includes('zixiao' as SkillId)) {
+        applyStatus(statuses, { type: 'regen_mp', value: 8, duration: 999 });
+      }
+      if (hasPrevision) {
+        applyStatus(statuses, { type: 'regen_mp_pct', value: 10, duration: 999 });
+      }
+    }
+    allyStatuses[ally.id] = statuses;
+  }
+
+  for (const enemy of enemies) {
+    enemyStatuses[enemy.id] = [];
+  }
+
+  const turnOrder = buildTurnOrderFrom(allies, enemies);
+
+  _ctx = {
+    state: 'player_turn',
+    units: [...allies, ...enemies],
+    allies,
+    enemies,
+    currentUnitIndex: 0,
+    turnOrder,
+    round: 1,
+    log: [],
+    skillCooldowns: {},
+    hasPrevision,
+    pendingEvade: false,
+    selectedTarget: null,
+    teamBattle: allies.length > 1 || enemies.length > 1,
+    allyStatuses,
+    enemyStatuses,
+  };
+
+  bus.emit('battle:started', {
+    allies,
+    enemies,
+    teamBattle: _ctx.teamBattle,
+  });
+
+  _log(`── 第 1 回合 ──`);
+  _notifyUpdate();
 }
 
 /** 使用药品 */

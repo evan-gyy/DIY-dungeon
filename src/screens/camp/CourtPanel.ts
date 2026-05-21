@@ -23,7 +23,7 @@ export function renderCourtPanel(content: HTMLElement): void {
   const p = getPlayer();
   const courtStats = p.courtStats ?? { strategy: 10, eloquence: 10, charisma: 10, scholarship: 10 };
   const influence = p.influence ?? 0;
-  const courtPath = (p.courtPath ?? null) as CourtPath | null;
+  const courtPath = (p.playerCareer ?? p.courtPath ?? null) as CourtPath | null;
   const courtRank = (p.courtRank ?? 'commoner') as CourtRank;
   const lastAction = (p.lastActionType ?? 'idle') as LastActionType;
 
@@ -165,7 +165,7 @@ export function renderCourtPanel(content: HTMLElement): void {
   if (wenBtn) {
     wenBtn.addEventListener('click', () => {
       const player = getPlayer();
-      const updated: typeof player = { ...player, courtPath: 'wen' as CourtPath };
+      const updated: typeof player = { ...player, courtPath: 'wen' as CourtPath, playerCareer: 'wen' };
       setPlayer(updated);
       saveGame(updated);
       showToast('📜 你选择了文官之路！侧重口才与学识。');
@@ -178,7 +178,7 @@ export function renderCourtPanel(content: HTMLElement): void {
   if (wuBtn) {
     wuBtn.addEventListener('click', () => {
       const player = getPlayer();
-      const updated: typeof player = { ...player, courtPath: 'wu' as CourtPath };
+      const updated: typeof player = { ...player, courtPath: 'wu' as CourtPath, playerCareer: 'wu' };
       setPlayer(updated);
       saveGame(updated);
       showToast('⚔️ 你选择了武官之路！侧重智谋与魅力。');
@@ -198,7 +198,7 @@ export function renderCourtPanel(content: HTMLElement): void {
       }
       setPlayer(result.updatedPlayer!);
       saveGame(getPlayer());
-      const newLabel = getCourtRankLabel(result.newRank!, player.courtPath as CourtPath | null);
+      const newLabel = getCourtRankLabel(result.newRank!, (player.playerCareer ?? player.courtPath) as CourtPath | null);
       showToast(`🏛️ 晋升成功！你已是${newLabel}！`);
       renderCourtPanel(content);
     });

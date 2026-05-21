@@ -1,7 +1,7 @@
 # DIY-Dungeon 项目架构文档
 
 > 本文档面向开发者和 AI Agent，描述当前项目的完整架构、各模块职责，以及接下来的开发方向。
-> 最后更新：2026-05-18（v2.3 P9全量激活 ✅ / Direction C 世界事件介入 / Direction I NPC行为可见性）
+> 最后更新：2026-05-21（v2.9 称号系统 + NPC寿命与死亡 + 势力AI增强：正邪交战/招降/招募指令/大势力加成 + 掌门管理面板）
 
 ---
 
@@ -33,7 +33,7 @@ DIY-dungeon/
 │   │
 │   ├── data/                      纯数据层（不依赖 DOM 或状态）
 │   │   ├── types.ts               **所有 TS 接口和 ID 联合类型**（单一来源，含沙盒字段）
-│   │   ├── sandboxTypes.ts        沙盒类型定义（MissionDef, PromotionTrial, FactionAlignment, CourtRank 等）
+│   │   ├── sandboxTypes.ts        沙盒类型定义（MissionDef/PromotionTrial/FactionAlignment/CourtRank/FactionOfficialRank/FactionDirective等）
 │   │   ├── skills.ts              SKILLS: Record<SkillId, SkillData>（按门派/境界分层，炼气~渡劫六境）
 │   │   ├── enemies.ts             ENEMIES: Record<EnemyId, EnemyTemplate>
 │   │   ├── npcs.ts                NPC_DIALOGS: Record<NpcId, NpcDialogData>（含第三章新 NPC 对话树）
@@ -44,6 +44,7 @@ DIY-dungeon/
 │   │   ├── worldMap.ts            世界地图节点配置（~35 个地点 + LocationAction 日常行动 + sect_learn_skill 行动）
 │   │   ├── sectSkillTables.ts     🆕 各宗门技能表（WUDANG/SHAOLIN/RIYUE/EMEI/BEGGAR/QUANZHEN/KUNLUN/TANGMEN + SECT_SKILL_TABLES + getSkillRealm()）
 │   │   ├── sects.ts               SECTS: Record<SectId, SectData>（含 alignment + culture 标签）
+│   │   ├── titles.ts              🆕 称号定义：TITLES 池（15个称号 + 解锁条件 + 属性加成）
 │   │   ├── story.ts               WUDANG_TIERS（关卡配置，遗留文件）
 │   │   └── chapters/
 │   │       ├── types.ts           ChapterData / CampScene 接口
@@ -54,24 +55,27 @@ DIY-dungeon/
 │   │
 │   ├── state/                     状态层（依赖 data，不依赖 DOM）
 │   │   ├── GameState.ts           PlayerState singleton：getPlayer / setPlayer
-│   │   ├── SaveSystem.ts          saveGame / loadSave / loadAllSlots（Zod 验证 + 向下兼容）
+│   │   ├── SaveSystem.ts          saveGame / loadSave（🆕 v2 lz-string压缩 + 背包精简 + NPC属性动态重算 + v1自动迁移）
 │   │   ├── LevelSystem.ts         修为系统：REALM_NAMES(80层制)、突破机制（canBreakThrough / breakThroughRealm）
 │   │   └── schemas.ts             PlayerStateSchema（Zod，含所有字段的 .default()，支持旧存档兼容）
 │   │
-│   ├── systems/                   游戏逻辑（依赖 data + state，不依赖 DOM）— 20 个文件
+│   ├── systems/                   游戏逻辑（依赖 data + state，不依赖 DOM）— 22 个文件
 │   │   ├── BattleEngine.ts        4v4 团队战引擎（initBattle / playerUseSkill / playerBasicAttack / 队友AI / 回合交替）
 │   │   ├── StatusEffects.ts       applyStatus / tickStatus / getStatusValue
 │   │   ├── EnemyAI.ts             enemyTurn / weightedRandom / predictAction
+│   │   ├── TitleSystem.ts         🆕 称号系统（getActiveTitle / hasTitle / activateTitle / deactivateTitle / getTitleBonus）
 │   │   ├── NpcBehavior.ts         NPC 行为引擎（5级优先级：疗伤→修炼60%→社交15%→门派任务15%→移动10%，行为结果写入 recentLog，含阵营加权移动 + NPC间16种互动动作池）
 │   │   ├── NPCGenerator.ts        随机 NPC 生成器（门派中枢 + 城市游荡者 + 京城官员，三角金字塔 + 36天赋 + 天骄）
 │   │   ├── NPCInteraction.ts      NPC 互动（对话/切磋/送礼）
 │   │   ├── NPCManager.ts          NPC 槽位管理 / 指派任务
+│   │   ├── ActionSystem.ts        🆕 数值闭环引擎（statExp累计+属性升级+成功率公式+世界闭环）
+│   │   ├── FactionAI.ts           🆕 势力议事引擎 v3（三轨指令：军务+江湖 + 朝廷属性亲和 + 随从加成/经验共享/参战 + 晋升判定 + statExp接入）
 │   │   ├── NpcRelationship.ts     🆕 NPC 间友好度系统（性格兼容矩阵 + 同门加成 + 关系标签：好友/仇敌）
 │   │   ├── Inventory.ts           addItem / removeItem / useItem
 │   │   ├── PromotionSystem.ts     沙盒晋升（canPromote / executePromotion / getPromotionTrial）
 │   │   ├── MissionSystem.ts       任务引擎（接取/追踪/完成/放弃/进度更新）
 │   │   ├── FactionSystem.ts       势力外交引擎（tickFactionDiplomacy / getFactionRelation / 倾向匹配 + 文化相似度）
-│   │   ├── FactionWarfare.ts      🆕 势力领土争夺（tryTriggerSiege / playerJoinSiege 4v4攻城 / 领土控制 / 世界新闻）
+│   │   ├── FactionWarfare.ts      🆕 势力领土争夺（tryTriggerSiege / playerJoinSiege / resolveDelegatedSiege 3波车轮战 / 无主地占领 / 随从代战）
 │   │   ├── SectManagement.ts      🆕 门派经营管理（19门派双属性：资源+稳定度 / NPC门派任务 / 月度议事决策 / 攻城消耗结算）
 │   │   ├── WorldState.ts          世界演算引擎（门派资源演化 / 10 种世界事件 / 势力排名 / 个人日志 / 宗门加入）
 │   │   ├── CourtSystem.ts         朝廷系统（品阶晋升 / 影响力计算）
@@ -80,12 +84,12 @@ DIY-dungeon/
 │   │   ├── FabaoShop.ts           法器商店逻辑（商品池/按境界分组/购买）
 │   │   └── BreakthroughPill.ts    突破丹系统（丹药替代剧情解锁突破）
 │   │
-│   ├── screens/                   UI 层（依赖全部下层模块）— 根级 8 个 + camp/ 12 个
+│   ├── screens/                   UI 层（依赖全部下层模块）— 根级 8 个 + camp/ 13 个
 │   │   ├── ScreenManager.ts       showScreen / getCurrentScreen
 │   │   ├── MainMenu.ts            主菜单渲染
 │   │   ├── SaveSelect.ts          存档槽选择（含沙盒字段显示）
 │   │   ├── CharCreate.ts          角色创建（选立绘 + 输入姓名 + 沙盒字段初始化）
-│   │   ├── Camp.ts                营地主容器（Tab 切换 + 侧边栏「附近的人」+ 地图弹窗 + 沙盒兼容初始化 + 时间推进 + 议事触发）
+│   │   ├── Camp.ts                营地主容器（Tab 切换 + 侧边栏「附近的人」+ 地图弹窗 + 沙盒兼容初始化 + 时间推进 + 议事触发 + 地图栏身份徽章）
 │   │   ├── camp/
 │   │   │   ├── AttrPanel.ts       属性面板（修为突破按钮 + 宗门身份 + 贡献值 + 晋升进度/试炼按钮）
 │   │   │   ├── BagPanel.ts        背包面板（24 格，使用道具）
@@ -94,11 +98,13 @@ DIY-dungeon/
 │   │   │   ├── FabaoPanel.ts      法宝装备面板（三槽装备/卸下）
 │   │   │   ├── RelationPanel.ts   人物关系面板（可折叠分类 + 好感度 + 🆕 鬼谷八荒式横版 NPC 详情弹窗：左侧立绘+境界光效，右侧属性含宗门/朝廷身份）
 │   │   │   ├── MissionPanel.ts    任务面板（接取/追踪/完成/放弃，左侧常驻）
-│   │   │   ├── WorldPanel.ts      江湖态势面板（势力排行/详情卡片/个人日志/宗门加入/世界推演）
+│   │   │   ├── WorldPanel.ts      江湖态势面板（势力排行/SVG外交关系图/玩家外交行动/个人日志/宗门加入/世界推演）
 │   │   │   ├── CourtPanel.ts      朝廷面板（品阶/政务/影响力/文武双线）
+│   │   │   ├── SectPanel.ts        🆕 师门身份面板（势力四维+贡献进度+晋升路线图）
 │   │   │   ├── CouncilScreen.ts   🆕 月度议事 CG 全屏界面（掌门立绘+长老+对话气泡+rank分级选项+攻城参战入口）
 │   │   │   ├── FabaoShopUI.ts     法器商店 UI 覆盖层（宗门/城市商店）
-│   │   │   └── SkillLearnOverlay.ts  🆕 宗门习武弹窗（按6境界分层显示本派技能，消耗贡献值学习）
+│   │   │   ├── SkillLearnOverlay.ts  🆕 宗门习武弹窗（按6境界分层显示本派技能，消耗贡献值学习）
+│   │   │   └── SectLeaderPanel.ts   🆕 掌门管理面板（资源调配/招生纳贤/外交决策）
 │   │   ├── DialogScreen.ts        NPC 对话树
 │   │   ├── BattleScreen.ts        战斗 UI（4v4 团队战：多单位卡片 + 目标选择 + 技能栏 + 结算）
 │   │   ├── StoryScreen.ts         VN 引擎（打字机 / 对话 / CG / 选择枝 / 战斗节点）
@@ -123,7 +129,7 @@ DIY-dungeon/
 └── docs/
     ├── ARCHITECTURE.md            本文档
     ├── GAME_DESIGN.md             游戏设计文档（含沙盒模式详解）
-    ├── SANDBOX_PLAN.md            沙盒模式实施计划
+    ├── TODO_LIST.md                开发待办清单
     ├── REALM_SKILL_FABAO_SYSTEM.md 境界-技能-法宝体系设计文档
     ├── CG_GENERATION_PLAN.md      CG 生成提示词
     └── chapters/
@@ -179,8 +185,8 @@ export type ScreenId =
   | 'main' | 'saveselect' | 'create' | 'story'
   | 'camp' | 'dialog' | 'battle';
 
-// Camp Tab（新增 'relation' 和 'fabao'）
-export type CampTabId = 'story' | 'attr' | 'bag' | 'skill' | 'fabao' | 'relation';
+// Camp Tab（'court'/'sect'/'mission'/'world' 为沙盒模式新增）
+export type CampTabId = 'story' | 'attr' | 'bag' | 'skill' | 'fabao' | 'relation' | 'mission' | 'court' | 'sect' | 'world';
 ```
 
 `PlayerState` 接口也在此定义，包含所有玩家字段（`chapter`、`act`、`chapter2Route`、`equippedFabao`、`ownedFabao` 等）。
@@ -524,16 +530,26 @@ export function predictNextAction(enemy: BattleEnemyUnit): { icon: string; name:
 
 适配多单位架构，AI 选择目标时遍历存活友方单位。
 
-#### `NpcBehavior.ts` — NPC 动态行为引擎（🆕 v2.0 优先级重构）
+#### `NpcBehavior.ts` — NPC 动态行为引擎（🆕 v2.0 优先级重构 + v2.9 寿命系统）
 
 **v2.0 重构**：从旧版「三选一 + 独立移动判定」改为 5 级优先级行为树 + NPC 间互动。
 
+**🆕 v2.9 寿命与死亡**：
+- 每 tick NPC 年龄增长（`age += 1/12` 月），`age >= maxAge` → 寿终正寝
+- 争斗死亡：恶意互动（brawl/ambush/revenge）中大等级差（≥10）败方 5% 死亡
+- 攻城战死亡：参战 NPC 2% 阵亡（玩家队友除外）
+- 人口上限 80 存活 NPC，低于上限时自动生成替补（Lv.1~3 散修）
+- 宗门季度纳新（每3月）：大中型宗门招收 1 名弟子，5% 天骄率
+- NPC 主动互动玩家：好感高 → 赠礼/情报/同行，好感低 → 挑衅/谣言
+
 ```typescript
-export function initNpcDatabase(): Record<string, NpcStats>   // 初始化 NPC 数据库（含初始位置）
+export function initNpcDatabase(): Record<string, NpcStats>   // 初始化 NPC 数据库（含初始位置+寿命计算）
 export function getNpcStats(id: string): NpcStats | null       // 获取单个 NPC 数值
-export function tickNpcBehaviors(): NpcTickResult[]            // 执行所有 NPC 行为 tick（5级优先级）
+export function tickNpcBehaviors(): NpcTickResult[]            // 执行所有 NPC 行为 tick（5级优先级+年龄增长+死亡判定+替补生成）
 export function getNpcsAtLocation(locId: LocationId): NpcStats[] // 获取指定地点的 NPC
-export function tickNpcToNpcInteractions(): NpcInteractionResult[] // NPC 间自主互动
+export function tickNpcToNpcInteractions(): NpcInteractionResult[] // NPC 间自主互动（含争斗死亡判定）
+export function tickNpcPlayerInteraction(): void               // 🆕 NPC 主动互动玩家
+export function tickQuarterlySectRecruitment(): NpcTickResult[] // 🆕 宗门季度纳新
 export function appendNpcLog(npcId: string, entry: string): void  // 追加 NPC 近期经历
 ```
 
@@ -873,7 +889,11 @@ const rankLabel = rankLabels[p.discipleRank] || '外门弟子';
 
 **🆕 NPC 状态弹窗（0513 鬼谷八荒式横版重设计）**：点击已解锁角色的立绘卡片，弹出该角色的详细状态面板。横版布局（720px）：左侧 240px 立绘面板带境界颜色光晕（`--realm-glow` CSS 变量），天骄 NPC 金色光效增强；右侧属性面板显示六大区块：身份标识（所属帮派 🏛️ + 朝廷地位 🏯）、修为境界（名称+经验进度条）、六维属性网格（HP/MP/ATK/DEF/AGI/暴击）、天赋标签（按品质着色）、装备法宝（3件横排）、好感度条+性格描述。支持关闭按钮、点击背景、ESC 键三种关闭方式。`showNpcStatsOverlay()` 已导出为 public API，供 `Camp.ts` 的 sidebar 复用。
 
-#### `Camp.ts` — 营地主容器（🆕 0507 更新，0510 地图行为更新）
+#### `Camp.ts` — 营地主容器（🆕 0507 更新，0510 地图行为更新，0519 身份徽章+SectPanel路由）
+
+**🆕 身份徽章（0519）**：`renderMapBar()` 在地图栏左侧渲染朝廷品阶（🏛️）和师门身份（🏯）两个徽章，始终可见。点击徽章调用 `switchCampTab()` 直接跳转对应面板。徽章通过 `getCourtRankLabelText()` / `getRankLabelText()` 获取标签文字。
+
+**🆕 师门身份面板路由**：`switchCampTab('sect')` 调用 `renderSectPanel(content)`，展示势力四维、贡献进度、晋升路线图。
 
 **🆕 旧存档兼容初始化**：
 ```typescript
@@ -1017,7 +1037,10 @@ export function openDialog(npcId: NpcId): void
 |------|------|----------|
 | `PromotionSystem.ts` | 沙盒晋升逻辑 | `canPromote()`, `executePromotion()`, `getPromotionTrial()`, `getContributionProgress()` |
 | `MissionSystem.ts` | 任务系统引擎 | `acceptMission()`, `updateMissionProgress()`, `completeMission()`, `abandonMission()` |
-| `FactionSystem.ts` | 势力外交引擎 | `tickFactionDiplomacy()`, `getFactionRelation()`, `getFactionTrust()`, `getFactionAlignment()` |
+| `FactionSystem.ts` | 势力外交引擎 | `tickFactionDiplomacy()`, `getFactionRelation()`, `getFactionTrust()`, `getFactionAlignment()`, `playerDiplomaticAction()`, `getAllRelationsSnapshot()` |
+| `FactionAI.ts` | 🆕 势力议事引擎 v3 | `factionAITick()`, `factionCouncil()`, `claimBestDirective()`, `computeStatPercentile()`, `getFactionDirectives()`, `getNpcOfficial()`, `getFollowerCombatBonus()`, `getFollowerCourtBonus()`, `shareExpWithFollowers()`, `shareCombatGrowthWithFollowers()`, `getFollowerBattleParticipants()`, `tickFollowerDirectiveClaim()`, `getActiveDirectivesForPlayer()`，🆕 recruit 招募指令模板 |
+| `SectManagement.ts` | 门派经营+统一据点 | `initSectState()`, `updateSectState()`, `computeSectPower()`, `tickSectNaturalChange()`, **`initSettlements()`**, **`tickSettlements()`**, **`getSettlement()`**, **`getSectSettlement()`**, `updateSettlement()` |
+| `CourtSystem.ts` | 朝廷晋升系统 | `canPromoteCourt()` (v2: 属性门+功绩消耗), `executeCourtPromotion()`, `getSplitFocusMultiplier()` |
 | `WorldState.ts` | 世界演算引擎 | `initWorldState()`, `tickWorldState()`, `getFactionRankings()`, `addChronicleEntry()`, `joinSect()`, `contributeToFaction()` |
 | `CourtSystem.ts` | 朝廷品阶系统 | `getCourtRank()`, `calculateInfluence()`, `getAvailableCourtActions()` |
 | `CourtEngine.ts` | 朝廷政务引擎 | `executeCourtAction()`, D100 掷骰 + 修正值判定（成功/大成功/失败） |
@@ -1028,7 +1051,8 @@ export function openDialog(npcId: NpcId): void
 | `NPCInteraction.ts` | NPC 互动 | `interactNpc()`, `giftToNpc()`, `sparWithNpc()` |
 | `NPCManager.ts` | NPC 管理 | `assignNpcToSlot()`, `getNpcBySlot()`, NPC 槽位分配 |
 | `NpcRelationship.ts` | 🆕 NPC 间友好度 | `initAllNpcRelationships()`, `changeNpcAffection()`, `getAffectionTier()`, `getNpcNpcRelationTag()` |
-| `FactionWarfare.ts` | 🆕 领土争夺 | `tryTriggerSiege()`, `playerJoinSiege()`, 4v4 攻城 / 领土控制 / 世界新闻 |
+| `TitleSystem.ts` | 🆕 称号系统 | `getActiveTitle()`, `hasTitle()`, `activateTitle()`, `deactivateTitle()`, `getTitleBonus()` — 返回倍率加成（atkMul/defMul/agiMul/hpMul/mpMul/critBonus/cultivationMul） |
+| `FactionWarfare.ts` | 🆕 领土争夺 | `tryTriggerSiege()`, `playerJoinSiege()`, `resolveDelegatedSiege()`, 3波车轮战攻城 / 无主地占领 / 随从代战 / 领土控制 / 世界新闻 / 🆕 正邪交战概率翻倍 / 🆕 大势力战力加成（城数+资源+稳定度） / 🆕 领土易主时招降本地NPC |
 | `SectManagement.ts` | 🆕 门派经营 | `initSectState()`, `tickSectNaturalChange()`, `executeSectTask()`, `generateCouncilProposal()`, `executeCouncilDecision()` |
 
 #### 沙盒 UI 面板（`src/screens/camp/`）
@@ -1041,6 +1065,7 @@ export function openDialog(npcId: NpcId): void
 | `FabaoShopUI.ts` | 覆盖层弹窗 | 法器商店 UI（宗门店/城市店，按境界分组浏览购买） |
 | `SkillLearnOverlay.ts` | 🆕 覆盖层弹窗 | 宗门习武 UI：按6境界分层显示本派技能，消耗贡献值学习 |
 | `CouncilScreen.ts` | 🆕 CG全屏覆盖层 | 月度议事 UI：掌门立绘+长老+对话气泡+rank分级选项+攻城参战入口 |
+| `SectLeaderPanel.ts` | 🆕 掌门大殿 | 掌门管理界面：资源调配（资源→稳定度/繁荣度）+ 招生纳贤（消耗资源招募NPC弟子）+ 外交决策（宣战/求和/结盟） |
 
 #### 沙盒数据流
 
@@ -1486,6 +1511,39 @@ second_meet: {
 
 28. **🆕 NPC 行为可见性 Direction I（0518）**：`NpcBehavior.ts` 新增 `npcActivityLabel(result)` 和 `writeActivityLog(n, entry)` 两个内部函数。每次 `tickNpcBehaviors()` 执行后将行为结果写入对应 NPC 的 `recentLog` 数组（最多 20 条，相同相邻条去重）。`Camp.ts` 的 `renderSidebar()` 读取 `npc.recentLog?.at(-1)` 并在 NPC 卡片底部展示（`.nearby-npc-activity` CSS 类，绿色斜体小字）。
 
+29. **🆕 外交可视化+玩家外交 Direction D+E（0519）**：`WorldPanel.ts` 新增 SVG 关系图（21 势力节点按地理坐标排列，trust 颜色编码连线，玩家节点金色脉冲高亮）。点击节点弹出外交行动菜单（遣使修好/宣战/缔结同盟/求和），职级+信任+资源三重检查。`FactionSystem.ts` 新增 `playerDiplomaticAction()`（执外交行动+扣成本+更新关系）、`getAvailableDiplomacyActions()`（计算可用按钮列表）、`getAllRelationsSnapshot()`（对外提供全图关系快照）。`style.css` 新增 `.dg-*` 15个 CSS 类。
+
+30. **🆕 势力议事引擎 v2 + 政务官阶 P10（0519）**：`FactionAI.ts` 从 v1（260行，单议案直接结算）重写为 v2（~540行，指令池架构）。核心流程：`factionCouncil()` 按 6 模板(攻城/经商/外交/发展/守备/侦察)加权生成 `FactionDirective` → 存入 `PlayerState.factionDirectives` → NPC 按属性匹配度认领 → 执行进度(NPC属性×指令亲和度) → 完成结算 → 贡献积累 → 晋升判定。`sandboxTypes.ts` 新增 `FactionOfficialRank`(6级官阶)/`FactionOfficial`/`FactionDirective`/`FactionDirectiveType`/`FactionRankConfig`/晋升配置等 12 个类型。晋升使用 `computeStatPercentile()` 计算 NPC 在势力内相对排名（如"agi 排前 50%"），不使用绝对值门褬。指令 3 月过期自动清理。
+
+31. **🆕 全宗门交互式任务（0519）**：`worldMap.ts` 的 14 个宗门据点全部新增 `battleConfig`（战斗任务）和 `courtConfig`（交互式对话任务）。战斗任务调用 `launchTaskBattle()` → `calculateFinalStats()` 按玩家等级+难度平衡生成敌人。交互任务使用 D100 掷骰的 `showCourtTaskDialog()`，纳入了属性检定和成功/失败分支。
+
+32. **🆕 廷议可及性修复（0519）**：`SectManagement.ts` 的 `SECT_BASES` 新增 `kaifeng_city: 'imperial_court'` 和 `yanjing_city: 'rebels'`。`Camp.ts` 的 `checkCouncilTrigger()` 改为先检查玩家所属宗门（不再要求必须在据点），在据点则直接开议事、不在则信使通知。
+
+33. **🆕 师门身份面板 SectPanel（0519）**：新建 `src/screens/camp/SectPanel.ts`，提供江湖线职业生涯面板：势力四维（资源/稳定/繁荣/力量分）、贡献值进度条+晋升按钮（扣除贡献值提升 `discipleRank`）、完整进阶路线图（外门→内门→真传→长老→副掌门→掌门）。`CampTabId` 新增 `'sect'`，`index.html` 新增对应导航按钮。
+
+34. **🆕 身份徽章（0519）**：`index.html` 地图栏新增 `map-court-rank-badge` 和 `map-sect-rank-badge` 两个 span。`Camp.ts` 的 `renderMapBar()` 实时渲染朝廷品阶（🏛️）和师门身份（🏯）徽章。点击徽章调用 `switchCampTab()` 跳转对应面板。`style.css` 新增 `.map-rank-badge` / `.court-rank-badge` / `.sect-rank-badge` 样式。
+
+35. **🆕 存档压缩与优化（0520）**：引入 `lz-string` npm 包实现 Base64 压缩。背包仅存 `{id, count}`（重建自 `ITEMS` 字典）。NPC 战斗属性（maxHp/maxMp/atk/def/agi/crit）不再存储——读档时从 level+talents 调用 `calculateFinalStats()` 动态重算。存档格式升级至 v2（`{version:2, slots:{slot_1:"base64..."}}`），自动迁移 v1 旧存档。预估体积减少 ~70%。
+
+36. **🆕 属性经验值系统 ActionSystem（0520）**：新建 `src/systems/ActionSystem.ts`。`PlayerState` 和 `NpcStats` 新增 `combatStatExp`（atk/def/agi/crit）和 `courtStatExp`（strategy/eloquence/charisma/scholarship）。公式：`statExpNeeded = (currentStat + 1) * 100`。任务完成时按 `statAffinity` 权重分配经验，经验满 → 属性 +1。成功率公式：`successRate = 50 + (stat - difficulty) * 5`（钳制 10-90%）。`FactionAI.ts` 的 `settleDirective()` 已接入 `grantNpcStatExp()`。
+
+37. **🆕 NPC 世界响应层（0520）**：`NpcBehavior.ts` 新增 `applyWorldResponse(npcId)`。每 tick 随机 20% NPC 受世界状态影响：据点治安 >80 → NPC 安居+经验；治安 <25 → 被劫-气血；繁荣度 >80 → 见闻+经验；势力资源 >400 → 获赐法器；势力稳定 <30 → 心力交瘁。效果写入 `recentLog`。
+
+38. **🆕 议事动态数据插值（0520）**：`CouncilScreen.ts` 新增 `interpolateWorldData(text)`，支持 `{{topSect}}` `{{playerSect}}` `{{sectResources}}` `{{sectStability}}` `{{playerContrib}}` 模板标记，自动替换为实时游戏数据。议事发言从静态模板变为动态世界快照。
+
+39. **🆕 称号系统（0521）**：`src/data/titles.ts` 定义 ~15 个称号（剑术大师/钢筋铁骨/疾风快剑/博学鸿儒/龙骧将军/暗影行者/求道真人等），各有解锁条件（combat_win_30 / def_streak_10 / agi_above_40 / scholarship_above_30 / court_rank_3 / steal_success_5 / realm_huashen 等）和属性加成（atkMul/defMul/agiMul/hpMul/mpMul/critBonus/cultivationMul）。`TitleSystem.ts` 提供 `getActiveTitle()`/`hasTitle()`/`activateTitle()`/`deactivateTitle()`/`getTitleBonus()`。玩家可在 `AttrPanel.ts` 中从已解锁称号自由选择一个激活，激活后属性即时更新（金色加值显示）。`PlayerState` 新增 `activeTitle: string | null` + `unlockedTitles: string[]`。
+
+40. **🆕 NPC 寿命与死亡系统（0521）**：`NpcStats` 新增 `age`/`maxAge`/`isAlive` 字段。寿命公式按境界分层：凡人 60-80 / 炼气 120-180 / 筑基 250-400 / 结丹 500-800 / 元婴 1000-1500 / 化神 2000-3000 / 渡劫+ 5000-8000。`initNpcDatabase()` 为手写 NPC 自动计算寿命。每 tick 年龄 +1/12 月，`age >= maxAge` → 寿终正寝。争斗死亡：恶意互动大等级差(≥10)败方 5% 死亡。攻城死亡：参战 NPC 2% 阵亡。人口上限 80，低于上限时自动生成 Lv.1~3 替补散修。季度纳新（每3月）中大型宗门招 1 弟子，5% 天骄率。NPC 主动互动玩家（好感高→赠礼/情报/同行，好感低→挑衅/谣言）。
+
+41. **🆕 势力 AI 增强（0521）**：
+    - **正邪交战概率翻倍**：`tryTriggerSiege()` 中攻守双方 alignment 不同（righteous vs chaotic）→ 攻城概率 ×2.0；chaotic 弱势方 ×1.5
+    - **大势力攻城加成**：`calcTeamPower()` 接受可选 `factionId` 参数，控制城数 ≥3（×1.1）/≥6（×1.2），资源 ≥300（×1.05），稳定度 ≥70（×1.05），可叠加
+    - **领土易主招降**：`tryRecruitLocalNpcs()` 按 NPC 性格（upright 抗拒/cunning 接受/power 主动投靠）+ 关系判定是否加入新势力
+    - **招募指令**：`FactionDirectiveType` 新增 `'recruit'`，FactionAI 指令模板增加招募无宗门 NPC 的指令，NPC 到达目标后进行魅力检定
+    - **掌门管理面板**：`SectLeaderPanel.ts` 提供资源调配（资源→稳定度/繁荣度）、招生纳贤（招募外门/精英/随机弟子）、外交决策（宣战/求和/结盟）三大功能
+
+42. **🆕 NpcStats 缺省寿命处理**：`NPC_STATS_INIT` 类型为 `Omit<NpcStats, 'exp' | 'age' | 'maxAge' | 'isAlive'>`，手写 NPC 定义无需填写寿命字段——由 `initNpcDatabase()` 在初始化时根据 level 调用 `getMaxAgeForLevel()` 和 `getRandomInitialAge()` 自动计算。`NPCGenerator.ts` 的 `_generateNpc()` 同步产出寿命字段。`SectLeaderPanel.ts` 招募新 NPC 时也需赋值这三个字段。
+
 ---
 
 ## 十、待扩展模块 🆕 0510
@@ -1555,4 +1613,4 @@ second_meet: {
 
 4. **TypeScript strict mode**：所有新增 ID 必须先在 `src/data/types.ts` 的联合类型中声明，再在其他文件中使用。`tsc --noEmit` 会验证所有引用。
 
-5. **开发顺序建议**：P6 ✅ → P7 ✅ → P8 ✅ → v2.0修复 ✅ → P9 ✅ → Direction C ✅ → Direction I ✅ → 势力AI自主行动 → 外交可视化。详细优先级和方案见 [SANDBOX_PLAN.md §七](./SANDBOX_PLAN.md)。
+5. **开发顺序建议**：P6 ✅ → P7 ✅ → P8 ✅ → v2.0修复 ✅ → P9 ✅ → Direction C ✅ → Direction I ✅ → Direction D+E ✅ → Direction B+P10 v3 ✅ → 朝廷晋升属性门 ✅ → 任务中途事件 ✅ → 指令进行UI ✅ → 统一据点属性 ✅ → G(势力力量分攻城集成) ✅ → H(大地图随机遭遇) ✅ → J(派随从代战) ✅ → K(技能校验) ✅ → 称号系统 ✅ → NPC寿命/死亡 ✅ → 势力AI增强 ✅ → 城池繁荣度 UI 可视化。详细待办清单见 [TODO_LIST.md](./TODO_LIST.md)。

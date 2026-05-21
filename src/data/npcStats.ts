@@ -105,6 +105,40 @@ export interface NpcStats {
   recentLog?: string[];
   /** 🆕 P8: NPC志向（驱动自主行为） */
   ambition?: import('../data/types').NpcAmbition;
+  /** 🆕 战斗属性经验值 */
+  combatStatExp?: { atk: number; def: number; agi: number; crit: number };
+  /** 🆕 朝廷属性经验值 */
+  courtStatExp?: { strategy: number; eloquence: number; charisma: number; scholarship: number };
+  /** 🆕 NPC寿命：当前年龄（岁） */
+  age: number;
+  /** 🆕 NPC寿命：最大寿命（岁，由境界决定） */
+  maxAge: number;
+  /** 🆕 NPC寿命：是否存活 */
+  isAlive: boolean;
+}
+
+/** 根据境界等级计算寿命上限（岁） */
+export function getMaxAgeForLevel(level: number): number {
+  if (level <= 10) return 60 + Math.floor(Math.random() * 20);           // 凡人~炼气: 60-80
+  if (level <= 20) return 120 + Math.floor(Math.random() * 60);          // 筑基: 120-180
+  if (level <= 30) return 250 + Math.floor(Math.random() * 150);         // 结丹: 250-400
+  if (level <= 40) return 500 + Math.floor(Math.random() * 300);         // 元婴: 500-800
+  if (level <= 50) return 1000 + Math.floor(Math.random() * 500);        // 化神: 1000-1500
+  if (level <= 60) return 2000 + Math.floor(Math.random() * 1000);       // 渡劫: 2000-3000
+  if (level <= 70) return 5000 + Math.floor(Math.random() * 3000);       // 大乘: 5000-8000
+  return 10000 + Math.floor(Math.random() * 5000);                       // 飞升: 10000-15000
+}
+
+/** 根据境界等级计算随机初始年龄（岁），高境界NPC更年长 */
+export function getRandomInitialAge(level: number): number {
+  if (level <= 10) return 18 + Math.floor(Math.random() * 25);           // 18-43
+  if (level <= 20) return 25 + Math.floor(Math.random() * 40);           // 25-65
+  if (level <= 30) return 30 + Math.floor(Math.random() * 80);           // 30-110
+  if (level <= 40) return 40 + Math.floor(Math.random() * 150);          // 40-190
+  if (level <= 50) return 60 + Math.floor(Math.random() * 300);          // 60-360
+  if (level <= 60) return 100 + Math.floor(Math.random() * 500);         // 100-600
+  if (level <= 70) return 200 + Math.floor(Math.random() * 1000);        // 200-1200
+  return 500 + Math.floor(Math.random() * 2000);                         // 500-2500
 }
 
 // 🆕 使用 realmConfig 系统计算NPC属性（接受天赋数组）
@@ -127,7 +161,7 @@ function makeNpcStats(level: number, talents: TalentId[], critBonus: number = 0)
 // 🆕 使用 realmConfig 系统自动计算属性，确保数值平衡
 // 🆕 P8: 所有NPC使用 talents 数组替代旧 talent 字段；天赋分配按势力强弱差异化
 
-export const NPC_STATS_INIT: Record<string, Omit<NpcStats, 'exp'>> = {
+export const NPC_STATS_INIT: Record<string, Omit<NpcStats, 'exp' | 'age' | 'maxAge' | 'isAlive'>> = {
   // ═══════════════════════════════════════════════
   // 🌸 三位女主角
   // ═══════════════════════════════════════════════

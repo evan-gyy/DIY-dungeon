@@ -372,7 +372,7 @@ export type StatusType =
 export type SkillType = 'attack' | 'support' | 'control' | 'passive';
 export type TargetType = 'enemy' | 'self';
 
-export type CampTabId = 'story' | 'attr' | 'bag' | 'skill' | 'relation' | 'fabao' | 'mission' | 'court' | 'world';
+export type CampTabId = 'story' | 'attr' | 'bag' | 'skill' | 'relation' | 'fabao' | 'mission' | 'court' | 'sect' | 'world' | 'sect_leader';
 
 export type ScreenId =
   | 'main' | 'saveselect' | 'create' | 'story'
@@ -622,8 +622,10 @@ export interface PlayerState {
   npcDatabase?: Record<string, NpcStats>; // NPC 数值卡数据库（可选，首次加载时初始化）
   /** 🆕 NPC 好感度字典：key=NPC的npcDbId，value=好感度数值 */
   npcAffection: Record<string, number>;
-  /** 🆕 P8: NPC 间友好度字典：key=`${idA}_${idB}`(A<B字典序)，value=-100~100 */
+  /** 🆕 P8: NPC 间友好度字典：key=`${idA}__${idB}`(A<B字典序)，value=-100~100 */
   npcRelationship: Record<string, number>;
+  /** 🆕 NPC 间关系标签：key同友好度字典，value=关系标签数组（如['lover','sworn_brother']） */
+  npcRelationshipLabels: Record<string, string[]>;
   // 🆕 突破与宗门系统（沙盒模式预留）
   /** 已解锁突破的大境界列表（如 ['zhuji'] 表示筑基突破已解锁） */
   realmBreakUnlocked: string[];
@@ -633,10 +635,16 @@ export interface PlayerState {
   courtRank: string;
   /** 🆕 朝廷四维属性 */
   courtStats: { strategy: number; eloquence: number; charisma: number; scholarship: number };
+  /** 🆕 战斗属性经验值（积累足够经验→属性+1） */
+  combatStatExp: { atk: number; def: number; agi: number; crit: number };
+  /** 🆕 朝廷属性经验值（积累足够经验→属性+1） */
+  courtStatExp: { strategy: number; eloquence: number; charisma: number; scholarship: number };
   /** 🆕 朝廷影响力（朝廷的"修为"） */
   influence: number;
   /** 🆕 朝廷路线（null=未选择） */
   courtPath: 'wen' | 'wu' | null;
+  /** 🆕 职业路线选择（文官+江湖 / 武官+江湖，null=未选择，一旦选定不可更改） */
+  playerCareer: 'wen' | 'wu' | null;
   /** 🆕 上一行动领域（用于分心惩罚） */
   lastActionType: 'martial' | 'court' | 'idle';
   // 🆕 沙盒：宗门贡献值系统
@@ -677,10 +685,33 @@ export interface PlayerState {
   gameMonth: number;         // 当前游戏月份（从1开始）
   turnInMonth: number;       // 本月内的回合数（0-9）
   councilCooldown: number;   // 下次议事可触发的 month 数（防止重复触发）
+  /** 🆕 偷师冷却：key="steal_<SectId>"，value=上次偷师的 month */
+  stealCooldowns: Record<string, number>;
+  /** 🆕 累计击杀数 */
+  killCount: number;
+  /** 🆕 偷师成功次数 */
+  stealSuccessCount: number;
+  /** 🆕 已获得的称号列表 */
+  playerTitles: Array<{ titleId: string; acquiredAt: number }>;
+  /** 🆕 当前激活的称号 ID（cosmetic 称号可叠加显示） */
+  activeTitle: string | null;
+  /** 🆕 悬赏板 */
+  bountyBoard: Array<{
+    id: string; targetName: string; targetLevel: number;
+    targetLocation: string; issuer: string; issuerName: string;
+    crime: string; rewardGold: number; rewardRep: number;
+    difficulty: string; generatedAt: number; expiresAt: number;
+  }>;
+  /** 🆕 当前接取的悬赏 ID */
+  activeBountyId: string | null;
+  /** 🆕 上次刷新悬赏的月份 */
+  lastBountyRefresh: number;
   // 🆕 门派经营：每个门派的资源与稳定度
   sectState: Record<string, SectStateData>;
-  // 🆕 P7 城池繁荣度
+  // 🆕 P7 城池繁荣度（已被 settlementState 取代，保留兼容旧档）
   cityProsperity?: Record<string, number>;
+  // 🆕 统一据点属性：城市和门派共用同一套属性框架
+  settlementState?: Record<string, import('./sandboxTypes').SettlementAttributes>;
   // 🆕 P7 势力力量分
   sectPower?: Record<string, number>;
   // 🆕 P7 江湖大事件冷却
@@ -694,6 +725,34 @@ export interface PlayerState {
     members: string[];
     formedMonth: number;
     expireMonth: number;
+  }>;
+  // 🆕 P10: 门派政务指令池（key=factionId, value=待执行的指令列表）
+  factionDirectives?: Record<string, Array<{
+    id: string;
+    type: string;
+    factionId: string;
+    label: string;
+    description: string;
+    targetLocation?: LocationId;
+    targetSect?: SectId;
+    priority: number;
+    statAffinity: { atk: number; def: number; agi: number; crit: number };
+    progressNeeded: number;
+    currentProgress: number;
+    assignedNpcId?: string;
+    claimedByPlayer?: boolean;
+    completed: boolean;
+    rewardDescription: string;
+    createdAtMonth: number;
+    expiresAtMonth: number;
+  }>>;
+  // 🆕 P10: NPC 政务记录（key=npcId）
+  factionOfficials?: Record<string, {
+    npcId: string;
+    factionId: SectId;
+    rank: string;
+    contribution: number;
+    directivesDoneThisMonth: number;
   }>;
   _slot: number;
   _savedAt?: string;

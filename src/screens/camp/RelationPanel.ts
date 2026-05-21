@@ -9,6 +9,7 @@ import { PERSONALITY } from '../../data/npcStats';
 import {
   canRecommend, executeRecommend,
   canRecruit, executeRecruit,
+  canRecruitUnaffiliated, executeRecruitUnaffiliated,
   canDismiss, executeDismiss,
   canAssign, executeAssign,
   getRankLabel, getAssignmentLabel,
@@ -644,6 +645,14 @@ function renderActionButtons(
     } else {
       buttons.push(`<button class="npc-action-btn disabled" disabled title="${check.message}">招募为随从（${check.message.slice(0, 15)}…）</button>`);
     }
+  } else if (stats.sect === 'none') {
+    // 无宗门隶属NPC（城市散修）→ 可直接登用
+    const check = canRecruitUnaffiliated(p, stats, affection);
+    if (check.success) {
+      buttons.push(`<button class="npc-action-btn primary" data-action="recruit-unaffiliated" data-npc-id="${npcDbId}">登用为随从</button>`);
+    } else {
+      buttons.push(`<button class="npc-action-btn disabled" disabled title="${check.message}">登用（${check.message.slice(0, 15)}…）</button>`);
+    }
   } else {
     const check = canRecommend(p, stats, affection);
     if (check.success) {
@@ -697,6 +706,12 @@ function bindActionEvents(overlay: HTMLElement, npcDbId: string, npcName: string
   // 招募按钮
   overlay.querySelector<HTMLElement>('[data-action="recruit"]')?.addEventListener('click', () => {
     doRecruit(npcDbId, npcName, stats);
+    overlay.remove();
+  });
+
+  // 登用无隶属NPC按钮
+  overlay.querySelector<HTMLElement>('[data-action="recruit-unaffiliated"]')?.addEventListener('click', () => {
+    doRecruitUnaffiliated(npcDbId, npcName, stats);
     overlay.remove();
   });
 
@@ -811,6 +826,36 @@ function doRecruit(npcDbId: string, npcName: string, stats: NpcStats): void {
 
   refreshRelationPanel();
   showToast(`✅ ${npcName}已成为你的随从！`);
+}
+
+function doRecruitUnaffiliated(npcDbId: string, npcName: string, stats: NpcStats): void {
+  const p = getPlayer();
+  const affection = getNpcAffection(npcDbId);
+  const check = canRecruitUnaffiliated(p, stats, affection);
+  if (!check.success) {
+    showToast(check.message);
+    return;
+  }
+
+  const result = executeRecruitUnaffiliated(p, stats);
+  const updated = {
+    ...p,
+    npcDatabase: { ...p.npcDatabase, [npcDbId]: result.npc },
+    npcCollection: { ...p.npcCollection, recruited: result.recruited, maxSlots: result.maxSlots, assignments: result.assignments, assignmentTargets: result.assignmentTargets },
+  };
+  setPlayer(updated);
+  saveGame(updated);
+
+  import('../../systems/WorldState').then(m => {
+    m.addChronicleEntry({
+      category: 'npc_interaction',
+      title: '登用贤才',
+      description: `${p.name}登用了散修${npcName}，引入${getSectShortName(p.sect)}。`,
+    });
+  });
+
+  refreshRelationPanel();
+  showToast(`✅ ${npcName}已被登用，加入${getSectShortName(p.sect)}并成为你的随从！`);
 }
 
 function doDismiss(npcDbId: string, npcName: string): void {

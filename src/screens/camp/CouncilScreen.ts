@@ -16,13 +16,37 @@ import type { SectId } from '../../data/types';
 import type { CouncilContext, CouncilProposal, CouncilResult } from '../../systems/SectManagement';
 import { executeCouncilDecision } from '../../systems/SectManagement';
 import { playerJoinSiege } from '../../systems/FactionWarfare';
+import { getFactionRankings } from '../../systems/WorldState';
+
+/** 将文本中的 {{marker}} 替换为真实游戏数据 */
+function interpolateWorldData(text: string): string {
+  const p = getPlayer();
+  let result = text;
+
+  // 势力相关
+  const sectName = SECTS[p.sect]?.name ?? '无门无派';
+  result = result.replace(/\{\{playerSect\}\}/g, sectName);
+  result = result.replace(/\{\{sectResources\}\}/g, String(p.sectState?.[p.sect]?.resources ?? 0));
+  result = result.replace(/\{\{sectStability\}\}/g, String(p.sectState?.[p.sect]?.stability ?? 50));
+
+  // 玩家相关
+  result = result.replace(/\{\{playerContrib\}\}/g, String(p.sectContribution ?? 0));
+  result = result.replace(/\{\{currentCity\}\}/g, String(p.currentLocationId));
+
+  // 天下大势
+  const rankings = getFactionRankings();
+  const topSect = rankings.length > 0 ? rankings[0]! : null;
+  result = result.replace(/\{\{topSect\}\}/g, topSect?.name ?? '武当');
+
+  return result;
+}
 
 // ──── 提案对话文本 ────
 
 const PROPOSAL_DIALOGUE: Record<CouncilProposal['type'], string[]> = {
   siege: [
-    '近日探子来报，敌对势力蠢蠢欲动。我派兵精粮足，正是开疆拓土之时！',
-    '诸位师弟师妹，我意已决——本月发兵攻打敌城，扬我派威名！',
+    '近日探子来报，{{topSect}}虎视眈眈。我{{playerSect}}兵精粮足，正是开疆拓土之时！',
+    '诸位师弟师妹，我意已决——本月发兵攻打敌城，扬我{{playerSect}}威名！',
     '卧榻之侧岂容他人鼾睡？那片城池，该换个主人了。',
   ],
   stabilize: [
@@ -36,9 +60,9 @@ const PROPOSAL_DIALOGUE: Record<CouncilProposal['type'], string[]> = {
     '穷则思变。各堂弟子当外出采办物资，充实门派库房。',
   ],
   develop: [
-    '江湖风云变幻，我派当以稳为主。本月休养生息，培养弟子。',
+    '{{topSect}}称霸一方，江湖风云变幻。我{{playerSect}}当以稳为主，休养生息。',
     '打打杀杀非长久之计。让年轻弟子们好好修炼，他日方能独当一面。',
-    '春风化雨，润物无声。诸位安心修行，门派自会蒸蒸日上。',
+    '库中尚有{{sectResources}}资源。春风化雨，润物无声，门派自会蒸蒸日上。',
   ],
 };
 
@@ -91,7 +115,7 @@ function renderCouncil(): void {
   overlay.className = 'council-overlay';
 
   const proposal = ctx.proposal;
-  const dialogue = pickOne(PROPOSAL_DIALOGUE[proposal.type]);
+  const dialogue = interpolateWorldData(pickOne(PROPOSAL_DIALOGUE[proposal.type]));
 
   // 长老立绘
   const elderHtml = ctx.elderNpcs.map((n, i) => `
@@ -189,15 +213,15 @@ interface ChoiceDef {
 
 function buildChoices(proposalType: CouncilProposal['type'], rank: string): ChoiceDef[] {
   const choices: ChoiceDef[] = [];
+  const p = getPlayer();
+  const followerCount = (p.npcCollection?.recruited ?? []).length;
 
   if (rank === 'outer') {
-    // 外门弟子：只能听从安排
     choices.push({
       value: 'follow', label: '听从安排', icon: '🙏',
       className: 'council-choice-follow',
     });
   } else if (rank === 'inner') {
-    // 内门弟子：附议 或 提出异议
     choices.push({
       value: 'support', label: '附议掌门', icon: '👍',
       className: 'council-choice-support',
@@ -208,7 +232,6 @@ function buildChoices(proposalType: CouncilProposal['type'], rank: string): Choi
       hint: '成功率 30%',
     });
   } else {
-    // 真传及以上：附议 / 异议 / 主动请缨
     choices.push({
       value: 'support', label: '附议掌门', icon: '👍',
       className: 'council-choice-support',
@@ -223,8 +246,15 @@ function buildChoices(proposalType: CouncilProposal['type'], rank: string): Choi
       choices.push({
         value: 'volunteer', label: '加入攻城队', icon: '⚔️',
         className: 'council-choice-volunteer',
-        hint: '4v4 战斗',
+        hint: '亲自上阵',
       });
+      if (followerCount > 0) {
+        choices.push({
+          value: 'delegate', label: '派随从代战', icon: '👥',
+          className: 'council-choice-delegate',
+          hint: `${followerCount}名随从可出战`,
+        });
+      }
     }
     choices.push({
       value: 'object', label: '提出异议', icon: '🤔',
@@ -273,10 +303,10 @@ function handleChoice(choice: string, ctx: CouncilContext): void {
     return;
   }
 
-  executeAndShowResult(ctx, choice as 'follow' | 'support' | 'volunteer');
+  executeAndShowResult(ctx, choice as 'follow' | 'support' | 'volunteer' | 'delegate');
 }
 
-function executeAndShowResult(ctx: CouncilContext, choice: 'follow' | 'support' | 'volunteer'): void {
+function executeAndShowResult(ctx: CouncilContext, choice: 'follow' | 'support' | 'volunteer' | 'delegate'): void {
   const result = executeCouncilDecision(ctx.proposal, ctx.sectId, choice);
 
   // 如果是攻城且玩家主动请缨，进入战斗
@@ -290,6 +320,22 @@ function executeAndShowResult(ctx: CouncilContext, choice: 'follow' | 'support' 
         result.battleContext!.targetLocation,
       );
     }, 1500);
+    return;
+  }
+
+  // 派随从代战：auto-resolve with follower bonus
+  if (result.enterBattle && result.battleContext && choice === 'delegate') {
+    import('../../systems/FactionWarfare').then(m => {
+      const followerIds = getPlayer().npcCollection?.recruited ?? [];
+      const siegeResult = m.resolveDelegatedSiege(
+        result.battleContext!.attackerSect,
+        result.battleContext!.defenderSect,
+        result.battleContext!.targetLocation,
+        followerIds,
+      );
+      showResultOverlay('随从战报', siegeResult.newsText ?? '随从代战结束。', 'done');
+      setTimeout(() => finalizeCouncil(), 3000);
+    });
     return;
   }
 

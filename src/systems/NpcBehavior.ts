@@ -1,10 +1,10 @@
 import type { SectId } from '../data/types';
 import { getRealmByLevel } from '../data/types';
 import type { NpcStats, NpcPersonality } from '../data/npcStats';
-import { NPC_STATS_INIT } from '../data/npcStats';
-import { TALENTS } from '../data/realmConfig';
+import { NPC_STATS_INIT, getMaxAgeForLevel, getRandomInitialAge } from '../data/npcStats';
+import { TALENTS, calculateFinalStats, NPC_TALENT_POOL, TALENT_TIER } from '../data/realmConfig';
+import type { TalentId } from '../data/realmConfig';
 import { getPlayer, setPlayer } from '../state/GameState';
-import { calculateFinalStats } from '../data/realmConfig';
 import { WORLD_MAP, type LocationId } from '../data/worldMap';
 import { type FactionAlignment } from '../data/sandboxTypes';
 import { SECTS } from '../data/sects';
@@ -18,7 +18,7 @@ import {
   getAffectionTier,
   getNpcNpcRelationTag,
 } from './NpcRelationship';
-import { executeSectTask, getSectCultivateBonus, shouldNpcLeaveSect, isSectBase } from './SectManagement';
+import { executeSectTask, getSectCultivateBonus, shouldNpcLeaveSect, isSectBase, SECT_BASES } from './SectManagement';
 
 // ── NPC 初始位置映射 ──
 const NPC_INITIAL_LOCATION: Record<string, LocationId> = {
@@ -126,6 +126,12 @@ export function initNpcDatabase(): Record<string, NpcStats> {
     // 优先使用 NPC 数据中指定的位置，否则从位置映射表取，最后回退到武当山
     const initialLoc = init.currentLocationId ?? NPC_INITIAL_LOCATION[id] ?? 'wudang_mountain';
     const migrated = migrateNpcTalents({ ...init, exp: 0, currentLocationId: initialLoc } as NpcStats);
+    // 寿命初始化（手写NPC若未设定则根据境界计算）
+    if (!(migrated as any).age || !(migrated as any).maxAge) {
+      (migrated as any).age = (migrated as any).age ?? getRandomInitialAge(init.level);
+      (migrated as any).maxAge = (migrated as any).maxAge ?? getMaxAgeForLevel(init.level);
+    }
+    (migrated as any).isAlive = (migrated as any).isAlive ?? true;
     db[id] = migrated;
   }
 
@@ -192,7 +198,16 @@ export function tickNpcBehaviors(): NpcTickResult[] {
   const results: NpcTickResult[] = [];
   const updatedDb = { ...p.npcDatabase };
 
+  // ── 寿命推进（每月 +1/12 岁）──
   for (const [id, npc] of Object.entries(updatedDb)) {
+    if (!npc.isAlive) continue;
+    updatedDb[id] = { ...npc, age: (npc.age ?? 18) + 1 / 12 };
+  }
+
+  for (const [id, npc] of Object.entries(updatedDb)) {
+    // 跳过已死亡NPC
+    if (!npc.isAlive) continue;
+
     const n: NpcStats = {
       ...npc,
       equippedFabao: { ...npc.equippedFabao },
@@ -368,6 +383,14 @@ export function tickNpcBehaviors(): NpcTickResult[] {
       }
     }
 
+    // 🆕 世界响应：每 tick 随机选取 20% NPC 应用世界状态反馈
+    if (Math.random() < 0.20) {
+      const worldEffect = applyWorldResponse(id);
+      if (worldEffect && !result.detail.includes('世界响应')) {
+        // 世界响应效果已通过 applyWorldResponse 直接写入 NPC
+      }
+    }
+
     // 🆕 P8: rebel志向有几率偷取门派资源
     if (ambition === 'rebel' && n.sect !== 'none' && Math.random() < 0.08) {
       const p2 = getPlayer();
@@ -401,6 +424,35 @@ export function tickNpcBehaviors(): NpcTickResult[] {
         detail: `${n.name}因门派动荡而脱离了${oldSectName}，成为散修。`,
       });
     }
+
+    // 寿终检查
+    if ((n.age ?? 18) >= (n.maxAge ?? 80)) {
+      n.isAlive = false;
+      updatedDb[id] = n;
+      results.push({
+        npcId: id, npcName: n.name, action: 'cultivate',
+        outcome: '寿终正寝',
+        detail: `${n.name}（${getRealmByLevel(n.level)}）寿元已尽，于${WORLD_MAP[n.currentLocationId ?? 'wudang_mountain']?.name ?? '某地'}仙逝。`,
+      });
+    }
+  }
+
+  // ── 人口补充：存活NPC不足80时生成替代者 ──
+  const aliveCount = Object.values(updatedDb).filter(n => n.isAlive !== false).length;
+  const MAX_NPC = 80;
+  if (aliveCount < MAX_NPC) {
+    const toGenerate = Math.min(MAX_NPC - aliveCount, 2); // 每次最多生成2个
+    for (let i = 0; i < toGenerate; i++) {
+      const replacement = generateReplacementNpc();
+      if (replacement && !updatedDb[replacement.id]) {
+        updatedDb[replacement.id] = replacement;
+        results.push({
+          npcId: replacement.id, npcName: replacement.name, action: 'move',
+          outcome: '初入江湖',
+          detail: `${replacement.name}初入江湖，开始在${WORLD_MAP[replacement.currentLocationId ?? 'changan_city']?.name ?? '某地'}闯荡。`,
+        });
+      }
+    }
   }
 
   setPlayer({ ...p, npcDatabase: updatedDb });
@@ -419,6 +471,12 @@ export function tickNpcBehaviors(): NpcTickResult[] {
     });
   }
 
+  // ── NPC 主动对玩家互动 ──
+  const playerInteractions = tickNpcPlayerInteraction();
+  for (const pi of playerInteractions) {
+    results.push(pi);
+  }
+
   return results;
 }
 
@@ -431,6 +489,55 @@ export function getNpcsAtLocation(locationId: LocationId): NpcStats[] {
   return Object.values(p.npcDatabase).filter(
     npc => (npc.currentLocationId ?? 'wudang_mountain') === locationId
   );
+}
+
+// ═════════════════════════════════════════════════════════
+//  人口补充：生成替代 NPC（低等级散修）
+// ═════════════════════════════════════════════════════════
+
+const REPLACEMENT_SURNAMES = ['李','王','张','刘','陈','杨','赵','黄','周','吴','徐','孙','胡','朱','高','林','何','郭','马','罗'];
+const REPLACEMENT_MALE_NAMES = ['小虎','铁柱','阿牛','大壮','石头','二狗','木生','水生','山娃','田娃'];
+const REPLACEMENT_FEMALE_NAMES = ['翠花','小蝶','阿秀','玉兰','春草','巧儿','兰儿','红儿','香儿','柳儿'];
+const REPLACEMENT_SECTS: SectId[] = ['wudang','shaolin','emei','beggar','huashan','demon','maoshan','kunlun','qingcheng','tangmen','quanzhen','kongtong','diancang','riyue','tiezhang'];
+const REPLACEMENT_CITIES: LocationId[] = ['changan_city','luoyang_city','kaifeng_city','yangzhou_city','suzhou_city','hangzhou_city','chengdu_city','xiangyang_city','jiangling_city','jiangzhou_city','tanzhou_city','guangzhou_city'];
+const REPLACEMENT_PERSONALITIES: NpcPersonality[] = ['aloof','kind','cunning','upright','gentle','bold'];
+
+function generateReplacementNpc(): NpcStats | null {
+  const id = `gen_repl_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
+  const gender = Math.random() < 0.55 ? 'male' : 'female';
+  const surname = REPLACEMENT_SURNAMES[Math.floor(Math.random() * REPLACEMENT_SURNAMES.length)]!;
+  const givenPool = gender === 'male' ? REPLACEMENT_MALE_NAMES : REPLACEMENT_FEMALE_NAMES;
+  const given = givenPool[Math.floor(Math.random() * givenPool.length)]!;
+  const level = 1 + Math.floor(Math.random() * 5); // 1-5级
+
+  const sect = REPLACEMENT_SECTS[Math.floor(Math.random() * REPLACEMENT_SECTS.length)]!;
+  const locId = REPLACEMENT_CITIES[Math.floor(Math.random() * REPLACEMENT_CITIES.length)]!;
+  const personality = REPLACEMENT_PERSONALITIES[Math.floor(Math.random() * REPLACEMENT_PERSONALITIES.length)]!;
+
+  const stats = calculateFinalStats(level, ['normal']);
+  return {
+    id, name: surname + given, sect, level,
+    talents: ['normal'], isTianjiao: false,
+    exp: 0,
+    hp: stats.hp, maxHp: stats.hp,
+    mp: stats.mp, maxMp: stats.mp,
+    atk: stats.atk, def: stats.def, agi: stats.agi, crit: stats.crit,
+    skills: level >= 3 ? ['wudang_changquan'] : [],
+    equippedFabao: { weapon: null, armor: null, accessory: null },
+    ownedFabao: [],
+    currentLocationId: locId,
+    discipleRank: 'outer',
+    courtRank: 'commoner',
+    personality,
+    courtStats: { strategy: 5, eloquence: 5, charisma: 5, scholarship: 5 },
+    influence: 0,
+    courtPath: null,
+    gender,
+    ambition: 'content',
+    age: getRandomInitialAge(level),
+    maxAge: getMaxAgeForLevel(level),
+    isAlive: true,
+  };
 }
 
 // ═════════════════════════════════════════════════════════
@@ -670,7 +777,7 @@ export function tickNpcToNpcInteractions(): NpcInteractionResult[] {
   if (!p.npcDatabase) return [];
 
   const results: NpcInteractionResult[] = [];
-  const npcs = Object.values(p.npcDatabase);
+  const npcs = Object.values(p.npcDatabase).filter(n => n.isAlive !== false);
 
   // 按地点分组
   const byLocation = new Map<string, NpcStats[]>();
@@ -743,6 +850,32 @@ export function tickNpcToNpcInteractions(): NpcInteractionResult[] {
             } else if (prevTag === 'enemy' && relationTag === null) {
               appendNpcLogInternal(npcA.id, `与${npcB.name}关系缓和`);
               appendNpcLogInternal(npcB.id, `与${npcA.name}关系缓和`);
+            }
+          }
+
+          // 🆕 争斗死亡判定：恶意互动中大等级差有概率致死
+          if (result.intent === 'hostile' && (result.type === 'brawl' || result.type === 'ambush' || result.type === 'revenge')) {
+            const levelDiff = Math.abs(npcA.level - npcB.level);
+            if (levelDiff >= 10) {
+              const loser = npcA.level > npcB.level ? npcB : npcA;
+              const winner = npcA.level > npcB.level ? npcA : npcB;
+              if (Math.random() < 0.05) {
+                loser.isAlive = false;
+                const p2 = getPlayer();
+                if (p2.npcDatabase?.[loser.id]) {
+                  const updatedNpcDb = { ...p2.npcDatabase, [loser.id]: loser };
+                  setPlayer({ ...p2, npcDatabase: updatedNpcDb });
+                }
+                appendNpcLogInternal(loser.id, `在与${winner.name}的争斗中不幸身亡`);
+                appendNpcLogInternal(winner.id, `在争斗中失手击杀了${loser.name}`);
+                results.push({
+                  npcA: loser.id, npcAName: loser.name,
+                  npcB: winner.id, npcBName: winner.name,
+                  type: result.type, intent: 'hostile',
+                  detail: `💀 ${loser.name}在与${winner.name}的争斗中不幸身亡！`,
+                  affectionDelta: -30,
+                });
+              }
             }
           }
 
@@ -888,4 +1021,274 @@ function appendNpcLogInternal(npcId: string, entry: string): void {
   if (oldLog.length > 0 && oldLog[oldLog.length - 1] === entry) return;
   const log = [...oldLog, entry].slice(-20);
   setPlayer({ ...p, npcDatabase: { ...db, [npcId]: { ...npc, recentLog: log } } });
+}
+
+// ═════════════════════════════════════════════════════════════
+//  世界响应层：世界状态 → NPC 行为动态反馈
+// ═════════════════════════════════════════════════════════════
+
+/**
+ * 世界状态对 NPC 的因果影响。
+ * 在每次 NPC tick 后调用，根据据点属性/势力状态调整 NPC 数值。
+ * 返回一个日志条目（若产生了影响）。
+ */
+export function applyWorldResponse(npcId: string): string | null {
+  const p = getPlayer();
+  const npc = p.npcDatabase?.[npcId];
+  if (!npc) return null;
+
+  const locId = npc.currentLocationId ?? 'wudang_mountain';
+  const settlement = p.settlementState?.[locId];
+  const sectState = p.sectState?.[npc.sect];
+  let effect: string | null = null;
+
+  if (settlement) {
+    // 治安 > 80：百姓安居，NPC 资产自然增长
+    if (settlement.publicOrder >= 80 && Math.random() < 0.15) {
+      const bonus = Math.floor(Math.random() * 5) + 1;
+      npc.exp += bonus;
+      effect = `🏘️ 在${WORLD_MAP[locId]?.name ?? locId}安居乐业，修为+${bonus}`;
+    }
+    // 治安 < 25：盗贼横行，NPC 可能被劫
+    if (settlement.publicOrder < 25 && Math.random() < 0.12) {
+      const loss = Math.floor(Math.random() * 10) + 3;
+      npc.hp = Math.max(1, npc.hp - loss);
+      effect = `🗡️ 在${WORLD_MAP[locId]?.name ?? locId}遭遇盗匪，气血-${loss}`;
+    }
+    // 繁荣度 > 80：商业兴旺，NPC 获得额外经验（通过观摩交易）
+    if (settlement.prosperity >= 80 && Math.random() < 0.10) {
+      const bonus = Math.floor(Math.random() * 8) + 2;
+      npc.exp += bonus;
+      effect = `📈 ${WORLD_MAP[locId]?.name ?? locId}街市繁华，见闻广博，修为+${bonus}`;
+    }
+    // 武学值 > 70（仅门派据点）：NPC 修炼效率提升
+    if ((settlement.martialArts ?? 0) >= 70 && Math.random() < 0.08) {
+      const bonus = Math.floor(Math.random() * 10) + 5;
+      npc.exp += bonus;
+      effect = `⚔️ 在武学圣地潜心苦练，修为+${bonus}`;
+    }
+  }
+
+  // 势力状态影响
+  if (sectState && npc.sect !== 'none') {
+    // 势力资源丰富 → NPC 更容易获得法器
+    if (sectState.resources >= 400 && npc.ownedFabao.length === 0 && Math.random() < 0.05) {
+      npc.ownedFabao = ['iron_guard' as import('../data/types').FabaoId];
+      effect = `🎁 ${SECTS[npc.sect]?.name ?? npc.sect}府库充盈，获赐法器`;
+    }
+    // 势力稳定度过低 → NPC 士气下降
+    if (sectState.stability < 30 && Math.random() < 0.10) {
+      npc.hp = Math.max(1, npc.hp - 3);
+      effect = `😟 ${SECTS[npc.sect]?.name ?? npc.sect}内乱不断，心力交瘁`;
+    }
+  }
+
+  if (effect && npc.recentLog) {
+    const log = [...(npc.recentLog.slice(-19) ?? []), effect];
+    npc.recentLog = log;
+  }
+
+  return effect;
+}
+
+// ═════════════════════════════════════════════════════════════
+//  NPC 主动对玩家互动
+// ═════════════════════════════════════════════════════════════
+
+function tickNpcPlayerInteraction(): NpcTickResult[] {
+  const p = getPlayer();
+  const playerLoc = p.currentLocationId ?? 'wudang_mountain';
+  const npcsAtLoc = getNpcsAtLocation(playerLoc).filter(n => n.isAlive !== false);
+  const results: NpcTickResult[] = [];
+
+  for (const npc of npcsAtLoc) {
+    if (Math.random() > 0.20) continue; // 20% 概率
+
+    const aff = getNpcAffection(npc.id);
+    const playerRelations = p.npcRelations?.[npc.id] ?? [];
+    const isLover = playerRelations.includes('lover');
+    const isStudent = playerRelations.includes('student');
+    const isMaster = playerRelations.includes('master');
+
+    // 选择互动类型
+    if (aff >= 60) {
+      // 好感高：赠礼/分享情报/邀请同行
+      const roll = Math.random();
+      if (roll < 0.35) {
+        // 赠礼
+        const giftGold = Math.floor(Math.random() * 30) + 10;
+        setPlayer({ ...getPlayer(), gold: (getPlayer().gold ?? 0) + giftGold });
+        results.push({
+          npcId: npc.id, npcName: npc.name, action: 'npc_interact',
+          outcome: '赠礼',
+          detail: `${npc.name}赠送了你 ${giftGold} 铜钱：「小小心意，请收下。」`,
+        });
+      } else if (roll < 0.65) {
+        // 分享情报
+        const expGain = Math.floor(Math.random() * 15) + 10;
+        setPlayer({ ...getPlayer(), exp: (getPlayer().exp ?? 0) + expGain });
+        results.push({
+          npcId: npc.id, npcName: npc.name, action: 'npc_interact',
+          outcome: '分享情报',
+          detail: `${npc.name}与你分享了最近的江湖见闻。经验 +${expGain}`,
+        });
+      } else {
+        // 邀请同行（增加好感）
+        changeNpcAffection(npc.id, 2);
+        results.push({
+          npcId: npc.id, npcName: npc.name, action: 'npc_interact',
+          outcome: '邀请同行',
+          detail: `${npc.name}邀请你同行游历，一路畅谈甚欢。好感 +2`,
+        });
+      }
+    } else if (aff <= -30) {
+      // 好感低：挑衅/散播谣言
+      const roll = Math.random();
+      if (roll < 0.5) {
+        changeNpcAffection(npc.id, -3);
+        results.push({
+          npcId: npc.id, npcName: npc.name, action: 'npc_interact',
+          outcome: '当众挑衅',
+          detail: `${npc.name}当众向你挑衅，言语颇为不善。好感 -3`,
+        });
+      } else {
+        setPlayer({ ...getPlayer(), reputation: Math.max(-999, (getPlayer().reputation ?? 0) - 5) });
+        results.push({
+          npcId: npc.id, npcName: npc.name, action: 'npc_interact',
+          outcome: '散播谣言',
+          detail: `${npc.name}在背后散播关于你的不利谣言，声望略微受损。`,
+        });
+      }
+    } else if (isLover) {
+      // 道侣：邀请同游
+      const expGain = Math.floor(Math.random() * 20) + 15;
+      setPlayer({ ...getPlayer(), exp: (getPlayer().exp ?? 0) + expGain });
+      changeNpcAffection(npc.id, 3);
+      results.push({
+        npcId: npc.id, npcName: npc.name, action: 'npc_interact',
+        outcome: '道侣相伴',
+        detail: `${npc.name}邀你月下同游，心意相通。经验 +${expGain}，好感 +3`,
+      });
+    } else if (isMaster) {
+      // 师父传授心得
+      const expGain = Math.floor(Math.random() * 25) + 20;
+      setPlayer({ ...getPlayer(), exp: (getPlayer().exp ?? 0) + expGain });
+      results.push({
+        npcId: npc.id, npcName: npc.name, action: 'npc_interact',
+        outcome: '传授心得',
+        detail: `${npc.name}传授了一套修炼心法给你。经验 +${expGain}`,
+      });
+    } else if (isStudent) {
+      // 弟子请教（增加师徒羁绊）
+      changeNpcAffection(npc.id, 2);
+      results.push({
+        npcId: npc.id, npcName: npc.name, action: 'npc_interact',
+        outcome: '弟子请教',
+        detail: `${npc.name}向你请教武学疑难，你耐心解答。师徒情谊加深。`,
+      });
+    }
+  }
+
+  return results;
+}
+
+// ═════════════════════════════════════════════════════════════
+//  宗门季度纳新（每3个月触发）
+// ═════════════════════════════════════════════════════════════
+
+/** 宗门季度纳新：大中型宗门招收新弟子 */
+export function tickQuarterlySectRecruitment(): NpcTickResult[] {
+  const p = getPlayer();
+  const results: NpcTickResult[] = [];
+  const sectPower = p.sectPower ?? {};
+  const npcDb = { ...(p.npcDatabase ?? {}) };
+
+  const allSects = Object.keys(SECTS).filter(s =>
+    s !== 'none' && s !== 'imperial_court' && s !== 'rebels'
+  ) as SectId[];
+
+  for (const sectId of allSects) {
+    const power = sectPower[sectId] ?? 50;
+    if (power < 50) continue;
+
+    const sectBaseLoc = Object.entries(SECT_BASES)
+      .find(([, s]) => s === sectId)?.[0] as LocationId | undefined;
+    if (!sectBaseLoc) continue;
+
+    // 尝试招募同城散修
+    const roguesAtBase = Object.values(npcDb).filter(n =>
+      n.isAlive !== false && n.sect === 'none' && n.currentLocationId === sectBaseLoc
+    );
+
+    let recruitNpc: NpcStats | null = null;
+    if (roguesAtBase.length > 0 && Math.random() < 0.6) {
+      recruitNpc = roguesAtBase[Math.floor(Math.random() * roguesAtBase.length)]!;
+      recruitNpc = { ...recruitNpc, sect: sectId, discipleRank: 'outer' };
+      npcDb[recruitNpc.id] = recruitNpc;
+      results.push({
+        npcId: recruitNpc.id, npcName: recruitNpc.name, action: 'move',
+        outcome: '被招募',
+        detail: `${recruitNpc.name}被${SECTS[sectId]?.name ?? sectId}招募，成为外门弟子。`,
+      });
+    } else {
+      // 生成新弟子
+      const isGenius = Math.random() < 0.05;
+      const genId = `gen_recruit_${sectId}_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+      const level = 1 + Math.floor(Math.random() * 3);
+      const gender = Math.random() < 0.55 ? 'male' : 'female';
+      const surnames = ['李','王','张','刘','陈','杨','赵'];
+      const mNames = ['小虎','阿牛','大壮','石头','二狗'];
+      const fNames = ['翠花','小蝶','阿秀','玉兰','春草'];
+      const surname = surnames[Math.floor(Math.random() * surnames.length)]!;
+      const givenPool = gender === 'male' ? mNames : fNames;
+      const given = givenPool[Math.floor(Math.random() * givenPool.length)]!;
+      const personality = ['bold','kind','gentle','cunning','upright','aloof'][Math.floor(Math.random() * 6)]! as NpcPersonality;
+
+      const talents: TalentId[] = isGenius
+        ? (() => {
+            const legendary = NPC_TALENT_POOL.filter(t => TALENT_TIER[t] === 'legendary');
+            const superior = NPC_TALENT_POOL.filter(t => TALENT_TIER[t] === 'superior');
+            const l1 = legendary[Math.floor(Math.random() * legendary.length)]!;
+            const l2 = legendary[Math.floor(Math.random() * legendary.length)]!;
+            const s1 = superior[Math.floor(Math.random() * superior.length)]!;
+            return [l1, l2, s1];
+          })()
+        : ['normal'];
+
+      const stats = calculateFinalStats(level, talents);
+
+      recruitNpc = {
+        id: genId, name: surname + given, sect: sectId, level,
+        talents, isTianjiao: isGenius,
+        exp: 0,
+        hp: stats.hp, maxHp: stats.hp, mp: stats.mp, maxMp: stats.mp,
+        atk: stats.atk, def: stats.def, agi: stats.agi, crit: stats.crit,
+        skills: level >= 3 ? ['wudang_changquan'] : [],
+        equippedFabao: { weapon: null, armor: null, accessory: null },
+        ownedFabao: [],
+        currentLocationId: sectBaseLoc,
+        discipleRank: 'outer',
+        courtRank: 'commoner',
+        personality,
+        courtStats: { strategy: 5, eloquence: 5, charisma: 5, scholarship: 5 },
+        influence: 0, courtPath: null,
+        gender,
+        ambition: 'content',
+        age: getRandomInitialAge(level),
+        maxAge: getMaxAgeForLevel(level),
+        isAlive: true,
+      };
+      npcDb[genId] = recruitNpc;
+
+      const geniusTag = isGenius ? '【天骄】' : '';
+      results.push({
+        npcId: genId, npcName: recruitNpc.name, action: 'move',
+        outcome: '新弟子入门',
+        detail: `${SECTS[sectId]?.name ?? sectId}招收新弟子${geniusTag}：${recruitNpc.name}（Lv.${level}）。`,
+      });
+    }
+  }
+
+  setPlayer({ ...getPlayer(), npcDatabase: npcDb });
+  return results;
 }

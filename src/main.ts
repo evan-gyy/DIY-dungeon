@@ -82,4 +82,7 @@ window.addEventListener('DOMContentLoaded', () => {
   setTimeout(() => {
     switchMusic(MUSIC.main);
   }, 500);
+
+  // ── 技能校验（开发环境 console 输出）──
+  import('./data/skills').then(m => m.validateSkills());
 });

@@ -24,6 +24,9 @@ import {
   getFactionTrust,
   getAlignmentLabel,
   getActiveCoalitions,
+  getAllRelationsSnapshot,
+  getAvailableDiplomacyActions,
+  playerDiplomaticAction,
 } from '../../systems/FactionSystem';
 import { SECTS } from '../../data/sects';
 import { WORLD_MAP } from '../../data/worldMap';
@@ -72,6 +75,7 @@ export function renderWorldPanel(container: HTMLElement): void {
       ${pendingEvent ? renderPendingEventBanner(pendingEvent) : ''}
       ${renderSectCards()}
       ${renderCoalitionSection()}
+      ${renderDiplomacyGraph()}
       <div class="world-panel-grid">
         <div class="world-panel-left">
           ${renderEventHistory()}
@@ -233,7 +237,7 @@ function renderEventHistory(): string {
       <div class="wp-section-title">🌍 江湖事件</div>
       <div class="wp-chronicle-empty">
         <p>江湖风平浪静，暂无大事发生。</p>
-        <p style="font-size:11px;">日常修行时将有概率触发江湖事件。</p>
+        <p style="font-size:11px;">行走江湖时将有概率触发江湖事件。</p>
       </div>
     </div>`;
   }
@@ -291,7 +295,7 @@ function renderChronicleSection(): string {
       <div class="wp-section-title">📖 个人日志</div>
       <div class="wp-chronicle-empty">
         <p>尚无记录。</p>
-        <p style="font-size:11px;">完成日常修行、探索地图、与NPC互动都将记入日志。</p>
+        <p style="font-size:11px;">完成行走江湖、探索地图、与NPC互动都将记入日志。</p>
       </div>
     </div>`;
   }
@@ -323,9 +327,215 @@ function renderChronicleSection(): string {
   </div>`;
 }
 
+// ──── 外交关系图 (Direction D) ────
+
+const POS: Record<string, { x: number; y: number }> = {
+  kunlun:  { x: 5,  y: 15 }, kongtong:  { x: 18, y: 22 }, xuedao:  { x: 12, y: 30 },
+  huashan: { x: 48, y: 30 }, quanzhen:  { x: 30, y: 42 },
+  riyue:   { x: 82, y: 10 }, rebels:    { x: 88, y: 8 },
+  imperial_court: { x: 78, y: 32 }, shaolin: { x: 68, y: 48 },
+  beggar:  { x: 38, y: 58 }, wudang:    { x: 32, y: 72 },
+  demon:   { x: 78, y: 55 }, maoshan:   { x: 88, y: 55 }, xiaoyao: { x: 95, y: 68 },
+  tangmen: { x: 15, y: 78 }, qingcheng:  { x: 8, y: 85 },
+  emei:    { x: 5,  y: 95 }, tiezhang:  { x: 22, y: 88 },
+  wudu:    { x: 8,  y: 108 }, diancang: { x: 5,  y: 118 },
+  haisha:  { x: 92, y: 82 },
+};
+
+function trustToStrokeColor(trust: number): string {
+  if (trust >= 80) return '#66bb6a';
+  if (trust >= 60) return '#a5d6a7';
+  if (trust >= 30) return '#9e9e9e';
+  if (trust >= 15) return '#ef9a9a';
+  return '#e57373';
+}
+
+function trustToStrokeWidth(trust: number): number {
+  return trust >= 60 ? 2 : trust >= 30 ? 1.2 : 0.6;
+}
+
+function renderDiplomacyGraph(): string {
+  const p = getPlayer();
+  if (!p.sect || p.sect === 'none') return '';
+
+  const snapshots = getAllRelationsSnapshot();
+  if (snapshots.length === 0) return '';
+
+  const w = 680; const h = 460;
+  const pad = 30;
+
+  // 缩放坐标
+  const allX = Object.values(POS).map(p => p.x);
+  const allY = Object.values(POS).map(p => p.y);
+  const minX = Math.min(...allX);
+  const maxX = Math.max(...allX);
+  const minY = Math.min(...allY);
+  const maxY = Math.max(...allY);
+  const scaleX = (w - pad * 2) / (maxX - minX || 1);
+  const scaleY = (h - pad * 2) / (maxY - minY || 1);
+  const tx = (v: number) => pad + (v - minX) * scaleX;
+  const ty = (v: number) => pad + (v - minY) * scaleY;
+
+  // 连线
+  let lines = '';
+  for (const s of snapshots) {
+    const pa = POS[s.a];
+    const pb = POS[s.b];
+    if (!pa || !pb) continue;
+    const color = trustToStrokeColor(s.trust);
+    const sw = trustToStrokeWidth(s.trust);
+    lines += `<line x1="${tx(pa.x)}" y1="${ty(pa.y)}" x2="${tx(pb.x)}" y2="${ty(pb.y)}"
+      stroke="${color}" stroke-width="${sw}" opacity="0.45"
+      data-trust="${s.trust}" data-a="${s.a}" data-b="${s.b}" data-rel="${s.relationLabel}" />`;
+  }
+
+  // 节点
+  let nodes = '';
+  const playerSect = p.sect;
+  for (const [sectId, pos] of Object.entries(POS)) {
+    const sid = sectId as SectId;
+    const name = SECTS[sid]?.name ?? sectId;
+    const icon = SECTS[sid]?.icon ?? '🏴';
+    const isPlayer = sectId === playerSect;
+    const r = isPlayer ? 12 : 8;
+    const fill = isPlayer ? '#ffd700' : SECTS[sid]?.color ?? '#888';
+    nodes += `<g class="dg-node" data-sect="${sectId}" data-name="${name}">
+      <circle cx="${tx(pos.x)}" cy="${ty(pos.y)}" r="${r}" fill="${fill}"
+        stroke="${isPlayer ? '#fff' : '#333'}" stroke-width="${isPlayer ? 2 : 1}"
+        class="dg-node-circle ${isPlayer ? 'dg-player' : ''}" />
+      <text x="${tx(pos.x)}" y="${ty(pos.y) + r + 12}" text-anchor="middle"
+        fill="#ccc" font-size="10" class="dg-node-label">${icon}${name}</text>
+    </g>`;
+  }
+
+  const coalitionSection = renderDiplomacyTooltip();
+
+  return `
+    <div class="wp-section">
+      <div class="wp-section-title">🕸️ 天下大势图
+        <span style="font-size:11px;color:#888;margin-left:8px;">点击节点查看外交行动</span>
+      </div>
+      <div class="dg-container">
+        <svg viewBox="0 0 ${w} ${h}" class="dg-svg">
+          ${lines}
+          ${nodes}
+        </svg>
+        ${coalitionSection}
+      </div>
+    </div>`;
+}
+
+function renderDiplomacyTooltip(): string {
+  return `<div class="dg-tooltip" id="dg-tooltip" style="display:none;">
+    <div class="dg-tooltip-title" id="dg-tooltip-title"></div>
+    <div class="dg-tooltip-body" id="dg-tooltip-body"></div>
+    <div class="dg-tooltip-actions" id="dg-tooltip-actions"></div>
+  </div>`;
+}
+
+let _selectedDiploTarget: string | null = null;
+
+function bindDiplomacyGraph(container: HTMLElement): void {
+  const tooltip = container.querySelector<HTMLElement>('#dg-tooltip');
+  if (!tooltip) return;
+
+  const svg = container.querySelector<HTMLElement>('.dg-svg');
+  const lines = container.querySelectorAll<SVGLineElement>('line[data-trust]');
+
+  // hover 连线高亮
+  lines.forEach(line => {
+    line.addEventListener('mouseenter', () => {
+      line.style.opacity = '0.9';
+      line.style.strokeWidth = '3';
+    });
+    line.addEventListener('mouseleave', () => {
+      line.style.opacity = '0.45';
+      line.style.strokeWidth = line.getAttribute('stroke-width') || '1';
+    });
+  });
+
+  // click 节点 → 外交菜单
+  container.querySelectorAll<HTMLElement>('.dg-node').forEach(node => {
+    node.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const sectId = node.dataset.sect;
+      const name = node.dataset.name;
+      if (!sectId || !name) return;
+
+      const p = getPlayer();
+      if (sectId === p.sect) {
+        _selectedDiploTarget = null;
+        tooltip.style.display = 'none';
+        return;
+      }
+
+      _selectedDiploTarget = sectId;
+      const trust = getFactionTrust(p.sect as SectId, sectId as SectId);
+      const relLabel = getFactionRelationLabel(p.sect as SectId, sectId as SectId);
+      const actions = getAvailableDiplomacyActions(sectId as SectId);
+
+      const titleEl = tooltip.querySelector('#dg-tooltip-title');
+      const bodyEl = tooltip.querySelector('#dg-tooltip-body');
+      const actionsEl = tooltip.querySelector('#dg-tooltip-actions');
+      if (titleEl) titleEl.textContent = `${name}`;
+      if (bodyEl) bodyEl.innerHTML = `信任：<b>${trust}</b> · 关系：<b>${relLabel}</b>`;
+      if (actionsEl) {
+        actionsEl.innerHTML = actions.map(a =>
+          `<button class="dg-action-btn ${a.enabled ? '' : 'dg-action-disabled'}"
+            data-diplo-action="${a.action}" data-target="${sectId}"
+            ${a.enabled ? '' : 'disabled'} title="${a.reason}">
+            ${a.icon} ${a.label} <span class="dg-action-cost">${a.cost}</span>
+          </button>`
+        ).join('');
+
+        // 绑定外交按钮
+        actionsEl.querySelectorAll<HTMLElement>('[data-diplo-action]').forEach(btn => {
+          btn.addEventListener('click', (ev) => {
+            ev.stopPropagation();
+            const action = btn.dataset.diploAction as import('../../systems/FactionSystem').PlayerDiplomacyAction;
+            const target = btn.dataset.target as SectId;
+            if (!action || !target) return;
+            const result = playerDiplomaticAction(action, target);
+            import('../../ui/toast').then(m => m.showToast(result.message));
+            const parent = container.closest('.world-panel');
+            if (parent) {
+              renderWorldPanel(parent as HTMLElement);
+            }
+            _selectedDiploTarget = null;
+          });
+        });
+      }
+
+      // 定位 tooltip
+      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+      const containerRect = container.getBoundingClientRect();
+      const left = rect.left - containerRect.left + 20;
+      const top = rect.top - containerRect.top - 10;
+      tooltip.style.left = `${Math.max(0, Math.min(left, containerRect.width - 200))}px`;
+      tooltip.style.top = `${Math.max(0, Math.min(top, containerRect.height - 200))}px`;
+      tooltip.style.display = 'block';
+    });
+  });
+
+  // 点击空白处关闭
+  svg?.addEventListener('click', (e) => {
+    if ((e.target as HTMLElement).closest('.dg-node')) return;
+    _selectedDiploTarget = null;
+    tooltip.style.display = 'none';
+  });
+
+  container.addEventListener('click', (e) => {
+    if ((e.target as HTMLElement).closest('.dg-node') || (e.target as HTMLElement).closest('#dg-tooltip')) return;
+    _selectedDiploTarget = null;
+    tooltip.style.display = 'none';
+  });
+}
+
 // ──── 绑定按钮 ────
 
 function bindButtons(container: HTMLElement): void {
+  bindDiplomacyGraph(container);
+
   // 可介入事件：参与
   const acceptBtn = container.querySelector('#wp-pending-accept');
   if (acceptBtn) {

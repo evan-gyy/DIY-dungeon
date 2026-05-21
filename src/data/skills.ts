@@ -2916,6 +2916,91 @@ export const SKILLS: Record<SkillId, SkillData> = {
   },
 };
 
+/**
+ * 运行时校验技能平衡性。仅在开发环境 console.warn 输出异常。
+ */
+export function validateSkills(): { warnings: string[]; summary: string } {
+  const warnings: string[] = [];
+  const allSkills = Object.values(SKILLS);
+
+  // 技能总数
+  warnings.push(`[INFO] 技能总数：${allSkills.length}`);
+
+  // 1. MP 消耗校验
+  for (const s of allSkills) {
+    if (s.mp < 0) warnings.push(`[MP] ${s.id}: MP 消耗为负值 ${s.mp}`);
+    if (s.mp > 80) warnings.push(`[MP] ${s.id}: MP 消耗过高 ${s.mp}`);
+    if (s.mp === 0 && s.type === 'attack' && s.powerMul > 1.5)
+      warnings.push(`[MP] ${s.id}: 高伤害攻击技 MP 为 0`);
+  }
+
+  // 2. powerMul 校验
+  for (const s of allSkills) {
+    if (s.type === 'attack' && s.powerMul <= 0)
+      warnings.push(`[DMG] ${s.id}: 攻击技 powerMul 为 ${s.powerMul}`);
+    if (s.powerMul > 4.0)
+      warnings.push(`[DMG] ${s.id}: powerMul 异常高 ${s.powerMul}`);
+    if (s.type !== 'attack' && s.powerMul > 2.0)
+      warnings.push(`[DMG] ${s.id}: 非攻击技 powerMul=${s.powerMul} 偏高`);
+  }
+
+  // 3. 命中率校验
+  for (const s of allSkills) {
+    if (s.hit < 60) warnings.push(`[HIT] ${s.id}: 命中率过低 ${s.hit}`);
+    if (s.hit > 100) warnings.push(`[HIT] ${s.id}: 命中率超过 100`);
+  }
+
+  // 4. 冷却校验
+  for (const s of allSkills) {
+    if (s.cooldown < 0) warnings.push(`[CD] ${s.id}: 冷却为负值`);
+    if (s.cooldown > 8) warnings.push(`[CD] ${s.id}: 冷却过长 ${s.cooldown}`);
+  }
+
+  // 5. 破防校验
+  for (const s of allSkills) {
+    if (s.defPen < 0) warnings.push(`[PEN] ${s.id}: 破防为负值`);
+    if (s.defPen > 60) warnings.push(`[PEN] ${s.id}: 破防过高 ${s.defPen}`);
+  }
+
+  // 6. 宗门技能分布
+  const sectStats: Record<string, { total: number; atk: number; sup: number; ctrl: number; pas: number }> = {};
+  for (const s of allSkills) {
+    const sect = s.sect || 'none';
+    if (!sectStats[sect]) sectStats[sect] = { total: 0, atk: 0, sup: 0, ctrl: 0, pas: 0 };
+    sectStats[sect]!.total++;
+    if (s.type === 'attack') sectStats[sect]!.atk++;
+    else if (s.type === 'support') sectStats[sect]!.sup++;
+    else if (s.type === 'control') sectStats[sect]!.ctrl++;
+    else sectStats[sect]!.pas++;
+  }
+  for (const [sect, stat] of Object.entries(sectStats)) {
+    if (stat.total < 8 && sect !== 'none')
+      warnings.push(`[SECT] ${sect}: 技能数不足 ${stat.total}（建议≥8）`);
+    if (stat.atk < stat.total * 0.25)
+      warnings.push(`[SECT] ${sect}: 攻击技占比低 ${stat.atk}/${stat.total}`);
+    if (stat.total > 0 && stat.atk > stat.total * 0.7)
+      warnings.push(`[SECT] ${sect}: 攻击技占比过高 ${stat.atk}/${stat.total}`);
+  }
+
+  // 7. 治疗技校验
+  const healSkills = allSkills.filter(s => s.healPct > 0);
+  for (const s of healSkills) {
+    if (s.healPct > 60) warnings.push(`[HEAL] ${s.id}: 治疗比例过高 ${s.healPct}%`);
+    if (s.mp === 0 && s.healPct > 30) warnings.push(`[HEAL] ${s.id}: 高治疗技能 MP 为 0`);
+  }
+
+  const summary = warnings.join('\n');
+  if (typeof console !== 'undefined' && warnings.length > 1) {
+    console.log('%c[技能校验] %c' + warnings.length + ' 条',
+      'color:#e87d72;font-weight:bold', 'color:inherit');
+    warnings.forEach(w => {
+      if (w.startsWith('[INFO]')) console.log('  ' + w);
+      else console.warn('  ' + w);
+    });
+  }
+  return { warnings, summary };
+}
+
 // 保留 ELDERS 导出（向后兼容，虽然 LearnScreen 已移除）
 export const ELDERS = [
   {

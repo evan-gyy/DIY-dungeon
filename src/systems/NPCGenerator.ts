@@ -11,7 +11,7 @@
 // ============================================================
 
 import type { NpcStats, NpcPersonality } from '../data/npcStats';
-import { NPC_STATS_INIT } from '../data/npcStats';
+import { NPC_STATS_INIT, getMaxAgeForLevel, getRandomInitialAge } from '../data/npcStats';
 import type { SectId, SkillId, FabaoId, NpcAmbition } from '../data/types';
 import { SECT_SKILL_TABLES } from '../data/sectSkillTables';
 import { SECTS } from '../data/sects';
@@ -527,6 +527,9 @@ function _generateNpc(config: NpcGenConfig, presetRank?: DiscipleRank): NpcStats
     gender,
     portraitIndex,
     ambition,
+    age: getRandomInitialAge(level),
+    maxAge: getMaxAgeForLevel(level),
+    isAlive: true,
   };
 }
 

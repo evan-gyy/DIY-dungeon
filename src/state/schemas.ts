@@ -119,12 +119,28 @@ export const PlayerStateSchema = z.object({
     recentLog: z.array(z.string()).default([]),
     // 🆕 P8: NPC志向（驱动自主行为）
     ambition: z.enum(['content','master','power','rebel','avenger']).default('content'),
+    // 🆕 战斗属性经验值
+    combatStatExp: z.object({
+      atk: z.number().default(0), def: z.number().default(0),
+      agi: z.number().default(0), crit: z.number().default(0),
+    }).default({ atk: 0, def: 0, agi: 0, crit: 0 }).optional(),
+    // 🆕 朝廷属性经验值
+    courtStatExp: z.object({
+      strategy: z.number().default(0), eloquence: z.number().default(0),
+      charisma: z.number().default(0), scholarship: z.number().default(0),
+    }).default({ strategy: 0, eloquence: 0, charisma: 0, scholarship: 0 }).optional(),
+    // 🆕 NPC寿命
+    age: z.number().default(18),
+    maxAge: z.number().default(80),
+    isAlive: z.boolean().default(true),
   })).default({}),
 
   // 🆕 NPC 好感度字典
   npcAffection: z.record(z.string(), z.number()).default({}),
   // 🆕 P8: NPC 间友好度字典
   npcRelationship: z.record(z.string(), z.number()).default({}),
+  // 🆕 NPC 间关系标签（道侣/师徒/结义/挚友/劲敌/仇敌）
+  npcRelationshipLabels: z.record(z.string(), z.array(z.string())).default({}),
 
   // 🆕 突破解锁状态（旧存档兼容：默认为空数组）
   realmBreakUnlocked: z.array(z.string()).default([]),
@@ -178,8 +194,17 @@ export const PlayerStateSchema = z.object({
     charisma: z.number().default(10),
     scholarship: z.number().default(10),
   }).default({ strategy: 10, eloquence: 10, charisma: 10, scholarship: 10 }),
+  combatStatExp: z.object({
+    atk: z.number().default(0), def: z.number().default(0),
+    agi: z.number().default(0), crit: z.number().default(0),
+  }).default({ atk: 0, def: 0, agi: 0, crit: 0 }),
+  courtStatExp: z.object({
+    strategy: z.number().default(0), eloquence: z.number().default(0),
+    charisma: z.number().default(0), scholarship: z.number().default(0),
+  }).default({ strategy: 0, eloquence: 0, charisma: 0, scholarship: 0 }),
   influence: z.number().default(0),
   courtPath: z.enum(['wen', 'wu']).nullable().default(null),
+  playerCareer: z.enum(['wen', 'wu']).nullable().default(null),
   lastActionType: z.enum(['martial', 'court', 'idle']).default('idle'),
 
   // 🆕 沙盒：世界态势系统（江湖演化引擎）
@@ -230,6 +255,19 @@ export const PlayerStateSchema = z.object({
   gameMonth: z.number().default(1),
   turnInMonth: z.number().default(0),
   councilCooldown: z.number().default(0),
+  stealCooldowns: z.record(z.string(), z.number()).default({}),
+  killCount: z.number().default(0),
+  stealSuccessCount: z.number().default(0),
+  playerTitles: z.array(z.object({ titleId: z.string(), acquiredAt: z.number() })).default([]),
+  activeTitle: z.string().nullable().default(null),
+  bountyBoard: z.array(z.object({
+    id: z.string(), targetName: z.string(), targetLevel: z.number(),
+    targetLocation: z.string(), issuer: z.string(), issuerName: z.string(),
+    crime: z.string(), rewardGold: z.number(), rewardRep: z.number(),
+    difficulty: z.string(), generatedAt: z.number(), expiresAt: z.number(),
+  })).default([]),
+  activeBountyId: z.string().nullable().default(null),
+  lastBountyRefresh: z.number().default(0),
 
   // 🆕 门派经营
   sectState: z.record(z.string(), z.object({
@@ -240,6 +278,20 @@ export const PlayerStateSchema = z.object({
 
   // 🆕 P7 城池繁荣度
   cityProsperity: z.record(z.string(), z.number()).default({}),
+  // 🆕 统一据点属性
+  settlementState: z.record(z.string(), z.object({
+    population: z.number().default(30),
+    prosperity: z.number().default(30),
+    commerce: z.number().default(25),
+    agriculture: z.number().default(30),
+    garrison: z.number().default(20),
+    fortification: z.number().default(20),
+    publicOrder: z.number().default(50),
+    development: z.number().default(15),
+    martialArts: z.number().default(0),
+    academy: z.number().default(15),
+    cityRank: z.enum(['capital', 'major', 'minor']).optional(),
+  })).default({}),
   // 🆕 P7 势力力量分
   sectPower: z.record(z.string(), z.number()).default({}),
   // 🆕 P7 江湖大事件冷却
@@ -258,6 +310,36 @@ export const PlayerStateSchema = z.object({
     formedMonth: z.number(),
     expireMonth: z.number(),
   })).default([]),
+
+  // 🆕 P10: 门派政务指令池
+  factionDirectives: z.record(z.string(), z.array(z.object({
+    id: z.string(),
+    type: z.string(),
+    factionId: z.string(),
+    label: z.string(),
+    description: z.string().default(''),
+    targetLocation: z.string().optional(),
+    targetSect: z.string().optional(),
+    priority: z.number(),
+    statAffinity: z.object({ atk: z.number(), def: z.number(), agi: z.number(), crit: z.number() }),
+    courtAffinity: z.object({ strategy: z.number(), eloquence: z.number(), charisma: z.number(), scholarship: z.number() }).optional(),
+    progressNeeded: z.number(),
+    currentProgress: z.number(),
+    assignedNpcId: z.string().optional(),
+    claimedByPlayer: z.boolean().optional(),
+    completed: z.boolean(),
+    rewardDescription: z.string(),
+    createdAtMonth: z.number(),
+    expiresAtMonth: z.number(),
+  }))).default({}),
+  // 🆕 P10: NPC 政务记录
+  factionOfficials: z.record(z.string(), z.object({
+    npcId: z.string(),
+    factionId: z.string(),
+    rank: z.string(),
+    contribution: z.number(),
+    directivesDoneThisMonth: z.number(),
+  })).default({}),
 
   _slot:    z.number().default(1),
   _savedAt: z.string().optional(),

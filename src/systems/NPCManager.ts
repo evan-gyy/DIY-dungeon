@@ -321,6 +321,80 @@ export function syncSlotsOnPromotion(
   return getMaxRecruitSlots(newRank);
 }
 
+// ──── 登用无隶属NPC ────
+
+/**
+ * 检查是否可以登用无宗门隶属的 NPC 为随从。
+ * 用于城市中的散修 NPC（sect='none'）。
+ * 登用条件：魅力 + 声望 + 影响力 ≥ NPC 等级×3
+ */
+export function canRecruitUnaffiliated(
+  player: PlayerState,
+  npc: NpcStats,
+  affection: number,
+): RecruitResult {
+  if (npc.sect !== 'none') {
+    return { success: false, type: 'recruit', message: `${npc.name}已有宗门归属。` };
+  }
+
+  if (!player.sect || player.sect === 'none') {
+    return { success: false, type: 'recruit', message: '散修无法登用他人。' };
+  }
+
+  if (affection < 30) {
+    return { success: false, type: 'recruit', message: `好感度不足（需要 ≥ 30，当前 ${affection}）。` };
+  }
+
+  if (player.npcCollection.recruited.includes(npc.id)) {
+    return { success: false, type: 'recruit', message: `${npc.name}已经是你的随从了。` };
+  }
+
+  const playerRank = player.discipleRank as DiscipleRank;
+  const currentSlots = player.npcCollection.recruited.length;
+  const maxSlots = getMaxRecruitSlots(playerRank);
+  if (currentSlots >= maxSlots) {
+    return { success: false, type: 'recruit', message: `随从已满（${currentSlots}/${maxSlots}）。请提升职级或解除现有随从。` };
+  }
+
+  const charisma = player.courtStats?.charisma ?? 10;
+  const reputation = player.reputation ?? 0;
+  const influence = player.influence ?? 0;
+  const recruitmentPower = charisma + reputation / 10 + influence / 5;
+  const npcResistance = npc.level * 3;
+
+  if (recruitmentPower < npcResistance) {
+    return {
+      success: false,
+      type: 'recruit',
+      message: `登用能力不足（魅力${charisma}+声望${reputation}/10+影响力${influence}/5=${Math.floor(recruitmentPower)}，需≥${npcResistance}）。`,
+    };
+  }
+
+  return { success: true, type: 'recruit', message: `可以登用${npc.name}为随从，并将其引入${getSectName(player.sect)}。` };
+}
+
+/**
+ * 执行登用：无隶属 NPC 加入玩家宗门，并成为随从。
+ */
+export function executeRecruitUnaffiliated(
+  player: PlayerState,
+  npc: NpcStats,
+): { npc: NpcStats; recruited: string[]; maxSlots: number; assignments: Record<string, string>; assignmentTargets: Record<string, string> } {
+  const updatedNpc: NpcStats = {
+    ...npc,
+    sect: player.sect,
+    discipleRank: 'outer',
+    currentLocationId: player.currentLocationId,
+  };
+
+  const recruited = [...player.npcCollection.recruited, npc.id];
+  const maxSlots = getMaxRecruitSlots(player.discipleRank as DiscipleRank);
+  const assignments = { ...player.npcCollection.assignments, [npc.id]: 'idle' };
+  const assignmentTargets = { ...player.npcCollection.assignmentTargets };
+
+  return { npc: updatedNpc, recruited, maxSlots, assignments, assignmentTargets };
+}
+
 // ──── 标签辅助 ────
 
 function getSectName(sect: string): string {

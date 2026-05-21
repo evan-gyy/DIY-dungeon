@@ -688,8 +688,7 @@ export function presentGrandEvent(event: GrandEvent): Promise<GrandEventResult> 
  * 玩家做出选择后调用。
  * 解析事件结果，应用世界影响和奖励。
  */
-export function resolveGrandEvent(choiceId: string): GrandEventResult | null {
-  const event = _currentEvent;
+export function resolveGrandEvent(event: GrandEvent, choiceId: string): GrandEventResult | null {
   if (!event) return null;
 
   const outcome = event.outcomes[choiceId];

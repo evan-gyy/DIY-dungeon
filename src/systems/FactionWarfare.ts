@@ -17,7 +17,7 @@ import { SECTS } from '../data/sects';
 import { getPlayer, setPlayer } from '../state/GameState';
 import { appendNpcLog } from './NpcBehavior';
 import { getNpcAffection, changeNpcAffection } from './NpcRelationship';
-import { spendSiegeCost, applySiegeResult, getSectDefenseMultiplier } from './SectManagement';
+import { spendSiegeCost, applySiegeResult, getSectDefenseMultiplier, computeSectPower } from './SectManagement';
 
 // ──── 配置 ────
 
@@ -142,11 +142,31 @@ function getAlignment(sectId: SectId): FactionAlignment {
 /**
  * 计算队伍战力值
  * 战力 = Σ(HP×0.3 + ATK×0.4 + DEF×0.2 + AGI×0.1)
+ * 大势力加成：势力控制城市数越多、资源越丰、越稳定，战力越强
  */
-function calcTeamPower(npcs: NpcStats[]): number {
-  return npcs.reduce((sum, n) => {
+function calcTeamPower(npcs: NpcStats[], factionId?: SectId): number {
+  let power = npcs.reduce((sum, n) => {
     return sum + n.hp * 0.3 + n.atk * 0.4 + n.def * 0.2 + n.agi * 0.1;
   }, 0);
+
+  if (factionId && npcs.length > 0) {
+    const p = getPlayer();
+    const tc = p.territoryControl ?? {};
+    const controlledCities = Object.values(tc).filter(s => s === factionId).length;
+    const state = p.sectState?.[factionId];
+    const resources = state?.resources ?? 0;
+    const stability = state?.stability ?? 0;
+
+    let bonus = 1.0;
+    if (controlledCities >= 6) bonus *= 1.2;
+    else if (controlledCities >= 3) bonus *= 1.1;
+    if (resources >= 300) bonus *= 1.05;
+    if (stability >= 70) bonus *= 1.05;
+
+    power = Math.floor(power * bonus);
+  }
+
+  return power;
 }
 
 /** 获取两个势力间的关系（从 factionRelations） */
@@ -210,7 +230,6 @@ export function tryTriggerSiege(): SiegeResult {
   const candidates: Array<{ locId: LocationId; controller: SectId }> = [];
 
   for (const [locId, controller] of Object.entries(tc)) {
-    if (controller === 'none') continue;
     if (controller === attackerSect) continue;
 
     // 检查是否相邻（通过 WORLD_MAP 的连接关系）
@@ -245,26 +264,88 @@ export function tryTriggerSiege(): SiegeResult {
   const attackerState = p.sectState?.[attackerSect];
   if (!attackerState || attackerState.resources < 100) return { happened: false };
 
-  // 5. 概率判定（考虑势力关系）
-  const relation = getFactionRelation(attackerSect, defenderSect);
+  // 5. 概率判定（整合势力力量分）
+  const attackerPower = computeSectPower(attackerSect);
   let chance = BASE_SIEGE_CHANCE;
-  if (relation === 'hostile') chance += HOSTILE_BONUS;
-  if (relation === 'at_war') chance += AT_WAR_BONUS;
 
+  if (defenderSect === 'none') {
+    // 无主之地：势力分达标即可占领，概率大幅提升
+    if (attackerPower < 50) return { happened: false };
+    chance += 0.35;
+  } else {
+    const defenderPower = computeSectPower(defenderSect);
+    const powerRatio = defenderPower > 0 ? attackerPower / defenderPower : 2.0;
+    if (powerRatio > 1.5) chance += 0.20;
+    else if (powerRatio > 1.0) chance += 0.08;
+    else if (powerRatio < 0.5) chance -= 0.12;
+
+    const relation = getFactionRelation(attackerSect, defenderSect);
+    if (relation === 'hostile') chance += HOSTILE_BONUS;
+    if (relation === 'at_war') chance += AT_WAR_BONUS;
+
+    // 🆕 正邪交战倾向：阵营对立时攻城概率翻倍
+    const defAlign = getAlignment(defenderSect);
+    const attAlign = getAlignment(attackerSect);
+    const righteousSide: FactionAlignment[] = ['righteous', 'neutral'];
+    const chaoticSide: FactionAlignment[] = ['chaotic'];
+    if ((righteousSide.includes(attAlign) && chaoticSide.includes(defAlign)) ||
+        (chaoticSide.includes(attAlign) && righteousSide.includes(defAlign))) {
+      chance *= 2.0;
+      // 若守方是混乱阵营且攻方力量远超，趁虚而入
+      if (chaoticSide.includes(defAlign) && attackerPower > defenderPower * 1.2) {
+        chance *= 1.5;
+      }
+    }
+  }
+
+  chance = Math.max(0.05, Math.min(0.95, chance));
   if (Math.random() > chance) return { happened: false };
 
-  // 6. 选兵将
-  const attackerNpcs = pickTeam(attackerSect, 8); // 3 波需 8 人（4+4 for 前两波轮换）
+  // 6. 无主之地直接占领（无需战斗）
+  const locName = WORLD_MAP[target.locId]?.name ?? target.locId;
+
+  if (defenderSect === 'none') {
+    spendSiegeCost(attackerSect);
+
+    const newTc = { ...tc };
+    newTc[target.locId] = attackerSect;
+    setPlayer({ ...getPlayer(), territoryControl: newTc });
+
+    const newCooldowns = { ...cooldowns, [target.locId]: currentTurn + SIEGE_COOLDOWN };
+    setPlayer({ ...getPlayer(), siegeCooldown: newCooldowns });
+
+    const attackerNpcs = pickTeam(attackerSect, 4);
+    for (const npc of attackerNpcs) {
+      appendNpcLog(npc.id, `随军进驻无主之地${locName}，未遇抵抗。`);
+    }
+
+    const newsText = `听闻${getSectName(attackerSect)}出兵占据了无主之地${locName}，势力进一步扩张。`;
+    const newsItem: WorldNewsItem = { text: newsText, turn: currentTurn, leftTime: 5 };
+    const currentNews = p.worldNews ?? [];
+    const updatedNews = [newsItem, ...currentNews].slice(0, 10);
+    setPlayer({ ...getPlayer(), worldNews: updatedNews });
+
+    return {
+      happened: true,
+      attackerSect,
+      defenderSect: 'none' as SectId,
+      targetLocation: target.locId,
+      attackerWin: true,
+      newsText,
+    };
+  }
+
+  // 7. 有主之地 — 选兵将，三波车轮战
+  const attackerNpcs = pickTeam(attackerSect, 8);
   const defenderNpcs = pickTeam(defenderSect, 8);
   const attackerElites = pickLeaderTeam(attackerSect, 4);
   const defenderElites = pickLeaderTeam(defenderSect, 4);
 
   if (attackerNpcs.length < 2 || defenderNpcs.length < 2) return { happened: false };
 
-  // 消耗资源
   spendSiegeCost(attackerSect);
 
-  // 7. 三波车轮战判定
+  // 8. 三波车轮战判定
   const defenderMult = getSectDefenseMultiplier(defenderSect);
   let attWins = 0;
   let defWins = 0;
@@ -272,8 +353,8 @@ export function tryTriggerSiege(): SiegeResult {
   let defMorale = 0;
 
   // 第一波：城门战（各出 4 人）
-  const wave1AttPower = calcTeamPower(attackerNpcs.slice(0, 4));
-  const wave1DefPower = calcTeamPower(defenderNpcs.slice(0, 4)) * defenderMult;
+  const wave1AttPower = calcTeamPower(attackerNpcs.slice(0, 4), attackerSect);
+  const wave1DefPower = calcTeamPower(defenderNpcs.slice(0, 4), defenderSect) * defenderMult;
   if (resolveWave(wave1AttPower, wave1DefPower)) {
     attWins++; attMorale = 20;
   } else {
@@ -281,8 +362,8 @@ export function tryTriggerSiege(): SiegeResult {
   }
 
   // 第二波：街道战（各出 4 人，含士气加成）
-  const wave2AttPower = calcTeamPower(attackerNpcs.slice(4, 8)) * (1 + attMorale / 200);
-  const wave2DefPower = calcTeamPower(defenderNpcs.slice(4, 8)) * defenderMult * (1 + defMorale / 200);
+  const wave2AttPower = calcTeamPower(attackerNpcs.slice(4, 8), attackerSect) * (1 + attMorale / 200);
+  const wave2DefPower = calcTeamPower(defenderNpcs.slice(4, 8), defenderSect) * defenderMult * (1 + defMorale / 200);
   if (resolveWave(wave2AttPower, wave2DefPower)) {
     attWins++;
   } else {
@@ -290,8 +371,8 @@ export function tryTriggerSiege(): SiegeResult {
   }
 
   // 第三波：决战（精英队，含士气加成）
-  const wave3AttPower = calcTeamPower(attackerElites) * (1 + attMorale / 200);
-  const wave3DefPower = calcTeamPower(defenderElites) * defenderMult * (1 + defMorale / 200);
+  const wave3AttPower = calcTeamPower(attackerElites, attackerSect) * (1 + attMorale / 200);
+  const wave3DefPower = calcTeamPower(defenderElites, defenderSect) * defenderMult * (1 + defMorale / 200);
   if (resolveWave(wave3AttPower, wave3DefPower)) {
     attWins++;
   } else {
@@ -300,16 +381,21 @@ export function tryTriggerSiege(): SiegeResult {
 
   const attackerWin = attWins >= 2;
 
-  // 8. 更新领土
+  // 9. 更新领土
   const newTc = { ...tc };
   if (attackerWin) {
     newTc[target.locId] = attackerSect;
   }
 
-  // 9. 门派状态影响
+  // 10. 门派状态影响
   applySiegeResult(attackerSect, defenderSect, attackerWin);
 
   setPlayer({ ...getPlayer(), territoryControl: newTc });
+
+  // 🆕 领土易主时，招降当地NPC
+  if (attackerWin) {
+    tryRecruitLocalNpcs(target.locId, attackerSect, defenderSect);
+  }
 
   // 11. 冷却
   const newCooldowns = { ...cooldowns, [target.locId]: currentTurn + SIEGE_COOLDOWN };
@@ -321,14 +407,23 @@ export function tryTriggerSiege(): SiegeResult {
   // 13. 日志
   const alignmentText = SIEGE_RESULT_TEXT[attackerAlign] ?? { win: '攻占成功', lose: '战败撤退' };
   const resultText = attackerWin ? alignmentText.win : alignmentText.lose;
-  const locName = WORLD_MAP[target.locId]?.name ?? target.locId;
-  const attackerName = FACTION_DEFS[attackerSect]?.alignment ?? attackerSect;
   const newsText = `听闻${getSectName(attackerSect)}攻击了${getSectName(defenderSect)}掌控下的${locName}，最终${resultText}。`;
 
-  // 记录参战 NPC 日志
   for (const npc of [...attackerNpcs, ...defenderNpcs]) {
     appendNpcLog(npc.id, `参与了对${locName}的攻城战（${attackerWin ? '攻击方胜' : '防御方胜'}）`);
   }
+
+  // 🆕 攻城阵亡判定：参战NPC各有2%概率阵亡
+  const allCombatants = [...attackerNpcs, ...defenderNpcs, ...attackerElites, ...defenderElites];
+  const currentNpcDb = { ...(p.npcDatabase ?? {}) };
+  for (const npc of allCombatants) {
+    if (Math.random() < 0.02) {
+      npc.isAlive = false;
+      currentNpcDb[npc.id] = npc;
+      appendNpcLog(npc.id, `在${locName}攻城战中力战身亡。`);
+    }
+  }
+  setPlayer({ ...getPlayer(), npcDatabase: currentNpcDb });
 
   // 14. 生成新闻
   const newsItem: WorldNewsItem = {
@@ -348,6 +443,81 @@ export function tryTriggerSiege(): SiegeResult {
     attackerWin,
     newsText,
   };
+}
+
+// ──── 招降被占城市NPC ────
+
+/** 领土易主后，根据性格/志向招降当地NPC */
+function tryRecruitLocalNpcs(locId: LocationId, newOwner: SectId, oldOwner: SectId): void {
+  const p = getPlayer();
+  const npcDb = { ...(p.npcDatabase ?? {}) };
+  const npcsAtLoc = Object.values(npcDb).filter(n =>
+    n.isAlive !== false && n.currentLocationId === locId && n.sect === oldOwner
+  );
+
+  const newAlign = getAlignment(newOwner);
+  let recruitedCount = 0;
+
+  for (const npc of npcsAtLoc) {
+    // 掌门/长老不当降将（守节）
+    if (npc.discipleRank === 'leader' || npc.discipleRank === 'vice_leader') continue;
+
+    let acceptChance = 0.3; // 基础30%
+
+    // 性格修正
+    if (npc.personality === 'upright' && (newAlign === 'righteous' || newAlign === 'neutral')) {
+      acceptChance += 0.2;
+    } else if (npc.personality === 'upright' && newAlign === 'chaotic') {
+      acceptChance -= 0.5; // 刚正者不降邪道
+    } else if (npc.personality === 'cunning') {
+      acceptChance += 0.3;
+    } else if (npc.personality === 'bold') {
+      acceptChance += 0.1;
+    } else if (npc.personality === 'kind') {
+      acceptChance -= 0.1;
+    }
+
+    // 志向修正
+    const ambition = npc.ambition ?? 'content';
+    if (ambition === 'power') acceptChance += 0.4;
+    else if (ambition === 'rebel') acceptChance -= 0.2;
+    else if (ambition === 'content') acceptChance += 0.1;
+
+    // 检查是否有挚友/道侣在新势力
+    const relations = p.npcRelationshipLabels?.[npc.id] ?? [];
+    const newOwnerNpcIds = Object.values(npcDb)
+      .filter(n => n.sect === newOwner && n.isAlive !== false)
+      .map(n => n.id);
+    const hasCloseRelationInNewSect = relations.some(r => {
+      if (r === 'lover' || r === 'friend' || r === 'sworn_brother') {
+        // Check if the relationship target is in new owner
+        // Simplified: check if any related NPC is in the new sect
+        return newOwnerNpcIds.some(id => p.npcRelationshipLabels?.[id]?.includes(npc.id));
+      }
+      return false;
+    });
+    if (hasCloseRelationInNewSect) acceptChance = 1.0; // 有亲近之人在新势力则必定加入
+
+    acceptChance = Math.max(0, Math.min(1, acceptChance));
+
+    if (Math.random() < acceptChance) {
+      // 接受招募
+      npc.sect = newOwner;
+      npc.discipleRank = npc.discipleRank === 'elder' ? 'true' : npc.discipleRank; // 降一级
+      npcDb[npc.id] = npc;
+      recruitedCount++;
+      appendNpcLog(npc.id, `归顺了${getSectName(newOwner)}`);
+    } else {
+      // 拒绝招募 → 成为散修
+      npc.sect = 'none';
+      npcDb[npc.id] = npc;
+      appendNpcLog(npc.id, `拒绝归顺${getSectName(newOwner)}，成为散修`);
+    }
+  }
+
+  if (recruitedCount > 0) {
+    setPlayer({ ...getPlayer(), npcDatabase: npcDb });
+  }
 }
 
 // ──── 选将逻辑 ────
@@ -673,6 +843,33 @@ export function tryTriggerSiegeForCouncil(
   const p = getPlayer();
   const currentTurn = (p.worldState?.turn ?? 0) + 1;
 
+  const locName = WORLD_MAP[targetLocation]?.name ?? targetLocation;
+
+  // 无主之地直接占领
+  if (defenderSect === 'none') {
+    spendSiegeCost(attackerSect);
+
+    const tc = { ...(p.territoryControl ?? {}) } as Record<LocationId, SectId>;
+    tc[targetLocation] = attackerSect;
+    setPlayer({ ...p, territoryControl: tc } as any);
+
+    const cooldowns = { ...(p.siegeCooldown ?? {}), [targetLocation]: currentTurn + SIEGE_COOLDOWN };
+    setPlayer({ ...getPlayer(), siegeCooldown: cooldowns });
+
+    const attackerNpcs = pickTeam(attackerSect, 4);
+    for (const npc of attackerNpcs) {
+      appendNpcLog(npc.id, `随议事决议进军${locName}，未遇抵抗即占领。`);
+    }
+
+    const newsText = `听闻${getSectName(attackerSect)}依议事决议出兵占据${locName}，势力版图扩张。`;
+    const newsItem: WorldNewsItem = { text: newsText, turn: currentTurn, leftTime: 5 };
+    const currentNews = p.worldNews ?? [];
+    const updatedNews = [newsItem, ...currentNews].slice(0, 10);
+    setPlayer({ ...getPlayer(), worldNews: updatedNews });
+
+    return { happened: true, attackerWin: true, newsText };
+  }
+
   // 选兵将
   const attackerNpcs = pickTeam(attackerSect, 4);
   const defenderNpcs = pickTeam(defenderSect, 4);
@@ -716,7 +913,6 @@ export function tryTriggerSiegeForCouncil(
   worsenFactionRelation(attackerSect, defenderSect, 15);
 
   // 日志
-  const locName = WORLD_MAP[targetLocation]?.name ?? targetLocation;
   for (const npc of [...attackerNpcs, ...defenderNpcs]) {
     appendNpcLog(npc.id, `参与了对${locName}的攻城战（议事决议，${attackerWin ? '攻击方胜' : '防御方胜'}）`);
   }
@@ -734,6 +930,118 @@ export function tryTriggerSiegeForCouncil(
   const currentNews = p.worldNews ?? [];
   const updatedNews = [newsItem, ...currentNews].slice(0, 10);
   setPlayer({ ...getPlayer(), worldNews: updatedNews });
+
+  return { happened: true, attackerWin, newsText };
+}
+
+/**
+ * 派随从代战：auto-resolve 三波攻城，随从等级提供加成。
+ * 成功率 = 基础战力比 + 随从加成（每人 +5%）。
+ */
+export function resolveDelegatedSiege(
+  attackerSect: SectId,
+  defenderSect: SectId,
+  targetLocation: LocationId,
+  followerIds: string[],
+): { happened: boolean; attackerWin?: boolean; newsText?: string } {
+  const p = getPlayer();
+  const currentTurn = (p.worldState?.turn ?? 0) + 1;
+  const locName = WORLD_MAP[targetLocation]?.name ?? targetLocation;
+
+  if (defenderSect === 'none') {
+    // 无主之地直接占领
+    spendSiegeCost(attackerSect);
+    const tc = { ...(p.territoryControl ?? {}) } as Record<LocationId, SectId>;
+    tc[targetLocation] = attackerSect;
+    setPlayer({ ...p, territoryControl: tc } as any);
+    const cooldowns = { ...(p.siegeCooldown ?? {}), [targetLocation]: currentTurn + SIEGE_COOLDOWN };
+    setPlayer({ ...getPlayer(), siegeCooldown: cooldowns });
+    const newsText = `你派遣随从出兵占据${locName}，未遇抵抗。`;
+    return { happened: true, attackerWin: true, newsText };
+  }
+
+  // 选兵将
+  const attackerNpcs = pickTeam(attackerSect, 8);
+  const defenderNpcs = pickTeam(defenderSect, 8);
+  if (attackerNpcs.length < 2 || defenderNpcs.length < 2) return { happened: false };
+
+  // 随从加成：从 npcDatabase 获取随从等级总和
+  const db = p.npcDatabase ?? {};
+  let followerBonus = 0;
+  for (const fid of followerIds) {
+    const npc = db[fid];
+    if (npc) followerBonus += npc.level * 0.5;
+  }
+
+  spendSiegeCost(attackerSect);
+
+  // 三波车轮战（含随从加成）
+  const defenderMult = getSectDefenseMultiplier(defenderSect);
+  const followerPowerBonus = 1 + followerBonus / 200; // 每级 0.5%，上限约 +25%
+  let attWins = 0;
+  let defWins = 0;
+  let attMorale = 0;
+  let defMorale = 0;
+
+  // 第一波：城门战
+  const w1Att = calcTeamPower(attackerNpcs.slice(0, 4), attackerSect) * followerPowerBonus;
+  const w1Def = calcTeamPower(defenderNpcs.slice(0, 4), defenderSect) * defenderMult;
+  if (resolveWave(w1Att, w1Def)) { attWins++; attMorale = 20; }
+  else { defWins++; defMorale = 20; }
+
+  // 第二波：街道战
+  const w2Att = calcTeamPower(attackerNpcs.slice(4, 8), attackerSect) * followerPowerBonus * (1 + attMorale / 200);
+  const w2Def = calcTeamPower(defenderNpcs.slice(4, 8), defenderSect) * defenderMult * (1 + defMorale / 200);
+  if (resolveWave(w2Att, w2Def)) { attWins++; }
+  else { defWins++; }
+
+  // 第三波：决战
+  const attElites = pickLeaderTeam(attackerSect, 4);
+  const defElites = pickLeaderTeam(defenderSect, 4);
+  const w3Att = calcTeamPower(attElites) * followerPowerBonus * (1 + attMorale / 200);
+  const w3Def = calcTeamPower(defElites) * defenderMult * (1 + defMorale / 200);
+  if (resolveWave(w3Att, w3Def)) { attWins++; }
+  else { defWins++; }
+
+  const attackerWin = attWins >= 2;
+
+  // 更新领土
+  const tc = { ...(p.territoryControl ?? {}) } as Record<LocationId, SectId>;
+  if (attackerWin) tc[targetLocation] = attackerSect;
+  setPlayer({ ...p, territoryControl: tc } as any);
+
+  applySiegeResult(attackerSect, defenderSect, attackerWin);
+  worsenFactionRelation(attackerSect, defenderSect, 15);
+
+  const cooldowns = { ...(p.siegeCooldown ?? {}), [targetLocation]: currentTurn + SIEGE_COOLDOWN };
+  setPlayer({ ...getPlayer(), siegeCooldown: cooldowns });
+
+  for (const npc of [...attackerNpcs, ...defenderNpcs]) {
+    appendNpcLog(npc.id, `参与了对${locName}的攻城战（随从代战，${attackerWin ? '攻方胜' : '守方胜'}）`);
+  }
+
+  // 随从参战记录
+  for (const fid of followerIds) {
+    const npc = db[fid];
+    if (npc) appendNpcLog(fid, `代玩家出征${locName}（${attackerWin ? '获胜' : '战败'}）`);
+  }
+
+  const newsText = attackerWin
+    ? `你的随从率队攻占${getSectName(defenderSect)}掌控的${locName}，大获全胜！`
+    : `你的随从率队攻打${locName}失利，铩羽而归。`;
+
+  const newsItem: WorldNewsItem = { text: newsText, turn: currentTurn, leftTime: 5 };
+  const currentNews = p.worldNews ?? [];
+  const updatedNews = [newsItem, ...currentNews].slice(0, 10);
+  setPlayer({ ...getPlayer(), worldNews: updatedNews });
+
+  // 玩家获得经验（少于亲自参战）
+  const updated = {
+    ...getPlayer(),
+    exp: p.exp + (attackerWin ? 60 : 15),
+    sectContribution: (p.sectContribution ?? 0) + (attackerWin ? 40 : 10),
+  };
+  setPlayer(updated);
 
   return { happened: true, attackerWin, newsText };
 }

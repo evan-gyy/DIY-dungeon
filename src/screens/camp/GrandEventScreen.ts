@@ -133,7 +133,8 @@ function renderEventScreen(): void {
 // ──── 选择处理 ────
 
 function handleChoice(choiceId: string): void {
-  const result = resolveGrandEvent(choiceId);
+  if (!_currentEvent) return;
+  const result = resolveGrandEvent(_currentEvent, choiceId);
   if (!result) return;
 
   // 禁用所有按钮

@@ -254,12 +254,13 @@ export function shouldNpcLeaveSect(sectId: SectId): boolean {
 // ──── 攻击方相邻逻辑 ────
 
 /** 门派据点 → SectId 映射 */
-const SECT_BASES: Partial<Record<LocationId, SectId>> = {
+export const SECT_BASES: Partial<Record<LocationId, SectId>> = {
   wudang_mountain: 'wudang', shaolin_temple: 'shaolin', emei_mountain: 'emei',
   beggar_hq: 'beggar', maoshan_daoyuan: 'maoshan', kunlun_mountain: 'kunlun',
   qingcheng_mountain: 'qingcheng', tangmen_estate: 'tangmen', xiaoyao_valley: 'xiaoyao',
   zhongnan_mountain: 'quanzhen', kongtong_mountain: 'kongtong', diancang_mountain: 'diancang',
   huashan_base: 'huashan', heimu_cliff: 'riyue',
+  kaifeng_city: 'imperial_court', yanjing_city: 'rebels',
 };
 
 // ──── 议事决策 ────
@@ -515,25 +516,26 @@ export interface CouncilResult {
  */
 export function executeCouncilDecision(
   proposal: CouncilProposal, sectId: SectId,
-  playerChoice: 'follow' | 'support' | 'object' | 'volunteer',
+  playerChoice: 'follow' | 'support' | 'object' | 'volunteer' | 'delegate',
 ): CouncilResult {
   const state = getSectState(sectId);
   const isVolunteer = playerChoice === 'volunteer';
-  const multiplier = isVolunteer ? 1.5 : 1.0;
+  const isDelegate = playerChoice === 'delegate';
+  const multiplier = isVolunteer ? 1.5 : isDelegate ? 1.2 : 1.0;
 
   switch (proposal.type) {
     case 'siege': {
       const target = findSiegeTarget(sectId);
       if (!target) {
-        // 找不到目标，降级为发展
         return executeCouncilDecision({ type: 'develop', label: '发展门派' }, sectId, playerChoice);
       }
-      // 攻城行为由 CouncilScreen 触发 playerJoinSiege
       return {
         type: 'siege',
         effectText: isVolunteer
           ? `你主动请缨，率队攻打${target.locationName}！`
-          : `掌门决定攻打${target.locationName}，已选出4名弟子。`,
+          : isDelegate
+            ? `你令随从带队攻打${target.locationName}，自己在后方督战。`
+            : `掌门决定攻打${target.locationName}，已选出4名弟子。`,
         enterBattle: true,
         battleContext: {
           attackerSect: sectId,
@@ -577,3 +579,168 @@ export function executeCouncilDecision(
     }
   }
 }
+
+// ═════════════════════════════════════════════════════════
+//  统一据点系统（三国志式：城市 + 门派 = 同一属性框架）
+// ═════════════════════════════════════════════════════════
+
+import type { SettlementAttributes } from '../data/sandboxTypes';
+import { CITY_DEFAULTS, SECT_SETTLEMENT_DEFAULTS, SECT_TIER_TO_SETTLEMENT, SETTLEMENT_MONTHLY_TICK } from '../data/sandboxTypes';
+
+/** 已知城市的地点 ID 及等级 */
+const CITY_CONFIGS: Record<string, 'capital' | 'major' | 'minor'> = {
+  kaifeng_city: 'capital',
+  changan_city: 'capital',
+  luoyang_city: 'capital',
+  xiangyang_city: 'major',
+  chengdu_city: 'major',
+  yangzhou_city: 'major',
+  jiangling_city: 'major',
+  suzhou_city: 'major',
+  hangzhou_city: 'major',
+  dali_city: 'major',
+  yanjing_city: 'major',
+  fuzhou_city: 'major',
+  quanzhou_city: 'major',
+  guangzhou_city: 'major',
+  // fallback: minor
+};
+
+/**
+ * 初始化所有据点的属性（城市 + 门派基地）。
+ * 在新游戏或加载旧档缺少 settlementState 时调用。
+ */
+export function initSettlements(): void {
+  const p = getPlayer();
+  const settlements: Record<string, SettlementAttributes> = { ...(p.settlementState ?? {}) };
+
+  // ── 城市 ──
+  for (const locId of Object.keys(WORLD_MAP) as LocationId[]) {
+    if (isSectBase(locId) !== undefined) continue; // 跳过门派据点
+    const tier = CITY_CONFIGS[locId] ?? 'minor';
+    const def = CITY_DEFAULTS[tier];
+    if (!def) continue;
+    // 仅在不存在时初始化
+    if (!settlements[locId]) {
+      settlements[locId] = {
+        ...def,
+        // 微 randomization（±10%）
+        population: clamp(def.population + randPct(), 0, 100),
+        prosperity: clamp(def.prosperity + randPct(), 0, 100),
+        commerce: clamp(def.commerce + randPct(), 0, 100),
+        agriculture: clamp(def.agriculture + randPct(), 0, 100),
+        garrison: clamp(def.garrison + randPct(), 0, 100),
+        fortification: clamp(def.fortification + randPct(), 0, 100),
+        publicOrder: clamp(def.publicOrder + randPct(), 0, 100),
+        development: clamp(def.development + randPct(), 0, 100),
+        martialArts: 0,
+        academy: clamp(def.academy + randPct(), 0, 100),
+        cityRank: tier,
+      };
+    }
+  }
+
+  // ── 门派据点 ──
+  for (const locId of Object.keys(WORLD_MAP) as LocationId[]) {
+    const sectId = isSectBase(locId);
+    if (sectId === undefined) continue;
+    const tier = SECT_TIERS[sectId] ?? 'second_rate';
+    const tierKey = SECT_TIER_TO_SETTLEMENT[tier] ?? 'second_rate';
+    const def = SECT_SETTLEMENT_DEFAULTS[tierKey];
+    if (!def) continue;
+    if (!settlements[locId]) {
+      settlements[locId] = {
+        ...def,
+        population: clamp(def.population + randPct(), 0, 100),
+        prosperity: clamp(def.prosperity + randPct(), 0, 100),
+        commerce: clamp(def.commerce + randPct(), 0, 100),
+        agriculture: clamp(def.agriculture + randPct(), 0, 100),
+        garrison: clamp(def.garrison + randPct(), 0, 100),
+        fortification: clamp(def.fortification + randPct(), 0, 100),
+        publicOrder: clamp(def.publicOrder + randPct(), 0, 100),
+        development: clamp(def.development + randPct(), 0, 100),
+        martialArts: clamp(def.martialArts + randPct(), 0, 100),
+        academy: clamp(def.academy + randPct(), 0, 100),
+      };
+    }
+  }
+
+  setPlayer({ ...p, settlementState: settlements });
+}
+
+/** 每月据点自然增长 */
+export function tickSettlements(): void {
+  const p = getPlayer();
+  const settlements = { ...(p.settlementState ?? {}) };
+  if (Object.keys(settlements).length === 0) return;
+
+  for (const [locId, s] of Object.entries(settlements)) {
+    const updated = { ...s };
+    // 治安低于 30 → 繁荣度下降
+    if (s.publicOrder < 30) {
+      updated.prosperity = Math.max(0, s.prosperity - 3);
+      updated.publicOrder = Math.min(100, s.publicOrder + 2); // 自然回升
+    } else {
+      // 正常增长
+      updated.prosperity = Math.min(100, s.prosperity + (SETTLEMENT_MONTHLY_TICK.prosperity ?? 2));
+      updated.commerce = Math.min(100, s.commerce + (SETTLEMENT_MONTHLY_TICK.commerce ?? 1));
+      updated.agriculture = Math.min(100, s.agriculture + (SETTLEMENT_MONTHLY_TICK.agriculture ?? 1));
+      updated.publicOrder = Math.min(100, s.publicOrder + (SETTLEMENT_MONTHLY_TICK.publicOrder ?? 1));
+    }
+    // 发展值受人口上限约束
+    updated.development = Math.min(100, s.development + (SETTLEMENT_MONTHLY_TICK.development ?? 1));
+    // 商业和农业受人口基础约束
+    updated.population = Math.min(100, s.population + Math.floor(s.agriculture / 20));
+
+    settlements[locId] = updated;
+  }
+
+  setPlayer({ ...p, settlementState: settlements });
+}
+
+/** 获取某个地点的据点属性 */
+export function getSettlement(locationId: LocationId): SettlementAttributes | undefined {
+  const p = getPlayer();
+  if (!p.settlementState) return undefined;
+  return p.settlementState[locationId];
+}
+
+/** 获取某个门派的据点属性（自动找门派基地位置） */
+export function getSectSettlement(sectId: SectId): SettlementAttributes | undefined {
+  for (const locId of Object.keys(WORLD_MAP) as LocationId[]) {
+    if (isSectBase(locId) === sectId) {
+      return getSettlement(locId);
+    }
+  }
+  return undefined;
+}
+
+/** 更新据点属性 */
+export function updateSettlement(
+  locationId: LocationId,
+  delta: Partial<SettlementAttributes>,
+): void {
+  const p = getPlayer();
+  const settlements = { ...(p.settlementState ?? {}) };
+  const current = settlements[locationId];
+  if (!current) return;
+  settlements[locationId] = {
+    ...current,
+    population: clamp((current.population ?? 30) + (delta.population ?? 0), 0, 100),
+    prosperity: clamp((current.prosperity ?? 30) + (delta.prosperity ?? 0), 0, 100),
+    commerce: clamp((current.commerce ?? 25) + (delta.commerce ?? 0), 0, 100),
+    agriculture: clamp((current.agriculture ?? 30) + (delta.agriculture ?? 0), 0, 100),
+    garrison: clamp((current.garrison ?? 20) + (delta.garrison ?? 0), 0, 100),
+    fortification: clamp((current.fortification ?? 20) + (delta.fortification ?? 0), 0, 100),
+    publicOrder: clamp((current.publicOrder ?? 50) + (delta.publicOrder ?? 0), 0, 100),
+    development: clamp((current.development ?? 15) + (delta.development ?? 0), 0, 100),
+    martialArts: clamp((current.martialArts ?? 0) + (delta.martialArts ?? 0), 0, 100),
+    academy: clamp((current.academy ?? 15) + (delta.academy ?? 0), 0, 100),
+  };
+  setPlayer({ ...p, settlementState: settlements });
+}
+
+/** 辅助：±5 随机浮动 */
+function randPct(): number { return Math.floor(Math.random() * 11) - 5; }
+/** 辅助：钳制值到 [min, max] */
+function clamp(v: number, min: number, max: number): number { return Math.max(min, Math.min(max, v)); }
