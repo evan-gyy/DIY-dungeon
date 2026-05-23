@@ -14,18 +14,24 @@ import {
   executeCourtPromotion,
   getCourtRankLabel,
   getSplitFocusMessage,
+  getEffectiveCourtStats,
+  getCourtRankBaseStats,
   COURT_STAT_LABELS,
   COURT_PATH_WEN_STATS,
   COURT_PATH_WU_STATS,
 } from '../../systems/CourtSystem';
+import { getStatExpProgress } from '../../systems/ActionSystem';
 
 export function renderCourtPanel(content: HTMLElement): void {
   const p = getPlayer();
-  const courtStats = p.courtStats ?? { strategy: 10, eloquence: 10, charisma: 10, scholarship: 10 };
+  const rawStats = p.courtStats ?? { strategy: 10, eloquence: 10, charisma: 10, scholarship: 10 };
+  const courtStats = getEffectiveCourtStats(p);
+  const courtStatExp = p.courtStatExp ?? { strategy: 0, eloquence: 0, charisma: 0, scholarship: 0 };
   const influence = p.influence ?? 0;
   const courtPath = (p.playerCareer ?? p.courtPath ?? null) as CourtPath | null;
   const courtRank = (p.courtRank ?? 'commoner') as CourtRank;
   const lastAction = (p.lastActionType ?? 'idle') as LastActionType;
+  const rankBase = getCourtRankBaseStats(courtRank);
 
   // 晋升检查
   const promoCheck = canPromoteCourt(p);
@@ -59,7 +65,7 @@ export function renderCourtPanel(content: HTMLElement): void {
     </div>`;
   }
 
-  // ── 四维属性展示 ──
+  // ── 四维属性展示 （含经验值进度条）──
   const statKeys = Object.keys(courtStats) as (keyof CourtStats)[];
   const isWen = courtPath === 'wen';
   const isWu = courtPath === 'wu';
@@ -67,24 +73,37 @@ export function renderCourtPanel(content: HTMLElement): void {
 
   const statBarsHtml = statKeys.map(key => {
     const val = courtStats[key];
+    const rawVal = rawStats[key];
+    const base = rankBase[key];
+    const isBoostedByRank = val > rawVal && base > rawVal;
+    const expVal = courtStatExp[key] ?? 0;
+    const expNeeded = (val + 1) * 100;
+    const expProgress = getStatExpProgress(val, expVal);
+    const expPct = Math.floor(expProgress * 100);
     const label = COURT_STAT_LABELS[key];
     const isEmphasized = emphasizedStats.includes(key);
     const barColor = isEmphasized
       ? (isWen ? 'linear-gradient(90deg,#4a6fa5,#6b8dbe)' : 'linear-gradient(90deg,#c0392b,#e74c3c)')
       : 'linear-gradient(90deg,#5dade2,#9b59b6)';
     const emphasisMark = isEmphasized ? ' <span style="font-size:9px;color:#f0b27a;">★侧重要求</span>' : '';
+    const rankBoostNote = isBoostedByRank
+      ? ` <span style="font-size:9px;color:#27ae60;">（品阶保底 +${val - rawVal}）</span>`
+      : '';
 
     return `
     <div class="court-stat-row">
       <div class="court-stat-header">
         <span class="court-stat-icon">${label.icon}</span>
-        <span class="court-stat-name">${label.name}${emphasisMark}</span>
+        <span class="court-stat-name">${label.name}${emphasisMark}${rankBoostNote}</span>
         <span class="court-stat-val">${val}</span>
       </div>
-      <div class="court-stat-bar-track">
+      <div class="court-stat-bar-track" style="margin-bottom:1px;">
         <div class="court-stat-bar-fill" style="width:${val}%;background:${barColor};"></div>
       </div>
-      <div class="court-stat-desc">${label.desc}</div>
+      <div style="height:4px;background:#1a1a2e;border-radius:2px;overflow:hidden;margin-bottom:4px;">
+        <div style="height:100%;width:${expPct}%;background:linear-gradient(90deg,#c9a84c,#f0d060);border-radius:2px;transition:width 0.3s;"></div>
+      </div>
+      <div class="court-stat-desc">${label.desc} · <span style="color:#c9a84c;font-size:10px;">经验 ${expVal}/${expNeeded}</span></div>
     </div>`;
   }).join('');
 

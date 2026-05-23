@@ -17,6 +17,8 @@ import type { NpcStats, NpcPersonality, PersonalityConfig } from '../data/npcSta
 import { PERSONALITY } from '../data/npcStats';
 import { getPlayerNpcRelations, hasPlayerNpcRelation } from './NpcRelationship';
 import type { PlayerNpcRelation } from '../data/types';
+import { WORLD_MAP } from '../data/worldMap';
+import type { LocationId } from '../data/worldMap';
 
 // ═════════════════════════════════════════════════════════
 //  好感度层级
@@ -603,6 +605,359 @@ export function sparWithNpc(npcId: string, confirmed: boolean = false): SparResu
     expGained,
     message: `你向${persCfg.icon}${npcName}发起切磋！\n\n${duelNarrative}${diffLabel}\n\n好感 ${deltaText} · 经验 +${expGained}`,
   };
+}
+
+// ═════════════════════════════════════════════════════════
+//  论道（探讨武学/道法，双方获益）
+// ═════════════════════════════════════════════════════════
+
+export interface DiscussDaoResult {
+  success: boolean;
+  message: string;
+  playerExpGained: number;
+  npcExpGained: number;
+  affectionDelta: number;
+}
+
+const DAO_DIALOGUES: Record<AffectionTierKey, string[]> = {
+  cold: [
+    '寥寥数语，对方显然不愿多谈。不过寥寥几句，已让你若有所悟。',
+    '对方冷着脸敷衍了几句，但你从只言片语中仍然捕捉到了一丝武学真意。',
+  ],
+  neutral: [
+    '你与对方就武学之道交换了些许看法。虽然观点不尽相同，却也算有所收获。',
+    '论及剑道，对方略略提了几句本门心法。虽然点到为止，却让你豁然开朗。',
+  ],
+  warm: [
+    '对方兴致颇高，与你从剑法谈到心法，从武学谈到天地大道。不知不觉已过了一个时辰。',
+    '你道出近来修行困惑，对方沉思片刻后缓缓开口：「道法自然，强求不得。你且听我慢慢道来……」',
+  ],
+  close: [
+    '二人相对而坐，从黄昏谈到月上中天。武学、道法、人生……无所不谈。这大概就是知己的感觉吧。',
+    '对方难得地打开了话匣子，将自己的修行心得倾囊相授。「这些话，我只对你一人说过。」',
+  ],
+  intimate: [
+    '月光下，两人并肩而坐。对方轻声说道：「修道之路漫漫，有你同行，便不觉得辛苦。」论道之后，你的心境似乎也提升了几分。',
+    '对方握住你的手，眼中闪着光：「今日这番论道，胜过十年苦修。遇见你之后，我才知道什么是真正的『道』。」',
+  ],
+};
+
+export function discussDaoWithNpc(npcId: string): DiscussDaoResult {
+  const info = getInteractionInfo(npcId);
+  if (!info) return { success: false, message: '角色数据不存在。', playerExpGained: 0, npcExpGained: 0, affectionDelta: 0 };
+
+  const npc = getNpcStats(npcId);
+  if (!npc) return { success: false, message: 'NPC 数据异常。', playerExpGained: 0, npcExpGained: 0, affectionDelta: 0 };
+
+  const p = getPlayer();
+  const persCfg = PERSONALITY[info.personality];
+
+  // 基于双方的学识属性计算收益
+  const playerScholar = p.courtStats?.scholarship ?? 5;
+  const npcScholar = npc.courtStats?.scholarship ?? 5;
+  const scholarAvg = (playerScholar + npcScholar) / 2;
+
+  const playerExp = Math.max(5, Math.floor(scholarAvg * 2 + Math.random() * 10));
+  const npcExp = Math.max(3, Math.floor(npcScholar * 1.5 + Math.random() * 8));
+  const affectionDelta = Math.max(2, Math.round((3 + Math.random() * 3) * info.talkTotalMult));
+
+  // 更新玩家经验
+  const updatedP = { ...p, exp: p.exp + playerExp };
+  setPlayer(updatedP);
+  saveGame(updatedP);
+
+  // 更新 NPC 经验 + 好感
+  const npcDb = { ...(p.npcDatabase ?? {}) };
+  if (npcDb[npcId]) {
+    npcDb[npcId] = { ...npcDb[npcId]!, exp: (npcDb[npcId]!.exp ?? 0) + npcExp };
+    setPlayer({ ...updatedP, npcDatabase: npcDb });
+    saveGame(getPlayer());
+  }
+  changeNpcAffection(npcId, affectionDelta);
+  appendNpcLog(npcId, `主角前来论道（学识${playerScholar} vs ${npcScholar}）`);
+
+  const affTier = getAffectionTierKey(info.affection);
+  const pool = DAO_DIALOGUES[affTier] ?? DAO_DIALOGUES['neutral']!;
+  const narrative = pool[Math.floor(Math.random() * pool.length)]!;
+
+  return {
+    success: true,
+    message: `${persCfg.icon} ${npc.name}\n\n${narrative}\n\n📖 经验 +${playerExp} · ${npc.name} 经验 +${npcExp} · 好感 +${affectionDelta}`,
+    playerExpGained: playerExp,
+    npcExpGained: npcExp,
+    affectionDelta,
+  };
+}
+
+// ═════════════════════════════════════════════════════════
+//  请求指点（向高等级 NPC 请教）
+// ═════════════════════════════════════════════════════════
+
+export interface AskGuidanceResult {
+  success: boolean;
+  message: string;
+  playerExpGained: number;
+  affectionDelta: number;
+}
+
+const GUIDANCE_DIALOGUES: Record<AffectionTierKey, string[]> = {
+  cold: [
+    '对方略一皱眉：「修行在个人，莫要事事靠人。」不过还是随手点拨了一二。',
+    '对方态度冷淡，但还是指出了你剑法中的几处破绽。',
+  ],
+  neutral: [
+    '对方沉吟片刻，指出了你运气行功中的一处谬误。「此处的内力走向当如此……」',
+    '对方将你的剑招拆解了一遍，指出了三处可改进之处。虽然语气平淡，却句句在理。',
+  ],
+  warm: [
+    '对方认真地看着你演练了一遍剑法，频频点头：「进步很大。不过这一式还可再精进……」',
+    '对方仔细纠正了你的身法姿势，又传授了几招御气法门。「这些都是我师父当年教我的，你且记下。」',
+  ],
+  close: [
+    '对方将你拉到一旁，低声道：「此法门我只传与你一人。」随后将一招精妙剑式细细拆解。',
+    '对方将本门心法中最精华的部分娓娓道来。你的修为隐隐有了突破的征兆。',
+  ],
+  intimate: [
+    '对方将毕生所学中最得意的一式传给了你。「此招名为『破云』——我从未教过别人。」',
+    '「你天资聪颖，若能潜心修炼，他日成就必在我之上。」对方眼中满是期许。',
+  ],
+};
+
+export function askNpcForGuidance(npcId: string): AskGuidanceResult {
+  const info = getInteractionInfo(npcId);
+  if (!info) return { success: false, message: '角色数据不存在。', playerExpGained: 0, affectionDelta: 0 };
+
+  const npc = getNpcStats(npcId);
+  if (!npc) return { success: false, message: 'NPC 数据异常。', playerExpGained: 0, affectionDelta: 0 };
+
+  const p = getPlayer();
+
+  // 对方等级必须比你高
+  if (npc.level <= p.level) {
+    return {
+      success: false,
+      message: `${npc.name}微微一笑：「你的修为已不在我之下，我没什么可教你的了。」`,
+      playerExpGained: 0, affectionDelta: 0,
+    };
+  }
+
+  // 好感度门槛
+  if (info.affection < 20) {
+    return {
+      success: false,
+      message: `${npc.name}婉拒了你的请求：「你我尚未熟络，不便指点。」`,
+      playerExpGained: 0, affectionDelta: 0,
+    };
+  }
+
+  const persCfg = PERSONALITY[info.personality];
+  const levelDiff = npc.level - p.level;
+
+  // 收益：等级差越大，经验越多
+  const playerExp = Math.max(8, Math.floor(levelDiff * 3 + Math.random() * 15));
+  const affectionDelta = Math.max(2, Math.round((2 + Math.random() * 3) * info.talkTotalMult));
+
+  const updatedP = { ...p, exp: p.exp + playerExp };
+  setPlayer(updatedP);
+  saveGame(updatedP);
+
+  changeNpcAffection(npcId, affectionDelta);
+  appendNpcLog(npcId, `主角前来请教（等级差${levelDiff}）`);
+
+  const affTier = getAffectionTierKey(info.affection);
+  const pool = GUIDANCE_DIALOGUES[affTier] ?? GUIDANCE_DIALOGUES['neutral']!;
+  const narrative = pool[Math.floor(Math.random() * pool.length)]!;
+
+  return {
+    success: true,
+    message: `${persCfg.icon} ${npc.name}\n\n${narrative}\n\n📖 经验 +${playerExp} · 好感 +${affectionDelta}`,
+    playerExpGained: playerExp,
+    affectionDelta,
+  };
+}
+
+// ═════════════════════════════════════════════════════════
+//  打探情报（向 NPC 打听江湖消息）
+// ═════════════════════════════════════════════════════════
+
+export interface AskIntelResult {
+  success: boolean;
+  message: string;
+  affectionDelta: number;
+  intel: string | null;
+}
+
+const INTEL_TEMPLATES: string[] = [
+  '听说%s最近不太太平，盗匪横行，官府正在悬赏缉拿。',
+  '据说%s在%s发现了一处前人洞府，其中或有至宝。',
+  '有人在%s见过%s的%s，似乎正在秘密筹备什么。',
+  '近来%s与%s之间摩擦不断，怕是快要兵戎相见了。',
+  '%s市面上的%s价格飞涨，据说是因为%s的商路被劫了。',
+  '小道消息：%s有意与%s联姻，两家一旦联手，势力将大增。',
+  '传闻%s中出了一位天骄弟子，修为突飞猛进，被视为下一任掌门的热门人选。',
+  '%s附近近来时有妖物出没，已经伤了好几个采药人。',
+  '我听说%s的%s暗中勾结%s，似乎在谋划什么大事。',
+  '%s与%s的边境上，两方巡逻弟子已爆发过数次小规模冲突。',
+];
+
+function generateIntel(npc: NpcStats): string {
+  const allSects = ['武当', '少林', '峨眉', '丐帮', '华山', '日月教', '茅山', '昆仑', '青城', '唐门', '逍遥', '全真', '崆峒', '点苍', '铁掌帮', '五毒教', '血刀门', '海沙派'];
+  const allCities = ['襄阳', '洛阳', '长安', '开封', '成都', '金陵', '杭州', '燕京', '太原', '武昌', '明州', '广州', '凉州', '福州', '扬州', '苏州', '重庆', '大理', '江陵'];
+
+  const pick = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)]!;
+
+  const template = pick(INTEL_TEMPLATES);
+  const replacements = template.match(/%s/g)?.length ?? 0;
+  const args: string[] = [];
+  for (let i = 0; i < replacements; i++) {
+    // 随机选择城市或宗门填入
+    args.push(Math.random() < 0.5 ? pick(allSects) : pick(allCities));
+  }
+
+  // 用 args 填充模板
+  let result = template;
+  for (const arg of args) {
+    result = result.replace('%s', arg);
+  }
+  return result;
+}
+
+export function askNpcForIntel(npcId: string): AskIntelResult {
+  const info = getInteractionInfo(npcId);
+  if (!info) return { success: false, message: '角色数据不存在。', affectionDelta: 0, intel: null };
+
+  const npc = getNpcStats(npcId);
+  if (!npc) return { success: false, message: 'NPC 数据异常。', affectionDelta: 0, intel: null };
+
+  const persCfg = PERSONALITY[info.personality];
+
+  // 好感度门槛
+  if (info.affection < 10) {
+    return {
+      success: false,
+      message: `${persCfg.icon} ${npc.name}冷冷道：「我为何要告诉你？」`,
+      affectionDelta: 0, intel: null,
+    };
+  }
+
+  // 成功率基于 NPC 的智谋和魅力
+  const npcStrategy = npc.courtStats?.strategy ?? 5;
+  const npcCharisma = npc.courtStats?.charisma ?? 5;
+  const successRate = 0.4 + (npcStrategy + npcCharisma) * 0.02; // 40%~80%
+  const succeeded = Math.random() < successRate;
+
+  const affectionDelta = succeeded
+    ? Math.max(1, Math.round((2 + Math.random() * 2) * info.talkTotalMult))
+    : Math.round(-1 * Math.random() * 2);
+
+  changeNpcAffection(npcId, affectionDelta);
+  appendNpcLog(npcId, `主角前来打探情报${succeeded ? '（成功）' : '（失败）'}`);
+
+  if (succeeded) {
+    const intel = generateIntel(npc);
+    return {
+      success: true,
+      message: `${persCfg.icon} ${npc.name}左右看了看，压低声音道：「我告诉你一件事，你可别到处说……」\n\n📜 ${intel}\n\n好感 ${affectionDelta >= 0 ? '+' + affectionDelta : affectionDelta}`,
+      affectionDelta,
+      intel,
+    };
+  } else {
+    const failLines = [
+      '对方摇了摇头：「抱歉，我知道的也不比你多。」',
+      '对方迟疑了一下：「这事我也不太清楚……」',
+      '「不是我不愿说，是有些事知道得越少越好。」对方意味深长地看着你。',
+    ];
+    return {
+      success: false,
+      message: `${persCfg.icon} ${npc.name}\n\n${failLines[Math.floor(Math.random() * failLines.length)]!}\n\n好感 ${affectionDelta}`,
+      affectionDelta,
+      intel: null,
+    };
+  }
+}
+
+// ═════════════════════════════════════════════════════════
+//  邀约同行（邀请 NPC 一同旅行）
+// ═════════════════════════════════════════════════════════
+
+export interface InviteTravelResult {
+  success: boolean;
+  message: string;
+  affectionDelta: number;
+}
+
+export function inviteNpcToTravel(npcId: string, destLocationId: LocationId): InviteTravelResult {
+  const info = getInteractionInfo(npcId);
+  if (!info) return { success: false, message: '角色数据不存在。', affectionDelta: 0 };
+
+  const npc = getNpcStats(npcId);
+  if (!npc) return { success: false, message: 'NPC 数据异常。', affectionDelta: 0 };
+
+  const p = getPlayer();
+  const persCfg = PERSONALITY[info.personality];
+
+  // 好感度门槛
+  if (info.affection < 30) {
+    return {
+      success: false,
+      message: `${persCfg.icon} ${npc.name}婉拒道：「你我尚未如此熟络，还是各自行事为好。」`,
+      affectionDelta: 0,
+    };
+  }
+
+  // 已经同行了（NPC 已在玩家位置）
+  if (npc.currentLocationId === p.currentLocationId) {
+    // 判断是否愿意
+    const npcAgi = npc.agi ?? 10;
+    const acceptRate = 0.4 + info.affection * 0.005 + npcAgi * 0.01; // 40%~95%
+    const accepted = Math.random() < acceptRate;
+    const dest = WORLD_MAP[destLocationId];
+    const destName = dest?.name ?? destLocationId;
+
+    if (accepted) {
+      // 移动 NPC 到目的地
+      const npcDb = { ...(p.npcDatabase ?? {}) };
+      if (npcDb[npcId]) {
+        npcDb[npcId] = { ...npcDb[npcId]!, currentLocationId: destLocationId };
+        setPlayer({ ...p, npcDatabase: npcDb });
+        saveGame(getPlayer());
+      }
+
+      const affectionDelta = Math.round(3 * info.talkTotalMult);
+      changeNpcAffection(npcId, affectionDelta);
+      appendNpcLog(npcId, `与主角同行前往${destName}`);
+
+      const acceptLines = [
+        `「正好我也想去${destName}看看。」${npc.name}爽快地答应了。`,
+        `${npc.name}微微一笑：「有你在，到哪都行。」`,
+        `「行啊！路上还能切磋切磋。」${npc.name}已经背起了行囊。`,
+      ];
+
+      return {
+        success: true,
+        message: `${persCfg.icon} ${npc.name}\n\n${acceptLines[Math.floor(Math.random() * acceptLines.length)]!}\n\n📍 ${npc.name} 将与你一同前往【${destName}】 · 好感 +${affectionDelta}`,
+        affectionDelta,
+      };
+    } else {
+      const declineLines = [
+        `「今日我还有些私事要处理，改日吧。」${npc.name}抱歉地笑了笑。`,
+        `「${destName}太远了，我怕耽误修行。」${npc.name}摇了摇头。`,
+        `「最近此地有些事情需要我照应，不能走开。」`,
+      ];
+      return {
+        success: false,
+        message: `${persCfg.icon} ${npc.name}\n\n${declineLines[Math.floor(Math.random() * declineLines.length)]!}`,
+        affectionDelta: 0,
+      };
+    }
+  } else {
+    // NPC 不在同一地点
+    return {
+      success: false,
+      message: `${npc.name}不在此地，无法同行。`,
+      affectionDelta: 0,
+    };
+  }
 }
 
 // ═════════════════════════════════════════════════════════

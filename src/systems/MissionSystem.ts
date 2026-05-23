@@ -64,7 +64,7 @@ export const TRACK_CONFIG: Record<MissionTrack, TrackConfig> = {
 };
 
 /** 难度 → 属性经验基础值 */
-function baseExpForDifficulty(difficulty: string): number {
+export function baseExpForDifficulty(difficulty: string): number {
   switch (difficulty) {
     case 'easy': return 25;
     case 'normal': return 50;

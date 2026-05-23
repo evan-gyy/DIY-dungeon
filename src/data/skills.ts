@@ -656,9 +656,9 @@ export const SKILLS: Record<SkillId, SkillData> = {
   riyue_sun_qi: {
     id: 'riyue_sun_qi', name: '日精内功', icon: '☀️', type: 'passive', target: 'self',
     mp: 0, hit: 0, powerMul: 0, defPen: 0,
-    cooldown: 0, effect: { type: 'regen_mp', value: 5, duration: 99 },
+    cooldown: 0, effect: { type: 'regen_mp', value: 4, duration: 99 },
     healPct: 0,
-    desc: '【被动】汲取日精，每回合自动恢复5点内力，日月神功基础心法。',
+    desc: '【被动】汲取日精，每回合自动恢复4点内力，日月神功基础心法。',
     cost: { exp: 0 }, sect: 'riyue',
     battleTip: '被动·稳定内力回复',
   },
@@ -1394,7 +1394,7 @@ export const SKILLS: Record<SkillId, SkillData> = {
   },
   kunlun_sword_storm: {
     id: 'kunlun_sword_storm', name: '冰风暴剑', icon: '🌪️', type: 'attack', target: 'enemy',
-    mp: 40, hit: 3, powerMul: 0.55, defPen: 0.8,
+    mp: 40, hit: 3, powerMul: 0.6, defPen: 0.8,
     cooldown: 2, effect: null, healPct: 0,
     desc: '剑化冰风暴，三连击各造成55%攻击伤害，穿透极高。',
     cost: { exp: 650 }, sect: 'kunlun',
@@ -1593,7 +1593,7 @@ export const SKILLS: Record<SkillId, SkillData> = {
   // ══════════════════════════════════════
   huashan_sword_basic: {
     id: 'huashan_sword_basic', name: '华山基础剑', icon: '⚔️', type: 'attack', target: 'enemy',
-    mp: 5, hit: 1, powerMul: 1.0, defPen: 0.3,
+    mp: 8, hit: 1, powerMul: 1.35, defPen: 0.4,
     cooldown: 0, effect: null, healPct: 0,
     desc: '华山弟子入门剑法，中正平和，破防能力不俗。',
     cost: { exp: 0 }, sect: 'huashan',
@@ -1619,7 +1619,7 @@ export const SKILLS: Record<SkillId, SkillData> = {
   },
   huashan_sword_flash: {
     id: 'huashan_sword_flash', name: '剑光一闪', icon: '✨', type: 'attack', target: 'enemy',
-    mp: 15, hit: 1, powerMul: 1.35, defPen: 0.45,
+    mp: 15, hit: 1, powerMul: 1.5, defPen: 0.45,
     cooldown: 0, effect: null, healPct: 0,
     desc: '华山快剑第一式，剑光如电一闪而至。',
     cost: { exp: 100 }, sect: 'huashan',
@@ -1644,7 +1644,7 @@ export const SKILLS: Record<SkillId, SkillData> = {
   },
   huashan_storm_sword: {
     id: 'huashan_storm_sword', name: '狂风快剑', icon: '💨', type: 'attack', target: 'enemy',
-    mp: 22, hit: 3, powerMul: 0.45, defPen: 0.3,
+    mp: 22, hit: 3, powerMul: 0.55, defPen: 0.3,
     cooldown: 2, effect: null, healPct: 0,
     desc: '剑如狂风，三连击各造成45%攻击伤害。',
     cost: { exp: 300 }, sect: 'huashan',
@@ -1699,7 +1699,7 @@ export const SKILLS: Record<SkillId, SkillData> = {
   // ══════════════════════════════════════
   kongtong_fist_basic: {
     id: 'kongtong_fist_basic', name: '崆峒基础拳', icon: '👊', type: 'attack', target: 'enemy',
-    mp: 5, hit: 1, powerMul: 1.0, defPen: 0.3,
+    mp: 8, hit: 1, powerMul: 1.35, defPen: 0.4,
     cooldown: 0, effect: null, healPct: 0,
     desc: '崆峒弟子入门拳法，朴实刚健。',
     cost: { exp: 0 }, sect: 'kongtong',
@@ -1805,7 +1805,7 @@ export const SKILLS: Record<SkillId, SkillData> = {
   // ══════════════════════════════════════
   qingcheng_sword_basic: {
     id: 'qingcheng_sword_basic', name: '青城基础剑', icon: '⚔️', type: 'attack', target: 'enemy',
-    mp: 5, hit: 1, powerMul: 1.0, defPen: 0.3,
+    mp: 8, hit: 1, powerMul: 1.35, defPen: 0.4,
     cooldown: 0, effect: null, healPct: 0,
     desc: '青城弟子入门剑法，轻灵飘逸。',
     cost: { exp: 0 }, sect: 'qingcheng',
@@ -1839,7 +1839,7 @@ export const SKILLS: Record<SkillId, SkillData> = {
   },
   qingcheng_cloud_sword: {
     id: 'qingcheng_cloud_sword', name: '云雾剑', icon: '🌫️', type: 'attack', target: 'enemy',
-    mp: 18, hit: 3, powerMul: 0.42, defPen: 0.3,
+    mp: 18, hit: 3, powerMul: 0.5, defPen: 0.3,
     cooldown: 2, effect: { type: 'stun', value: 1, duration: 2 },
     healPct: 0,
     desc: '剑法飘忽如云雾遮目，三连击并有概率致盲2回合。',
@@ -1891,7 +1891,7 @@ export const SKILLS: Record<SkillId, SkillData> = {
   },
   qingcheng_sword_storm: {
     id: 'qingcheng_sword_storm', name: '青城剑雨', icon: '🌧️', type: 'attack', target: 'enemy',
-    mp: 32, hit: 4, powerMul: 0.38, defPen: 0.3,
+    mp: 32, hit: 4, powerMul: 0.48, defPen: 0.3,
     cooldown: 3, effect: null, healPct: 0,
     desc: '剑化万千如雨而下，四连击各造成38%攻击伤害。',
     cost: { exp: 600 }, sect: 'qingcheng',
@@ -1899,7 +1899,7 @@ export const SKILLS: Record<SkillId, SkillData> = {
   },
   qingcheng_taiji_sword: {
     id: 'qingcheng_taiji_sword', name: '青城太极剑', icon: '☯️', type: 'attack', target: 'enemy',
-    mp: 38, hit: 1, powerMul: 2.4, defPen: 0.65,
+    mp: 38, hit: 1, powerMul: 2.5, defPen: 0.65,
     cooldown: 4, effect: null, healPct: 0,
     desc: '青城道门绝学，太极剑意破万法，造成240%攻击伤害。',
     cost: { exp: 800 }, sect: 'qingcheng',
@@ -1911,7 +1911,7 @@ export const SKILLS: Record<SkillId, SkillData> = {
   // ══════════════════════════════════════
   diancang_sword_basic: {
     id: 'diancang_sword_basic', name: '点苍基础剑', icon: '⚔️', type: 'attack', target: 'enemy',
-    mp: 5, hit: 1, powerMul: 1.0, defPen: 0.3,
+    mp: 8, hit: 1, powerMul: 1.35, defPen: 0.4,
     cooldown: 0, effect: null, healPct: 0,
     desc: '点苍弟子入门剑法，诡异多变。',
     cost: { exp: 0 }, sect: 'diancang',
@@ -2019,7 +2019,7 @@ export const SKILLS: Record<SkillId, SkillData> = {
   // ══════════════════════════════════════
   tiezhang_palm_basic: {
     id: 'tiezhang_palm_basic', name: '铁掌基础掌', icon: '✋', type: 'attack', target: 'enemy',
-    mp: 5, hit: 1, powerMul: 1.0, defPen: 0.3,
+    mp: 8, hit: 1, powerMul: 1.35, defPen: 0.4,
     cooldown: 0, effect: null, healPct: 0,
     desc: '铁掌帮入门掌法，势大力沉。',
     cost: { exp: 0 }, sect: 'tiezhang',
@@ -2126,7 +2126,7 @@ export const SKILLS: Record<SkillId, SkillData> = {
   // ══════════════════════════════════════
   maoshan_talisman: {
     id: 'maoshan_talisman', name: '茅山符法', icon: '📜', type: 'attack', target: 'enemy',
-    mp: 5, hit: 1, powerMul: 1.0, defPen: 0.3,
+    mp: 8, hit: 1, powerMul: 1.35, defPen: 0.4,
     cooldown: 0, effect: null, healPct: 0,
     desc: '茅山弟子入门符法，以符纸引灵击敌。',
     cost: { exp: 0 }, sect: 'maoshan',
@@ -2201,7 +2201,7 @@ export const SKILLS: Record<SkillId, SkillData> = {
   // ══════════════════════════════════════
   wudu_poison_palm: {
     id: 'wudu_poison_palm', name: '五毒掌', icon: '☠️', type: 'attack', target: 'enemy',
-    mp: 5, hit: 1, powerMul: 1.0, defPen: 0.3,
+    mp: 8, hit: 1, powerMul: 1.35, defPen: 0.4,
     cooldown: 0, effect: null, healPct: 0,
     desc: '五毒教入门掌法，掌中带毒。',
     cost: { exp: 0 }, sect: 'wudu',
@@ -2275,7 +2275,7 @@ export const SKILLS: Record<SkillId, SkillData> = {
   // ══════════════════════════════════════
   xuedao_blade_basic: {
     id: 'xuedao_blade_basic', name: '血刀基础', icon: '🗡️', type: 'attack', target: 'enemy',
-    mp: 5, hit: 1, powerMul: 1.0, defPen: 0.3,
+    mp: 8, hit: 1, powerMul: 1.35, defPen: 0.4,
     cooldown: 0, effect: null, healPct: 0,
     desc: '血刀门入门刀法，凶悍凌厉。',
     cost: { exp: 0 }, sect: 'xuedao',
@@ -2347,7 +2347,7 @@ export const SKILLS: Record<SkillId, SkillData> = {
   // ══════════════════════════════════════
   haisha_palm_basic: {
     id: 'haisha_palm_basic', name: '海沙基础掌', icon: '✋', type: 'attack', target: 'enemy',
-    mp: 5, hit: 1, powerMul: 1.0, defPen: 0.3,
+    mp: 8, hit: 1, powerMul: 1.35, defPen: 0.4,
     cooldown: 0, effect: null, healPct: 0,
     desc: '海沙派入门掌法，掌风含沙。',
     cost: { exp: 0 }, sect: 'haisha',
@@ -2423,7 +2423,7 @@ export const SKILLS: Record<SkillId, SkillData> = {
   // ── 叛军 · 炼气期 ──
   rebel_fist: {
     id: 'rebel_fist', name: '军体拳', icon: '👊', type: 'attack', target: 'enemy',
-    mp: 8, hit: 1, powerMul: 1.7, defPen: 0.7,
+    mp: 10, hit: 1, powerMul: 1.5, defPen: 0.55,
     cooldown: 0, effect: null, healPct: 0,
     desc: '军中基础拳法，简洁凌厉，造成170%攻击伤害。千锤百炼，不花哨但致命。',
     cost: { exp: 0 }, sect: 'rebels',
@@ -2539,7 +2539,7 @@ export const SKILLS: Record<SkillId, SkillData> = {
   // ── 朝廷 · 炼气期 ──
   court_fist: {
     id: 'court_fist', name: '正步拳', icon: '👊', type: 'attack', target: 'enemy',
-    mp: 8, hit: 1, powerMul: 1.6, defPen: 0.7,
+    mp: 10, hit: 1, powerMul: 1.45, defPen: 0.55,
     cooldown: 0, effect: null, healPct: 0,
     desc: '正步出拳，堂堂正正。造成160%攻击伤害。官家武学之入门根基。',
     cost: { exp: 0 }, sect: 'imperial_court',
@@ -2548,9 +2548,9 @@ export const SKILLS: Record<SkillId, SkillData> = {
   court_authority_qi: {
     id: 'court_authority_qi', name: '官气诀', icon: '📜', type: 'passive', target: 'self',
     mp: 0, hit: 0, powerMul: 0, defPen: 0,
-    cooldown: 0, effect: { type: 'regen_mp', value: 5, duration: 99 },
+    cooldown: 0, effect: { type: 'regen_mp', value: 4, duration: 99 },
     healPct: 0,
-    desc: '【被动】官威化气，每回合恢复5点内力。身在庙堂，气运加身。',
+    desc: '【被动】官威化气，每回合恢复4点内力。身在庙堂，气运加身。',
     cost: { exp: 0 }, sect: 'imperial_court',
     battleTip: '被动·内力回复',
   },
@@ -2692,7 +2692,7 @@ export const SKILLS: Record<SkillId, SkillData> = {
   // ── 魔教 · 炼气期 ──
   demon_claw: {
     id: 'demon_claw', name: '暗月爪', icon: '🌑', type: 'attack', target: 'enemy',
-    mp: 9, hit: 1, powerMul: 1.65, defPen: 0.7,
+    mp: 10, hit: 1, powerMul: 1.5, defPen: 0.55,
     cooldown: 0, effect: null, healPct: 0,
     desc: '五指如钩，如暗月划空。造成165%攻击伤害。魔教入门杀招。',
     cost: { exp: 0 }, sect: 'demon',
@@ -2701,9 +2701,9 @@ export const SKILLS: Record<SkillId, SkillData> = {
   demon_heart: {
     id: 'demon_heart', name: '魔心诀', icon: '🖤', type: 'passive', target: 'self',
     mp: 0, hit: 0, powerMul: 0, defPen: 0,
-    cooldown: 0, effect: { type: 'regen_mp', value: 5, duration: 99 },
+    cooldown: 0, effect: { type: 'regen_mp', value: 4, duration: 99 },
     healPct: 0,
-    desc: '【被动】魔心暗种，每回合恢复5点内力。魔道根基，以心入武。',
+    desc: '【被动】魔心暗种，每回合恢复4点内力。魔道根基，以心入武。',
     cost: { exp: 0 }, sect: 'demon',
     battleTip: '被动·内力回复',
   },
@@ -2807,7 +2807,7 @@ export const SKILLS: Record<SkillId, SkillData> = {
   // ── 逍遥派 · 炼气期 ──
   xiaoyao_fist: {
     id: 'xiaoyao_fist', name: '凌波拳', icon: '🌊', type: 'attack', target: 'enemy',
-    mp: 9, hit: 1, powerMul: 1.6, defPen: 0.65,
+    mp: 10, hit: 1, powerMul: 1.45, defPen: 0.55,
     cooldown: 0, effect: null, healPct: 0,
     desc: '拳如波浪起伏，飘逸无常。造成160%攻击伤害。',
     cost: { exp: 0 }, sect: 'xiaoyao',
@@ -2816,9 +2816,9 @@ export const SKILLS: Record<SkillId, SkillData> = {
   xiaoyao_free_qi: {
     id: 'xiaoyao_free_qi', name: '逍遥气', icon: '🍃', type: 'passive', target: 'self',
     mp: 0, hit: 0, powerMul: 0, defPen: 0,
-    cooldown: 0, effect: { type: 'regen_mp', value: 5, duration: 99 },
+    cooldown: 0, effect: { type: 'regen_mp', value: 4, duration: 99 },
     healPct: 0,
-    desc: '【被动】逍遥天地，真气自生。每回合恢复5点内力。',
+    desc: '【被动】逍遥天地，真气自生。每回合恢复4点内力。',
     cost: { exp: 0 }, sect: 'xiaoyao',
     battleTip: '被动·内力回复',
   },

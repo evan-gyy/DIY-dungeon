@@ -1102,13 +1102,14 @@ function tickNpcPlayerInteraction(): NpcTickResult[] {
   const results: NpcTickResult[] = [];
 
   for (const npc of npcsAtLoc) {
-    if (Math.random() > 0.20) continue; // 20% 概率
+    if (Math.random() > 0.25) continue; // 25% 概率
 
     const aff = getNpcAffection(npc.id);
     const playerRelations = p.npcRelations?.[npc.id] ?? [];
     const isLover = playerRelations.includes('lover');
     const isStudent = playerRelations.includes('student');
     const isMaster = playerRelations.includes('master');
+    const npcPers = npc.personality ?? 'gentle';
 
     // 选择互动类型
     if (aff >= 60) {
@@ -1186,6 +1187,40 @@ function tickNpcPlayerInteraction(): NpcTickResult[] {
         outcome: '弟子请教',
         detail: `${npc.name}向你请教武学疑难，你耐心解答。师徒情谊加深。`,
       });
+    } else {
+      const neutralRoll = Math.random();
+      if (neutralRoll < 0.4) {
+        const affGain = (npcPers === 'kind' || npcPers === 'gentle') ? 2 : 1;
+        changeNpcAffection(npc.id, affGain);
+        results.push({
+          npcId: npc.id, npcName: npc.name, action: 'npc_interact',
+          outcome: '寒暄',
+          detail: npc.name + '与你打了个招呼，寒暄了几句。好感 +' + affGain,
+        });
+      } else if (neutralRoll < 0.7) {
+        const smallExp = Math.floor(Math.random() * 8) + 3;
+        setPlayer({ ...getPlayer(), exp: (getPlayer().exp ?? 0) + smallExp });
+        results.push({
+          npcId: npc.id, npcName: npc.name, action: 'npc_interact',
+          outcome: '闲聊',
+          detail: npc.name + '与你闲聊江湖琐事，你略有收获。经验 +' + smallExp,
+        });
+      } else if (neutralRoll < 0.9) {
+        changeNpcAffection(npc.id, 1);
+        results.push({
+          npcId: npc.id, npcName: npc.name, action: 'npc_interact',
+          outcome: '搭话',
+          detail: npc.name + '上前搭话：「道友可有闲暇切磋一二？」好感 +1',
+        });
+      } else {
+        const smallGold = Math.floor(Math.random() * 10) + 3;
+        setPlayer({ ...getPlayer(), gold: (getPlayer().gold ?? 0) + smallGold });
+        results.push({
+          npcId: npc.id, npcName: npc.name, action: 'npc_interact',
+          outcome: '小买卖',
+          detail: npc.name + '看中你身上的一件小物件，花 ' + smallGold + ' 铜钱买了下来。',
+        });
+      }
     }
   }
 

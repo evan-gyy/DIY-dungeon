@@ -33,7 +33,8 @@ import { SECTS } from '../data/sects';
 import { getRealmName } from '../state/LevelSystem';
 import { getNpcPortrait } from '../utils/npcPortrait';
 import type { CampTabId } from '../data/types';
-import type { DiscipleRank, NpcAssignment } from '../data/sandboxTypes';
+import type { DiscipleRank, NpcAssignment, SettlementAttributes } from '../data/sandboxTypes';
+import { getLocationRelation } from '../systems/SettlementActions';
 
 export function renderCampTopbar(): void {
   const p = getPlayer();
@@ -74,6 +75,106 @@ function getRankLabelText(rank: string): string {
     elder: '长老', vice_leader: '副掌门', leader: '掌门',
   };
   return labels[rank] ?? rank;
+}
+
+// ──── 据点信息（地图栏内嵌面板）────
+
+type SettlementStatKey2 = Exclude<keyof SettlementAttributes, 'cityRank'>;
+
+const SETTLEMENT_ATTR_LABELS2: Record<SettlementStatKey2, { icon: string; name: string }> = {
+  population:    { icon: '👥', name: '人口' },
+  prosperity:    { icon: '💰', name: '繁荣' },
+  commerce:      { icon: '🏪', name: '商业' },
+  agriculture:   { icon: '🌾', name: '农业' },
+  garrison:      { icon: '🛡️', name: '驻军' },
+  fortification: { icon: '🏰', name: '城防' },
+  publicOrder:   { icon: '⚖️', name: '治安' },
+  development:   { icon: '🔧', name: '开发' },
+  martialArts:   { icon: '🥋', name: '武学' },
+  academy:       { icon: '📚', name: '学术' },
+};
+
+function renderSettlementInfoInMapBar(locId: string): void {
+  const btn = document.getElementById('map-settlement-btn');
+  const panel = document.getElementById('camp-settlement-info');
+  if (!btn || !panel) return;
+
+  const p = getPlayer();
+  const state = (p.settlementState ?? {})[locId];
+  const isSandbox = p.gameMode === 'sandbox';
+
+  if (!isSandbox || !state) {
+    btn.style.display = 'none';
+    panel.style.display = 'none';
+    return;
+  }
+
+  btn.style.display = 'flex';
+  const loc = WORLD_MAP[locId as LocationId];
+  const locName = loc?.name ?? '未知';
+  const ctx = getLocationRelation(locId as LocationId);
+  const sectIcon = (SECTS as Record<string, { icon: string; name: string }>)[ctx.ownerFaction];
+  const isSect = isSectBase(locId as LocationId);
+
+  // 据点特色
+  let featureHtml = '';
+  if (isSect) {
+    const ma = state.martialArts ?? 0;
+    const ac = state.academy ?? 0;
+    if (ma >= 70) featureHtml += '<div style="color:#ffd700;">🥋 武学圣地：武学传承深厚，弟子习武事半功倍</div>';
+    else if (ma >= 40) featureHtml += '<div style="color:#e67e22;">⚔️ 习武之地：有一定的武学传承</div>';
+    if (ac >= 60) featureHtml += '<div style="color:#c39bd3;">📚 学术重镇：经藏丰富，学究辈出</div>';
+    else if (ac >= 30) featureHtml += '<div style="color:#85c1e9;">📖 书香之地：略有文风底蕴</div>';
+  } else {
+    const pop = state.population ?? 0;
+    const com = state.commerce ?? 0;
+    if (pop >= 60) featureHtml += '<div style="color:#27ae60;">🏙️ 繁华都会：人口稠密，商贾云集</div>';
+    else if (pop >= 30) featureHtml += '<div style="color:#f0b27a;">🏘️ 中等城镇：市井热闹，生活便利</div>';
+    if (com >= 60) featureHtml += '<div style="color:#c9a84c;">💎 商业枢纽：四方商路汇聚，物资丰富</div>';
+  }
+  if (!featureHtml) featureHtml = '<div style="color:var(--text-dim);">🏷️ 暂无显著特色</div>';
+
+  const attrBars = (Object.keys(SETTLEMENT_ATTR_LABELS2) as SettlementStatKey2[])
+    .map(k => {
+      const val = (state as unknown as Record<string, number>)[k] ?? 0;
+      const { icon, name } = SETTLEMENT_ATTR_LABELS2[k];
+      const barColor = val >= 70 ? 'linear-gradient(90deg,#27ae60,#2ecc71)'
+        : val >= 40 ? 'linear-gradient(90deg,#f39c12,#f0b27a)'
+        : 'linear-gradient(90deg,#e74c3c,#ef5350)';
+      return `<div class="settlement-attr-row">
+        <span class="settlement-attr-label">${icon} ${name}</span>
+        <div class="settlement-attr-bar"><div style="height:100%;width:${val}%;background:${barColor};border-radius:3px;"></div></div>
+        <span class="settlement-attr-val">${val}</span>
+      </div>`;
+    }).join('');
+
+  panel.innerHTML = `<div class="settlement-header">
+    <span class="settlement-header-icon">${isSect ? '🏯' : '🏙️'}</span>
+    <div>
+      <div class="settlement-header-name">${locName}</div>
+      <div class="settlement-header-desc">${loc?.description ?? ''}</div>
+    </div>
+  </div>
+  <div class="settlement-faction">
+    🏴 控制势力：${sectIcon ? `<span>${sectIcon.icon}</span>` : ''}
+    <span class="settlement-faction-owner">${ctx.ownerLabel}</span>
+  </div>
+  <div class="settlement-section-title">📊 据点属性</div>
+  ${attrBars}
+  <div class="settlement-section-title">🏷️ 据点特色</div>
+  <div class="settlement-feature">${featureHtml}</div>`;
+
+  // Toggle handler
+  const togglePanel = () => {
+    if (panel.style.display === 'none') {
+      panel.style.display = 'block';
+      btn.textContent = '▲';
+    } else {
+      panel.style.display = 'none';
+      btn.textContent = '📊';
+    }
+  };
+  btn.onclick = togglePanel;
 }
 
 /**
@@ -153,6 +254,9 @@ export function renderMapBar(): void {
   // 清空附近地点按钮（通过地图弹窗进行移动）
   const nearbyEl = document.getElementById('map-nearby-locations');
   if (nearbyEl) nearbyEl.innerHTML = '';
+
+  // ── 据点信息面板 ──
+  renderSettlementInfoInMapBar(locId);
 }
 
 /**

@@ -1,7 +1,7 @@
 # DIY-Dungeon 项目架构文档
 
 > 本文档面向开发者和 AI Agent，描述当前项目的完整架构、各模块职责，以及接下来的开发方向。
-> 最后更新：2026-05-21（v2.9 称号系统 + NPC寿命与死亡 + 势力AI增强：正邪交战/招降/招募指令/大势力加成 + 掌门管理面板）
+> 最后更新：2026-05-23（v2.8 NPC中立互动+交友可见性+游说登庸多因素说服系统）
 
 ---
 
@@ -64,10 +64,10 @@ DIY-dungeon/
 │   │   ├── StatusEffects.ts       applyStatus / tickStatus / getStatusValue
 │   │   ├── EnemyAI.ts             enemyTurn / weightedRandom / predictAction
 │   │   ├── TitleSystem.ts         🆕 称号系统（getActiveTitle / hasTitle / activateTitle / deactivateTitle / getTitleBonus）
-│   │   ├── NpcBehavior.ts         NPC 行为引擎（5级优先级：疗伤→修炼60%→社交15%→门派任务15%→移动10%，行为结果写入 recentLog，含阵营加权移动 + NPC间16种互动动作池）
+│   │   ├── NpcBehavior.ts         NPC 行为引擎（5级优先级：疗伤→修炼60%→社交15%→门派任务15%→移动10%，行为结果写入 recentLog，含阵营加权移动 + NPC间16种互动动作池 + 🆕 NPC主动互动玩家含中性好感互动）
 │   │   ├── NPCGenerator.ts        随机 NPC 生成器（门派中枢 + 城市游荡者 + 京城官员，三角金字塔 + 36天赋 + 天骄）
 │   │   ├── NPCInteraction.ts      NPC 互动（对话/切磋/送礼）
-│   │   ├── NPCManager.ts          NPC 槽位管理 / 指派任务
+│   │   ├── NPCManager.ts          NPC 槽位管理 / 指派任务 / 🆕 游说登庸多因素说服系统（势力实力+志向+性格+好感度）
 │   │   ├── ActionSystem.ts        🆕 数值闭环引擎（statExp累计+属性升级+成功率公式+世界闭环）
 │   │   ├── FactionAI.ts           🆕 势力议事引擎 v3（三轨指令：军务+江湖 + 朝廷属性亲和 + 随从加成/经验共享/参战 + 晋升判定 + statExp接入）
 │   │   ├── NpcRelationship.ts     🆕 NPC 间友好度系统（性格兼容矩阵 + 同门加成 + 关系标签：好友/仇敌）
@@ -94,10 +94,10 @@ DIY-dungeon/
 │   │   │   ├── AttrPanel.ts       属性面板（修为突破按钮 + 宗门身份 + 贡献值 + 晋升进度/试炼按钮）
 │   │   │   ├── BagPanel.ts        背包面板（24 格，使用道具）
 │   │   │   ├── SkillPanel.ts      技能装配面板
-│   │   │   ├── StoryPanel.ts      营地剧情面板（日常任务按地点动态读取 + 宗门习武入口 + 任务战斗按钮 + 沙盒 tick 调用）
+│   │   │   ├── StoryPanel.ts      营地剧情面板（日常任务按地点动态读取 + 宗门习武入口 + 任务战斗按钮 + 沙盒 tick 调用 + 🆕 政务任务属性经验预览+检定提示）
 │   │   │   ├── FabaoPanel.ts      法宝装备面板（三槽装备/卸下）
-│   │   │   ├── RelationPanel.ts   人物关系面板（可折叠分类 + 好感度 + 🆕 鬼谷八荒式横版 NPC 详情弹窗：左侧立绘+境界光效，右侧属性含宗门/朝廷身份）
-│   │   │   ├── MissionPanel.ts    任务面板（接取/追踪/完成/放弃，左侧常驻）
+│   │   │   ├── RelationPanel.ts   人物关系面板（可折叠分类 + 好感度 + 🆕 鬼谷八荒式横版 NPC 详情弹窗：左侧立绘+境界光效，右侧属性含宗门/朝廷身份 + NPC交友关系标签）
+│   │   │   ├── MissionPanel.ts    任务面板（接取/追踪/完成/放弃 + 🆕 属性经验成长预览，按轨道权重显示）
 │   │   │   ├── WorldPanel.ts      江湖态势面板（势力排行/SVG外交关系图/玩家外交行动/个人日志/宗门加入/世界推演）
 │   │   │   ├── CourtPanel.ts      朝廷面板（品阶/政务/影响力/文武双线）
 │   │   │   ├── SectPanel.ts        🆕 师门身份面板（势力四维+贡献进度+晋升路线图）
@@ -540,7 +540,7 @@ export function predictNextAction(enemy: BattleEnemyUnit): { icon: string; name:
 - 攻城战死亡：参战 NPC 2% 阵亡（玩家队友除外）
 - 人口上限 80 存活 NPC，低于上限时自动生成替补（Lv.1~3 散修）
 - 宗门季度纳新（每3月）：大中型宗门招收 1 名弟子，5% 天骄率
-- NPC 主动互动玩家：好感高 → 赠礼/情报/同行，好感低 → 挑衅/谣言
+- NPC 主动互动玩家：好感高 → 赠礼/情报/同行，好感低 → 挑衅/谣言，🆕 中性好感(-29~59) → 寒暄/闲聊/搭话/小买卖（25%概率，性格影响效果）
 
 ```typescript
 export function initNpcDatabase(): Record<string, NpcStats>   // 初始化 NPC 数据库（含初始位置+寿命计算）
@@ -1036,7 +1036,7 @@ export function openDialog(npcId: NpcId): void
 | 文件 | 职责 | 核心 API |
 |------|------|----------|
 | `PromotionSystem.ts` | 沙盒晋升逻辑 | `canPromote()`, `executePromotion()`, `getPromotionTrial()`, `getContributionProgress()` |
-| `MissionSystem.ts` | 任务系统引擎 | `acceptMission()`, `updateMissionProgress()`, `completeMission()`, `abandonMission()` |
+| `MissionSystem.ts` | 任务系统引擎 | `acceptMission()`, `updateMissionProgress()`, `completeMission()`, `abandonMission()`, 🆕 `baseExpForDifficulty()`（导出供 UI 层预览属性经验） |
 | `FactionSystem.ts` | 势力外交引擎 | `tickFactionDiplomacy()`, `getFactionRelation()`, `getFactionTrust()`, `getFactionAlignment()`, `playerDiplomaticAction()`, `getAllRelationsSnapshot()` |
 | `FactionAI.ts` | 🆕 势力议事引擎 v3 | `factionAITick()`, `factionCouncil()`, `claimBestDirective()`, `computeStatPercentile()`, `getFactionDirectives()`, `getNpcOfficial()`, `getFollowerCombatBonus()`, `getFollowerCourtBonus()`, `shareExpWithFollowers()`, `shareCombatGrowthWithFollowers()`, `getFollowerBattleParticipants()`, `tickFollowerDirectiveClaim()`, `getActiveDirectivesForPlayer()`，🆕 recruit 招募指令模板 |
 | `SectManagement.ts` | 门派经营+统一据点 | `initSectState()`, `updateSectState()`, `computeSectPower()`, `tickSectNaturalChange()`, **`initSettlements()`**, **`tickSettlements()`**, **`getSettlement()`**, **`getSectSettlement()`**, `updateSettlement()` |
@@ -1049,7 +1049,7 @@ export function openDialog(npcId: NpcId): void
 | `BreakthroughPill.ts` | 突破丹系统 | `useBreakthroughPill()`, `getAvailablePills()`, 丹药替代剧情解锁突破 |
 | `NPCGenerator.ts` | 随机 NPC 生成 | `generateSectNPCs()`, `generateCityNPCs()`, `generateCapitalNPCs()`, 门派性别规则 |
 | `NPCInteraction.ts` | NPC 互动 | `interactNpc()`, `giftToNpc()`, `sparWithNpc()` |
-| `NPCManager.ts` | NPC 管理 | `assignNpcToSlot()`, `getNpcBySlot()`, NPC 槽位分配 |
+| `NPCManager.ts` | NPC 管理 + 游说登庸 | `assignNpcToSlot()`, `getNpcBySlot()`, NPC 槽位分配，🆕 `canPersuadeNpc()`（多因素说服）/ `executePersuadeNpc()` |
 | `NpcRelationship.ts` | 🆕 NPC 间友好度 | `initAllNpcRelationships()`, `changeNpcAffection()`, `getAffectionTier()`, `getNpcNpcRelationTag()` |
 | `TitleSystem.ts` | 🆕 称号系统 | `getActiveTitle()`, `hasTitle()`, `activateTitle()`, `deactivateTitle()`, `getTitleBonus()` — 返回倍率加成（atkMul/defMul/agiMul/hpMul/mpMul/critBonus/cultivationMul） |
 | `FactionWarfare.ts` | 🆕 领土争夺 | `tryTriggerSiege()`, `playerJoinSiege()`, `resolveDelegatedSiege()`, 3波车轮战攻城 / 无主地占领 / 随从代战 / 领土控制 / 世界新闻 / 🆕 正邪交战概率翻倍 / 🆕 大势力战力加成（城数+资源+稳定度） / 🆕 领土易主时招降本地NPC |
@@ -1059,7 +1059,7 @@ export function openDialog(npcId: NpcId): void
 
 | 文件 | 对应 Tab | 功能 |
 |------|---------|------|
-| `MissionPanel.ts` | 📋 当前任务 | 任务列表（接取/追踪/完成/放弃），左侧常驻 |
+| `MissionPanel.ts` | 📋 当前任务 | 任务列表（接取/追踪/完成/放弃）+ 🆕 属性经验成长预览（`formatTrackStatGains` 按轨道权重计算） |
 | `WorldPanel.ts` | 🌏 江湖态势 | 势力排行+详情卡片+个人日志+宗门加入+推演按钮 |
 | `CourtPanel.ts` | 🏛️ 朝廷 | 品阶显示+政务行动+影响力进度+文武双线选择 |
 | `FabaoShopUI.ts` | 覆盖层弹窗 | 法器商店 UI（宗门店/城市店，按境界分组浏览购买） |
@@ -1543,6 +1543,12 @@ second_meet: {
     - **掌门管理面板**：`SectLeaderPanel.ts` 提供资源调配（资源→稳定度/繁荣度）、招生纳贤（招募外门/精英/随机弟子）、外交决策（宣战/求和/结盟）三大功能
 
 42. **🆕 NpcStats 缺省寿命处理**：`NPC_STATS_INIT` 类型为 `Omit<NpcStats, 'exp' | 'age' | 'maxAge' | 'isAlive'>`，手写 NPC 定义无需填写寿命字段——由 `initNpcDatabase()` 在初始化时根据 level 调用 `getMaxAgeForLevel()` 和 `getRandomInitialAge()` 自动计算。`NPCGenerator.ts` 的 `_generateNpc()` 同步产出寿命字段。`SectLeaderPanel.ts` 招募新 NPC 时也需赋值这三个字段。
+
+43. **🆕 NPC 中性互动（v2.8）**：`tickNpcPlayerInteraction()` 原先只对极端好感（≥60 或 ≤-30）或特殊关系 NPC 触发互动。现在新增 `else` 分支处理中性好感 NPC（-29~59，无道侣/师徒关系）：4 种互动类型（寒暄/闲聊/搭话/小买卖），触发概率 25%（原 20%）。性格影响：`kind`/`gentle` NPC 寒暄好感+2，其余+1。详见 `NpcBehavior.ts:1190-1224`。
+
+44. **🆕 NPC 交友可见性（v2.8）**：`RelationPanel.ts` 新增 `renderNpcSocialRelations()` 函数，遍历 `PlayerState.npcRelationship` 查找与当前 NPC 好感 ≥60（好友）或 ≤-60（仇敌）的其他 NPC，在 NPC 详情弹窗的"关系"区渲染彩色标签（蓝=好友，红=仇敌）。最多显示 4 好友 + 3 仇敌，超出显示"...等人"。`style.css` 新增 `.npc-social-*` 6 个 CSS 类。
+
+45. **🆕 玩家游说登庸多因素说服（v2.8）**：`NPCManager.ts` 新增 `canPersuadeNpc()` / `executePersuadeNpc()`。说服系统考虑四个维度：(1) 势力实力比 → `(ratio-1.0)×25` 钳制 [-20, 30]；(2) 志向-文化契合 → 每匹配 culture tag +8，钳制 [-25, 25]；(3) 性格权重 → 6种性格各有 powerWeight/affinityWeight/alignmentWeight，加权计算 personalityCompat；(4) 好感度 → `(affection-30)÷3.5` 上限 +20。总分 ≥10 成功。`RelationPanel.ts` 的推荐入宗按钮升级为"游说加入XX"，tooltip 显示各因素详情。
 
 ---
 

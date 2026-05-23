@@ -9,7 +9,8 @@
 
 import type { LocationId } from '../data/worldMap';
 import { WORLD_MAP } from '../data/worldMap';
-import type { SettlementAttributes, MissionTrack } from '../data/sandboxTypes';
+import type { SettlementAttributes, MissionTrack, CourtRank } from '../data/sandboxTypes';
+import { COURT_RANK_ORDER } from '../data/sandboxTypes';
 import { getPlayer, setPlayer } from '../state/GameState';
 import { saveGame } from '../state/SaveSystem';
 import { grantPlayerStatExp } from './ActionSystem';
@@ -117,6 +118,17 @@ export function getSettlementActions(locId: LocationId): SettlementAction[] {
 function clamp(v: number): number { return Math.max(0, Math.min(100, v)); }
 function randDelta(): number { return Math.floor(Math.random() * 4) + 1; } // 1~4
 
+/** 朝廷品阶越高，据点开发获得的影响力越多（政绩显赫） */
+function getCourtRankMultiplier(courtRank: string): number {
+  const idx = (COURT_RANK_ORDER as string[]).indexOf(courtRank);
+  if (idx <= 0) return 1.0;          // 平民
+  if (idx <= 2) return 1.2;          // 秀才~举人
+  if (idx <= 3) return 1.5;          // 进士
+  if (idx <= 4) return 1.8;          // 翰林
+  if (idx <= 5) return 2.0;          // 尚书
+  return 2.5;                         // 宰相
+}
+
 function modifySettlement(locId: LocationId, changes: Partial<SettlementAttributes>): void {
   const p = getPlayer();
   const state = { ...(p.settlementState ?? {}) };
@@ -137,39 +149,53 @@ export function executeSettlementAction(actionId: string, locId: LocationId): st
   const locName = WORLD_MAP[locId]?.name ?? '此地';
   const delta = randDelta();
 
+  const courtMul = getCourtRankMultiplier(p.courtRank ?? 'commoner');
+  const influenceLabel = p.courtRank !== 'commoner' ? `📜影响力 +` : '';
+
   switch (actionId) {
-    // ── 开发 ──
+    // ── 开发（三国志式：内政即政绩，获得影响力）──
     case 'dev_agriculture': {
       modifySettlement(locId, { agriculture: delta, development: 1 });
+      const infGain = Math.round((delta * 3 + 3) * courtMul);
+      setPlayer({ ...getPlayer(), influence: (getPlayer().influence ?? 0) + infGain });
       grantPlayerStatExp({ combat: {}, court: { strategy: delta * 5, scholarship: delta * 3 } });
-      return `🌾 农业开发完成！${locName}的农业 +${delta}。`;
+      return `🌾 农业开发完成！${locName}的农业 +${delta}，影响力 +${infGain}。`;
     }
     case 'dev_commerce': {
       modifySettlement(locId, { commerce: delta, prosperity: 1 });
       const goldEarned = delta * 8 + 10;
-      setPlayer({ ...getPlayer(), gold: getPlayer().gold + goldEarned });
+      const infGain = Math.round((delta * 3 + 4) * courtMul);
+      setPlayer({ ...getPlayer(), gold: getPlayer().gold + goldEarned, influence: (getPlayer().influence ?? 0) + infGain });
       grantPlayerStatExp({ combat: {}, court: { charisma: delta * 4, scholarship: delta * 3 } });
-      return `🏪 商业投资完成！${locName}的商业 +${delta}，赚得 ${goldEarned} 铜钱。`;
+      return `🏪 商业投资完成！${locName}的商业 +${delta}，赚得 ${goldEarned} 铜钱，影响力 +${infGain}。`;
     }
     case 'dev_fortify': {
       modifySettlement(locId, { fortification: delta, development: 1 });
+      const infGain = Math.round((delta * 4 + 3) * courtMul);
+      setPlayer({ ...getPlayer(), influence: (getPlayer().influence ?? 0) + infGain });
       grantPlayerStatExp({ combat: { def: delta * 4 }, court: { strategy: delta * 5 } });
-      return `🏰 城墙修筑完成！${locName}的城防 +${delta}。`;
+      return `🏰 城墙修筑完成！${locName}的城防 +${delta}，影响力 +${infGain}。`;
     }
     case 'dev_garrison': {
       modifySettlement(locId, { garrison: delta, publicOrder: 1 });
+      const infGain = Math.round((delta * 4 + 3) * courtMul);
+      setPlayer({ ...getPlayer(), influence: (getPlayer().influence ?? 0) + infGain });
       grantPlayerStatExp({ combat: { atk: delta * 4, def: delta * 3 }, court: { strategy: delta * 3 } });
-      return `🛡️ 守军操练完成！${locName}的驻军 +${delta}。`;
+      return `🛡️ 守军操练完成！${locName}的驻军 +${delta}，影响力 +${infGain}。`;
     }
     case 'dev_academy': {
       modifySettlement(locId, { academy: delta, development: 1 });
+      const infGain = Math.round((delta * 3 + 3) * courtMul);
+      setPlayer({ ...getPlayer(), influence: (getPlayer().influence ?? 0) + infGain });
       grantPlayerStatExp({ combat: {}, court: { scholarship: delta * 7 } });
-      return `📚 学堂兴办完成！${locName}的学术 +${delta}。`;
+      return `📚 学堂兴办完成！${locName}的学术 +${delta}，影响力 +${infGain}。`;
     }
     case 'dev_population': {
       modifySettlement(locId, { population: delta, publicOrder: -1 });
+      const infGain = Math.round((delta * 3 + 4) * courtMul);
+      setPlayer({ ...getPlayer(), influence: (getPlayer().influence ?? 0) + infGain });
       grantPlayerStatExp({ combat: {}, court: { charisma: delta * 5, eloquence: delta * 3 } });
-      return `👥 流民招募完成！${locName}的人口 +${delta}。`;
+      return `👥 流民招募完成！${locName}的人口 +${delta}，影响力 +${infGain}。`;
     }
 
     // ── 破坏 ──

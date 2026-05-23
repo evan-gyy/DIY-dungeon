@@ -573,6 +573,25 @@ export const COURT_PROMOTION_REQUIREMENTS: Partial<Record<CourtRank, CourtPromot
 };
 
 /**
+ * 朝廷品阶基础属性（晋升即获得属性保底）。
+ *
+ * 设计理念（太阁立志传V灵感）：
+ * - 每个朝廷品阶对应一个"身份能力基准值"
+ * - 晋升后属性至少达到此基准（若经验值已超过，则取经验值）
+ * - 有效属性 = max(品阶基准, 经验成长值)
+ * - 这与战斗系统的境界基础属性（REALM_BASE_STATS）形成对称设计
+ */
+export const COURT_RANK_BASE_STATS: Record<CourtRank, CourtStats> = {
+  commoner:  { strategy: 10, eloquence: 10, charisma: 10, scholarship: 10 },
+  xiucai:    { strategy: 15, eloquence: 18, charisma: 15, scholarship: 18 },
+  juren:     { strategy: 22, eloquence: 28, charisma: 22, scholarship: 28 },
+  jinshi:    { strategy: 30, eloquence: 38, charisma: 30, scholarship: 38 },
+  hanlin:    { strategy: 40, eloquence: 50, charisma: 40, scholarship: 50 },
+  shangshu:  { strategy: 52, eloquence: 62, charisma: 52, scholarship: 62 },
+  zaixiang:  { strategy: 65, eloquence: 78, charisma: 65, scholarship: 78 },
+};
+
+/**
  * 分心惩罚配置
  *
  * 鱼与熊掌不可兼得：

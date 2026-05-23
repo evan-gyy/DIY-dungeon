@@ -75,7 +75,7 @@ window.addEventListener('DOMContentLoaded', () => {
   document.getElementById('audio-control')?.addEventListener('click', () => {
     const enabled = toggleAudio();
     const el = document.getElementById('audio-control');
-    if (el) el.textContent = enabled ? '♪ 音乐' : '♪ 静音';
+    if (el) { el.textContent = enabled ? '♪' : '🔇'; el.title = enabled ? '音乐：开' : '音乐：关'; }
   });
 
   // ── Autoplay BGM ──

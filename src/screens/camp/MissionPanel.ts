@@ -17,9 +17,10 @@ import {
   getMissionTypeIcon,
   getDifficultyLabel,
   TRACK_CONFIG,
+  baseExpForDifficulty,
 } from '../../systems/MissionSystem';
 import type { MissionTrack } from '../../data/sandboxTypes';
-import { MAX_ACTIVE_MISSIONS } from '../../data/sandboxTypes';
+import { MAX_ACTIVE_MISSIONS, COMBAT_STAT_LABEL, COURT_STAT_LABEL } from '../../data/sandboxTypes';
 import { showCareerPathScreen } from './CareerPathScreen';
 import {
   getAvailablePlayerDirectives,
@@ -29,6 +30,33 @@ import {
 } from '../../systems/FactionAI';
 
 let showAvailablePanel = false;
+
+/** 根据轨道配置生成属性成长提示 */
+function formatTrackStatGains(track: MissionTrack, difficulty: string): string {
+  const cfg = TRACK_CONFIG[track] ?? TRACK_CONFIG['universal'];
+  const baseExp = baseExpForDifficulty(difficulty);
+  const parts: string[] = [];
+
+  // 战斗属性
+  for (const [stat, weight] of Object.entries(cfg.combatWeights)) {
+    if (weight > 0) {
+      const exp = Math.round(baseExp * weight);
+      const label = (COMBAT_STAT_LABEL as Record<string, string>)[stat] ?? stat;
+      parts.push(`${label}+${exp}`);
+    }
+  }
+  // 朝廷属性
+  for (const [stat, weight] of Object.entries(cfg.courtWeights)) {
+    if (weight > 0) {
+      const exp = Math.round(baseExp * weight);
+      const label = (COURT_STAT_LABEL as Record<string, string>)[stat] ?? stat;
+      parts.push(`${label}+${exp}`);
+    }
+  }
+
+  if (parts.length === 0) return '';
+  return `<div style="font-size:10px;color:#c39bd3;margin-top:3px;">📈 属性成长：${parts.join(' · ')}</div>`;
+}
 
 /**
  * 渲染宗门任务面板到 content 容器。
@@ -175,6 +203,7 @@ export function renderMissionPanel(container: HTMLElement): void {
         </div>
         <div class="mission-rewards">
           奖励：${currencyLabel}${currencyLabel ? ' · ' : ''}✨经验+${def.rewardExp} · 💰${def.rewardGold}两
+          ${formatTrackStatGains(def.track, def.difficulty)}
         </div>
         <div class="mission-actions">
           ${canComplete
@@ -276,6 +305,7 @@ function renderAvailableList(): void {
       <div class="mission-desc">${def.description}</div>
       <div class="mission-rewards">
         奖励：${currencyLabel}${currencyLabel ? ' · ' : ''}✨经验+${def.rewardExp} · 💰${def.rewardGold}两
+        ${formatTrackStatGains(def.track, def.difficulty)}
       </div>
       <div class="mission-actions">
         <button class="mission-btn accept" data-action="accept" data-defid="${def.id}">✅ 接取</button>

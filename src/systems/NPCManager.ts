@@ -25,6 +25,7 @@ import {
   RECRUIT_RANK_CAP,
   RECOMMEND_MIN_AFFECTION,
   RECRUIT_MIN_AFFECTION,
+  FACTION_DEFS,
 } from '../data/sandboxTypes';
 
 // ──── 辅助函数 ────
@@ -391,6 +392,167 @@ export function executeRecruitUnaffiliated(
   const maxSlots = getMaxRecruitSlots(player.discipleRank as DiscipleRank);
   const assignments = { ...player.npcCollection.assignments, [npc.id]: 'idle' };
   const assignmentTargets = { ...player.npcCollection.assignmentTargets };
+
+  return { npc: updatedNpc, recruited, maxSlots, assignments, assignmentTargets };
+}
+
+// ──── 游说登庸（增强版 NPC 招募） ────
+
+/**
+ * 游说登庸——从其他势力挖角 NPC。
+ * 多因素说服系统：势力实力差异 + 志向契合 + 性格相性 + 好感度。
+ */
+export interface PersuasionResult {
+  success: boolean;
+  factors: PersuasionFactors;
+  message: string;
+}
+
+export interface PersuasionFactors {
+  factionPowerBonus: number;
+  ambitionAlignment: number;
+  personalityCompat: number;
+  affectionBonus: number;
+  totalScore: number;
+  threshold: number;
+  detail: string;
+}
+
+/** 志向对势力文化的偏好映射 */
+const AMBITION_CULTURE_PREF: Record<string, string[]> = {
+  content:  ['taoist', 'buddhist', 'inner-peace', 'peaceful', 'carefree', 'ascetic'],
+  master:   ['sword', 'fist', 'blade', 'palm', 'inner-alchemy', 'talisman'],
+  power:    ['power', 'elite', 'imperial', 'forbidden', 'clan', 'moon', 'shadow'],
+  rebel:    ['rebel', 'restoration', 'loyalty', 'frontier'],
+  avenger:  ['shadow', 'forbidden', 'blood', 'poison', 'chaos', 'slaughter', 'gu-magic'],
+};
+
+/** 性格对游说诉求的偏好 */
+const PERSONALITY_PERSUASION_WEIGHT: Record<string, { powerWeight: number; affinityWeight: number; alignmentWeight: number }> = {
+  upright:  { powerWeight: 0.2, affinityWeight: 0.3, alignmentWeight: 0.5 },
+  cunning:  { powerWeight: 0.5, affinityWeight: 0.1, alignmentWeight: 0.4 },
+  bold:     { powerWeight: 0.4, affinityWeight: 0.2, alignmentWeight: 0.4 },
+  kind:     { powerWeight: 0.1, affinityWeight: 0.6, alignmentWeight: 0.3 },
+  gentle:   { powerWeight: 0.15, affinityWeight: 0.5, alignmentWeight: 0.35 },
+  aloof:    { powerWeight: 0.3, affinityWeight: 0.0, alignmentWeight: 0.7 },
+};
+
+/**
+ * 计算游说登庸的成功概率。
+ * 考虑四个维度：势力实力、志向契合、性格相性、好感度。
+ */
+export function canPersuadeNpc(
+  player: PlayerState,
+  npc: NpcStats,
+  affection: number,
+): PersuasionResult {
+  // ── 1. 势力实力差异 ──
+  const playerSectPower = player.sectPower?.[player.sect] ?? 50;
+  const npcSectPower = player.sectPower?.[npc.sect] ?? 50;
+  const powerRatio = npcSectPower > 0 ? playerSectPower / npcSectPower : 2.0;
+  const factionPowerBonus = Math.min(30, Math.max(-20, Math.floor((powerRatio - 1.0) * 25)));
+
+  // ── 2. 志向-势力文化契合 ──
+  const ambition = npc.ambition ?? 'content';
+  const preferredCultures = AMBITION_CULTURE_PREF[ambition] ?? [];
+  const playerSectCultures = FACTION_DEFS[player.sect]?.culture ?? [];
+  const npcSectCultures = FACTION_DEFS[npc.sect]?.culture ?? [];
+  // 玩家势力与 NPC 志向的契合度
+  const playerCultureMatch = preferredCultures.filter(c => playerSectCultures.includes(c)).length;
+  const npcCultureMatch = preferredCultures.filter(c => npcSectCultures.includes(c)).length;
+  const ambitionAlignment = Math.min(25, Math.max(-25, (playerCultureMatch - npcCultureMatch) * 8));
+
+  // ── 3. 性格相性 ──
+  const personality = npc.personality ?? 'gentle';
+  const _pw = PERSONALITY_PERSUASION_WEIGHT;
+  const weights = _pw[personality] ?? { powerWeight: 0.15, affinityWeight: 0.5, alignmentWeight: 0.35 };
+  const playerAlignment = FACTION_DEFS[player.sect]?.alignment ?? 'neutral';
+  const npcAlignment = FACTION_DEFS[npc.sect]?.alignment ?? 'neutral';
+  // 正邪匹配：upright 性格重视 alignment
+  let alignmentMatch = 0;
+  if (playerAlignment === npcAlignment) alignmentMatch = 0;
+  else if (playerAlignment === 'righteous' && npcAlignment === 'chaotic') alignmentMatch = -15;
+  else if (playerAlignment === 'chaotic' && npcAlignment === 'righteous') alignmentMatch = -15;
+  else alignmentMatch = 0; // neutral with anything is neutral
+  const alignmentScore = alignmentMatch * weights.alignmentWeight;
+  const powerScore = factionPowerBonus * weights.powerWeight;
+  const affinityScore = Math.floor(affection / 100 * 25) * weights.affinityWeight;
+  const personalityCompat = Math.floor(powerScore + alignmentScore + affinityScore);
+
+  // ── 4. 好感度加成 ──
+  const affectionBonus = Math.floor(Math.min(20, (affection - 30) / 3.5));
+
+  // ── 5. 综合判定 ──
+  const totalScore = factionPowerBonus + ambitionAlignment + personalityCompat + affectionBonus;
+  const threshold = 10; // 基础阈值
+
+  const success = totalScore >= threshold;
+
+  const detailParts: string[] = [];
+  if (factionPowerBonus > 0) detailParts.push(`我方势力更强 (+${factionPowerBonus})`);
+  else if (factionPowerBonus < 0) detailParts.push(`对方势力更强 (${factionPowerBonus})`);
+  if (ambitionAlignment > 0) detailParts.push(`志向契合 (+${ambitionAlignment})`);
+  else if (ambitionAlignment < 0) detailParts.push(`志向不合 (${ambitionAlignment})`);
+  if (personalityCompat > 0) detailParts.push(`性格相投 (+${personalityCompat})`);
+  else if (personalityCompat < 0) detailParts.push(`性格不合 (${personalityCompat})`);
+  if (affectionBonus > 0) detailParts.push(`好感加成 (+${affectionBonus})`);
+
+  let message: string;
+  if (success) {
+    message = `游说成功！${npc.name}同意加入${getSectName(player.sect)}。`;
+  } else {
+    message = `游说失败。${npc.name}婉拒了你的邀请。（总分 ${totalScore}，需 ≥ ${threshold}）`;
+  }
+
+  return {
+    success,
+    message,
+    factors: {
+      factionPowerBonus,
+      ambitionAlignment,
+      personalityCompat,
+      affectionBonus,
+      totalScore,
+      threshold,
+      detail: detailParts.join(' | ') || '势均力敌，无明显优劣',
+    },
+  };
+}
+
+/**
+ * 执行游说登庸：NPC 加入玩家宗门，可选是否成为随从。
+ */
+export function executePersuadeNpc(
+  player: PlayerState,
+  npc: NpcStats,
+  asFollower: boolean,
+): { npc: NpcStats; recruited: string[]; maxSlots: number; assignments: Record<string, string>; assignmentTargets: Record<string, string> } {
+  const updatedNpc: NpcStats = {
+    ...npc,
+    sect: player.sect,
+    discipleRank: 'outer',
+    currentLocationId: player.currentLocationId,
+  };
+
+  const newAff = Math.min(100, Math.max(-100, npc.sect !== player.sect ? -10 : 0));
+  // Note: affection adjustment handled by caller via changeNpcAffection
+
+  let recruited: string[];
+  let maxSlots: number;
+  let assignments: Record<string, string>;
+  let assignmentTargets: Record<string, string>;
+
+  if (asFollower) {
+    recruited = [...player.npcCollection.recruited, npc.id];
+    maxSlots = getMaxRecruitSlots(player.discipleRank as DiscipleRank);
+    assignments = { ...player.npcCollection.assignments, [npc.id]: 'idle' };
+    assignmentTargets = { ...player.npcCollection.assignmentTargets };
+  } else {
+    recruited = player.npcCollection.recruited;
+    maxSlots = getMaxRecruitSlots(player.discipleRank as DiscipleRank);
+    assignments = { ...player.npcCollection.assignments };
+    assignmentTargets = { ...player.npcCollection.assignmentTargets };
+  }
 
   return { npc: updatedNpc, recruited, maxSlots, assignments, assignmentTargets };
 }

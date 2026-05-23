@@ -15,11 +15,12 @@ import { tickFactionDiplomacy } from '../../systems/FactionSystem';
 import { tickWorldState, contributeToFaction, addChronicleEntry, joinSect } from '../../systems/WorldState';
 import { tryTriggerEncounter } from '../../systems/EncounterSystem';
 import { getActiveDirectivesForPlayer, type ActiveDirectiveView } from '../../systems/FactionAI';
-import type { DiscipleRank } from '../../data/sandboxTypes';
+import type { DiscipleRank, SettlementAttributes } from '../../data/sandboxTypes';
 import { COURT_RANK_ORDER, COURT_RANK_LABEL, DIRECTIVE_LABEL, COMBAT_STAT_LABEL, COURT_STAT_LABEL, type CourtRank, type FactionDirectiveType } from '../../data/sandboxTypes';
 import type { CampScene } from '../../data/chapters/types';
 import type { SkillId } from '../../data/types';
 import { grantPlayerStatExp } from '../../systems/ActionSystem';
+import { getEffectiveCourtStats } from '../../systems/CourtSystem';
 import { getStealTargetAtLocation, canAttemptSteal } from '../../systems/StealSkillSystem';
 import { getAvailableBounties, acceptBounty, abandonBounty, checkBountyCompletion, getDifficultyLabel, completeBounty } from '../../systems/BountySystem';
 import { checkCoupEligibility, executeCoup, completeCoupBattle } from '../../systems/PlayerUsurpation';
@@ -36,11 +37,19 @@ function withRankSync(player: ReturnType<typeof getPlayer>, newRank: DiscipleRan
 }
 
 /** 共通奖励结算 + 回合推进（非战斗/非政务任务的快捷路径，以及战斗/政务成功后的回调） */
-function applyTaskRewards(action: LocationAction, rewardMul: number = 1): void {
+function applyTaskRewards(action: LocationAction, rewardMul: number = 1, courtDc: number = 10, testedStat?: keyof typeof COURT_STAT_LABEL): void {
   const p = getPlayer();
+  const locId = p.currentLocationId ?? 'wudang_mountain';
+  const settlement = (p.settlementState ?? {})[locId];
+
+  // 武学圣地加成：据点武学值越高，修炼效率越高
+  const ma = settlement?.martialArts ?? 0;
+  const locationBonus = ma >= 85 ? 2.0 : ma >= 70 ? 1.5 : ma >= 40 ? 1.15 : 1.0;
+  const totalMul = rewardMul * locationBonus;
+
   const contrib = Math.floor((action.contribution ?? 0) * rewardMul);
   const influenceGain = Math.floor((action.influence ?? 0) * rewardMul);
-  const expGain = Math.floor(action.exp * rewardMul);
+  const expGain = Math.floor(action.exp * totalMul);
   const goldGain = Math.floor(action.gold * rewardMul);
 
   const updated = {
@@ -59,15 +68,25 @@ function applyTaskRewards(action: LocationAction, rewardMul: number = 1): void {
   const hasBattle = !!action.battleConfig;
   const hasCourt = !!action.courtConfig;
   if (hasCourt) {
-    // 政务任务：侧重朝廷四维成长
-    const baseExp = Math.round(10 * 5 * rewardMul);
+    // 政务任务：经验值与任务难度（DC）挂钩
+    // DC越高 → 经验越多。公式: dc * 20 * rewardMul
+    // 例如 DC10 成功 = 200 exp/主属性，DC20 = 400 exp/主属性
+    const baseExp = Math.round(courtDc * 20 * rewardMul);
+    // 检定属性获得全额经验，其他属性获得 40% 经验
+    const offExp = Math.round(baseExp * 0.4);
+    const courtExp: Record<string, number> = {
+      strategy: offExp, eloquence: offExp, charisma: offExp, scholarship: offExp,
+    };
+    if (testedStat && courtExp[testedStat] !== undefined) {
+      courtExp[testedStat] = baseExp;
+    }
     const levelUps = grantPlayerStatExp({
       combat: {},
       court: {
-        strategy: baseExp,
-        eloquence: baseExp,
-        charisma: baseExp,
-        scholarship: baseExp,
+        strategy: courtExp.strategy ?? offExp,
+        eloquence: courtExp.eloquence ?? offExp,
+        charisma: courtExp.charisma ?? offExp,
+        scholarship: courtExp.scholarship ?? offExp,
       },
     });
     if (levelUps.court.length > 0) {
@@ -77,10 +96,10 @@ function applyTaskRewards(action: LocationAction, rewardMul: number = 1): void {
       }, 800);
     }
   } else if (hasBattle) {
-    // 战斗任务：侧重战斗属性成长
+    // 战斗任务：侧重战斗属性成长，武学圣地加成
     const diffMap: Record<string, number> = { easy: 5, normal: 10, hard: 15 };
     const diffNum = diffMap[action.battleConfig!.difficulty] ?? 10;
-    const baseExp = Math.round(diffNum * 5 * rewardMul);
+    const baseExp = Math.round(diffNum * 5 * totalMul);
     const levelUps = grantPlayerStatExp({
       combat: { atk: baseExp, def: baseExp, agi: baseExp, crit: baseExp },
       court: {},
@@ -92,12 +111,21 @@ function applyTaskRewards(action: LocationAction, rewardMul: number = 1): void {
       }, 800);
     }
   } else {
-    // 普通日常：微量双修经验
-    const baseExp = Math.round(3 * rewardMul);
+    // 普通日常：微量双修经验，武学圣地加成
+    const baseExp = Math.round(3 * totalMul);
     grantPlayerStatExp({
       combat: { atk: baseExp, def: baseExp, agi: baseExp, crit: baseExp },
       court: { strategy: Math.round(baseExp / 2), eloquence: Math.round(baseExp / 2), charisma: Math.round(baseExp / 2), scholarship: Math.round(baseExp / 2) },
     });
+  }
+
+  // 武学圣地加成提示
+  if (locationBonus > 1.0) {
+    const locName = WORLD_MAP[locId]?.name ?? '此地';
+    const bonusHint = locationBonus >= 2.0 ? `🔥 ${locName}武学通天，修行效率×2！`
+      : locationBonus >= 1.5 ? `⚔️ ${locName}武学圣地，修行事半功倍！`
+      : `📖 ${locName}尚武之风，修行略有助益。`;
+    setTimeout(() => showToast(bonusHint), 1200);
   }
 
   // 重新获取更新后的 player（因为 grantPlayerStatExp 已经 setPlayer 了）
@@ -356,6 +384,98 @@ function getLocationContext(locId: LocationId): {
   return { relation: 'neutral', ownerLabel: `中立·${ownerName}`, ownerFaction: owner };
 }
 
+// ──── 据点信息面板 ────
+
+type SettlementStatKey = Exclude<keyof SettlementAttributes, 'cityRank'>;
+
+const SETTLEMENT_ATTR_LABELS: Record<SettlementStatKey, { icon: string; name: string }> = {
+  population:    { icon: '👥', name: '人口' },
+  prosperity:    { icon: '💰', name: '繁荣' },
+  commerce:      { icon: '🏪', name: '商业' },
+  agriculture:   { icon: '🌾', name: '农业' },
+  garrison:      { icon: '🛡️', name: '驻军' },
+  fortification: { icon: '🏰', name: '城防' },
+  publicOrder:   { icon: '⚖️', name: '治安' },
+  development:   { icon: '🔧', name: '开发' },
+  martialArts:   { icon: '🥋', name: '武学' },
+  academy:       { icon: '📚', name: '学术' },
+};
+
+import { SECTS } from '../../data/sects';
+
+function renderSettlementInfo(locId: string): string {
+  const p = getPlayer();
+  const state = (p.settlementState ?? {})[locId];
+  const ctx = getLocationContext(locId as LocationId);
+  const loc = WORLD_MAP[locId as LocationId];
+  const locName = loc?.name ?? '未知';
+  const sectIcon = (SECTS as Record<string, { icon: string; name: string }>)[ctx.ownerFaction];
+
+  // 据点特色描述
+  const isSect = isSectBase(locId as LocationId);
+  let featureHtml = '';
+  if (isSect && state) {
+    const ma = state.martialArts ?? 0;
+    const ac = state.academy ?? 0;
+    if (ma >= 70) featureHtml += '<div style="color:#ffd700;">🥋 武学圣地：武学传承深厚，弟子习武事半功倍</div>';
+    else if (ma >= 40) featureHtml += '<div style="color:#e67e22;">⚔️ 习武之地：有一定的武学传承</div>';
+    if (ac >= 60) featureHtml += '<div style="color:#c39bd3;">📚 学术重镇：经藏丰富，学究辈出</div>';
+    else if (ac >= 30) featureHtml += '<div style="color:#85c1e9;">📖 书香之地：略有文风底蕴</div>';
+  } else if (!isSect && state) {
+    const pop = state.population ?? 0;
+    const com = state.commerce ?? 0;
+    if (pop >= 60) featureHtml += '<div style="color:#27ae60;">🏙️ 繁华都会：人口稠密，商贾云集</div>';
+    else if (pop >= 30) featureHtml += '<div style="color:#f0b27a;">🏘️ 中等城镇：市井热闹，生活便利</div>';
+    if (com >= 60) featureHtml += '<div style="color:#c9a84c;">💎 商业枢纽：四方商路汇聚，物资丰富</div>';
+  }
+  if (!featureHtml) featureHtml = '<div style="color:var(--text-dim);">🏷️ 暂无显著特色</div>';
+
+  if (!state) {
+    return `<div id="settlement-info-panel" style="margin-bottom:10px;padding:12px 16px;background:rgba(255,255,255,0.02);border:1px solid var(--border-dim);border-radius:6px;">
+      <div style="font-size:11px;color:var(--text-dim);text-align:center;">📊 ${locName}据点数据尚未初始化</div>
+    </div>`;
+  }
+
+  const attrBars = (Object.keys(SETTLEMENT_ATTR_LABELS) as SettlementStatKey[])
+    .map(k => {
+      const val = (state as unknown as Record<string, number>)[k] ?? 0;
+      const { icon, name } = SETTLEMENT_ATTR_LABELS[k];
+      const barColor = val >= 70 ? 'linear-gradient(90deg,#27ae60,#2ecc71)'
+        : val >= 40 ? 'linear-gradient(90deg,#f39c12,#f0b27a)'
+        : 'linear-gradient(90deg,#e74c3c,#ef5350)';
+      return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;font-size:10px;">
+        <span style="width:48px;text-align:right;color:var(--text-dim);">${icon} ${name}</span>
+        <div style="flex:1;height:8px;background:#1a1a2e;border-radius:4px;overflow:hidden;">
+          <div style="height:100%;width:${val}%;background:${barColor};border-radius:4px;"></div>
+        </div>
+        <span style="width:24px;text-align:right;color:var(--text-dim);">${val}</span>
+      </div>`;
+    }).join('');
+
+  return `<div id="settlement-info-panel" style="margin-bottom:10px;padding:12px 16px;background:rgba(255,255,255,0.03);border:1px solid var(--border-dim);border-radius:6px;animation:fadeSlideUp 0.2s ease-out;">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+      <span style="font-size:16px;">${isSect ? '🏯' : '🏙️'}</span>
+      <div>
+        <div style="font-size:13px;color:var(--text-gold);letter-spacing:1px;">${locName}</div>
+        <div style="font-size:10px;color:var(--text-dim);">${loc?.description ?? ''}</div>
+      </div>
+    </div>
+    <div style="margin-bottom:8px;font-size:10px;">
+      <span style="color:var(--text-dim);">🏴 控制势力：</span>
+      ${sectIcon ? `<span>${sectIcon.icon}</span>` : ''}
+      <span style="color:#c39bd3;">${ctx.ownerLabel}</span>
+    </div>
+    <div style="margin-bottom:8px;">
+      <div style="font-size:10px;color:var(--text-dim);letter-spacing:1px;margin-bottom:4px;">📊 据点属性</div>
+      ${attrBars}
+    </div>
+    <div style="font-size:10px;line-height:1.6;">
+      <div style="color:var(--text-dim);letter-spacing:1px;margin-bottom:2px;">🏷️ 据点特色</div>
+      ${featureHtml}
+    </div>
+  </div>`;
+}
+
 function renderDailyTasks(): string {
   const p = getPlayer();
   const isSandbox = p.gameMode === 'sandbox';
@@ -431,6 +551,14 @@ function renderDailyTasks(): string {
       : 'universal';
     const trackLabel = track === 'jianghu' ? '🏮江湖' : track === 'court_wen' ? '📜文官' : track === 'court_wu' ? '⚔️武官' : '📋通用';
     const trackTag = `<span class="mission-track track-${track}">${trackLabel}</span>`;
+
+    // 政务任务：显示可检定属性提示
+    let courtStatHint = '';
+    if (t.courtConfig) {
+      const statNames = [...new Set(t.courtConfig.choices.map(c => COURT_STAT_LABEL[c.stat] ?? c.stat))];
+      courtStatHint = `<div class="daily-task-court-hint" style="font-size:10px;color:#c39bd3;margin-top:2px;">🔍 可检定：${statNames.join(' / ')}</div>`;
+    }
+
     const rewardHtml = isShop
       ? '<div class="daily-task-reward" style="color:var(--text-gold);">进入 →</div>'
       : '<div class="daily-task-reward">' +
@@ -445,6 +573,7 @@ function renderDailyTasks(): string {
       '<div class="daily-task-name">' + t.name + '</div>' +
       '<div class="daily-task-desc">' + t.desc + '</div>' +
       '<div class="daily-task-meta">' + trackTag + '</div>' +
+      courtStatHint +
       '</div>' +
       rewardHtml +
       '</button>';
@@ -637,7 +766,9 @@ function renderDailyTasks(): string {
   }
 
   return `<div class="daily-tasks-section">
-    <div class="daily-tasks-header">📋 行走江湖 · ${location?.name ?? '未知'} ${ctxLabel}</div>
+    <div class="daily-tasks-header">
+      📋 行走江湖 · ${location?.name ?? '未知'} ${ctxLabel}
+    </div>
     <div class="daily-tasks-grid">${availableHtml}${lockedHtml}</div>
   </div>${settlementHtml}${coupHtml}${stealHtml}${bountyHtml}${missionFightSection}`;
 }
@@ -922,7 +1053,19 @@ function showCourtTaskDialog(action: LocationAction): void {
   document.getElementById('court-task-overlay')?.remove();
 
   const p = getPlayer();
-  const courtStats = p.courtStats ?? { strategy: 10, eloquence: 10, charisma: 10, scholarship: 10 };
+  const courtStats = getEffectiveCourtStats(p);
+  const allStatKeys: (keyof typeof COURT_STAT_LABEL)[] = ['strategy', 'eloquence', 'charisma', 'scholarship'];
+
+  /** 预览成功时各属性的经验收益 */
+  function previewStatExp(dc: number, rewardMul: number, testedStat: string): string {
+    const base = Math.round(dc * 20 * rewardMul);
+    const off = Math.round(base * 0.4);
+    return allStatKeys.map(k => {
+      const val = k === testedStat ? base : off;
+      const label = COURT_STAT_LABEL[k] ?? k;
+      return `<span style="color:${val >= base ? '#c9a84c' : '#777'};">${label}+${val}exp</span>`;
+    }).join(' · ');
+  }
 
   const choiceHtml = cfg.choices.map(c => {
     const statName = COURT_STAT_LABEL[c.stat] ?? c.stat;
@@ -930,11 +1073,13 @@ function showCourtTaskDialog(action: LocationAction): void {
     const successChance = c.dc <= 1 ? 100 : Math.min(90, Math.max(10, 40 + (playerStat - c.dc) * 5));
     const tag = c.dc <= 1 ? '安全' : successChance >= 70 ? '稳妥' : successChance >= 45 ? '挑战' : '冒险';
     const tagColor = c.dc <= 1 ? '#888' : successChance >= 70 ? '#4caf50' : successChance >= 45 ? '#ffc107' : '#ef5350';
+    const statExpPreview = previewStatExp(c.dc, c.rewardMul, c.stat);
     return `<button class="court-choice-btn" data-choice-id="${c.id}" data-dc="${c.dc}" data-stat="${c.stat}" data-reward-mul="${c.rewardMul}">
       <div class="court-choice-label">${c.label}</div>
-      <div class="court-choice-stat">${statName} ${playerStat} vs DC${c.dc}</div>
+      <div class="court-choice-stat">🎯 检定：${statName} ${playerStat} vs DC${c.dc}</div>
       <div class="court-choice-tag" style="color:${tagColor}">${tag} · ${successChance}%</div>
       <div class="court-choice-desc">${c.desc}</div>
+      <div class="court-choice-stat-gain" style="font-size:10px;color:var(--text-dim);margin-top:4px;line-height:1.6;">📈 ${statExpPreview}</div>
     </button>`;
   }).join('');
 
@@ -947,6 +1092,7 @@ function showCourtTaskDialog(action: LocationAction): void {
     <div class="court-task-narrative">${cfg.narrative}</div>
     <div class="court-task-choices">${choiceHtml}</div>
     <div class="court-task-rewards">奖励：EXP +${action.exp} · 💰 +${action.gold}${action.influence ? ' · 📜 +' + action.influence : ''}</div>
+    <div style="font-size:10px;color:var(--text-dim);text-align:center;margin-top:4px;">💡 检定属性获得全额经验，其余属性获得40%</div>
   </div>`;
 
   document.body.appendChild(overlay);
@@ -974,7 +1120,7 @@ function showCourtTaskDialog(action: LocationAction): void {
 
       close();
       showToast(resultMsg);
-      applyTaskRewards(action, finalMul);
+      applyTaskRewards(action, finalMul, dc, stat);
     });
   });
 }
