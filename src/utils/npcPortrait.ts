@@ -16,53 +16,112 @@ const FIXED_PORTRAIT_MAP: Record<string, string> = {
   'liu_qinghan':      'picture/Female-main/柳清寒.png',
   'shen_nishang':     'picture/Female-main/沈霓裳.png',
   'mo_jiangqing':     'picture/Female-main/墨绐青.png',
-  'zhao_qinwei':      'picture/Female-main/趙沁微.png',
+  'zhao_qinwei':      'picture/Female-main/赵沁微.png',
 
-  // 武当派
-  'zhang_xuansu':     'picture/NPC/张玄素.png',
-  'chen_jingxu':      'picture/NPC/陈静虚.png',
-  'zhou_boan':        'picture/NPC/周伯安.png',
-  'song_zhiyuan':     'picture/NPC/宋知远.png',
-  'gu_xiaosang':      'picture/NPC/顾小桑.png',
-  'lu_chengzhou':     'picture/NPC/陆沉舟.png',
-  'ji_wushuang_npc':  'picture/NPC/纪无双.png',
-  'su_yunxiu_npc':    'picture/NPC/苏云绣.png',
-  'fang_zhonghe_npc': 'picture/NPC/方仲和.png',
-  'meng_wenyuan':     'picture/NPC/孟文渊.png',
-  'ye_ziyi':          'picture/NPC/叶紫衣.png',
+  // 武当派 — 全部已就位
+  'zhang_xuansu':     'picture/NPC/武当派/张玄素.png',
+  'chen_jingxu':      'picture/NPC/武当派/陈静虚.png',
+  'zhou_boan':        'picture/NPC/武当派/周伯安.png',
+  'song_zhiyuan':     'picture/NPC/武当派/宋知远.png',
+  'gu_xiaosang':      'picture/NPC/武当派/顾小桑.png',
+  'lu_chengzhou':     'picture/NPC/武当派/陆沉舟.png',
+  'ji_wushuang_npc':  'picture/NPC/武当派/纪无双.png',
+  'su_yunxiu_npc':    'picture/NPC/武当派/苏云绣.png',
+  'fang_zhonghe_npc': 'picture/NPC/武当派/方仲和.png',
+  'meng_wenyuan':     'picture/NPC/武当派/孟文渊.png',
+  'ye_ziyi':          'picture/NPC/武当派/叶紫衣.png',
 
-  // 全真教
-  'quanzhen_zhangmen': 'picture/NPC/陈道玄.png',
-  'quanzhen_elder':    'picture/NPC/李清元.png',
-  'quanzhen_qiuchuji': 'picture/NPC/周抱朴.png',
+  // 少林派 — 待生成
+  'shaolin_kongwen':  'picture/NPC/少林派/空闻方丈.png',
+  'shaolin_kongjian': 'picture/NPC/少林派/空见首座.png',
 
-  // 崆峒派
-  'kongtong_zhangmen': 'picture/NPC/铁昆仑.png',
-  'kongtong_elder':    'picture/NPC/霍震岳.png',
+  // 峨眉派 — 待生成
+  'emei_miejue':     'picture/NPC/峨眉派/灭绝师太.png',
+  'emei_jingxuan':   'picture/NPC/峨眉派/静玄师太.png',
 
-  // 点苍派
-  'diancang_zhangmen': 'picture/NPC/杨天纵.png',
-  'diancang_elder':    'picture/NPC/谢云帆.png',
+  // 丐帮 — 待生成
+  'beggar_hong':     'picture/NPC/丐帮/洪帮主.png',
+  'beggar_lu':       'picture/NPC/丐帮/鲁有脚.png',
 
-  // 朝廷文官
-  'xiangyang_zhifu':    'picture/NPC/郭铁山.png',
-  'changan_zhifu':      'picture/NPC/韩维庸.png',
-  'jiangling_zhifu':    'picture/NPC/刘守安.png',
-  'chengdu_zhifu':      'picture/NPC/王仲良.png',
-  'yangzhou_zhizhou':   'picture/NPC/杜文清.png',
-  'suzhou_zhizhou':     'picture/NPC/白修文.png',
-  'hangzhou_zhifu':     'picture/NPC/林观潮.png',
-  'dali_guoxiang':      'picture/NPC/高檀让.png',
-  'jiangzhou_zhizhou':  'picture/NPC/司马秋客.png',
-  'tanzhou_zhifu':      'picture/NPC/周必正.png',
-  'guangzhou_shibosi':  'picture/NPC/陈望海.png',
+  // 华山派 — 待生成
+  'huashan_master':  'picture/NPC/华山派/岳掌门.png',
+  'huashan_feng':    'picture/NPC/华山派/封不平.png',
+
+  // 黑月教 — 待生成
+  'demon_master':    'picture/NPC/黑月教/教主.png',
+  'demon_yang':      'picture/NPC/黑月教/杨左使.png',
+
+  // 茅山派 — 待生成
+  'maoshan_zhangmen': 'picture/NPC/茅山派/陶天师.png',
+  'maoshan_elder':    'picture/NPC/茅山派/葛玄清.png',
+
+  // 昆仑派 — 待生成
+  'kunlun_zhangmen': 'picture/NPC/昆仑派/何太虚.png',
+  'kunlun_elder':    'picture/NPC/昆仑派/寒松子.png',
+
+  // 青城派 — 待生成
+  'qingcheng_zhangmen': 'picture/NPC/青城派/余掌门.png',
+  'qingcheng_elder':    'picture/NPC/青城派/常鹤鸣.png',
+
+  // 唐门 — 待生成
+  'tangmen_zhangmen': 'picture/NPC/唐门/唐老太太.png',
+  'tangmen_elder':    'picture/NPC/唐门/唐无影.png',
+
+  // 逍遥派 — 待生成
+  'xiaoyao_zhangmen': 'picture/NPC/逍遥派/逍遥子.png',
+  'xiaoyao_elder':    'picture/NPC/逍遥派/苏星河.png',
+
+  // 全真教 — 全部已就位
+  'quanzhen_zhangmen':  'picture/NPC/全真派/陈道玄.png',
+  'quanzhen_elder':     'picture/NPC/全真派/李清元.png',
+  'quanzhen_qiuchuji':  'picture/NPC/全真派/赵守一.png',
+
+  // 崆峒派 — 全部已就位
+  'kongtong_zhangmen': 'picture/NPC/崆峒派/铁昆仑.png',
+  'kongtong_elder':    'picture/NPC/崆峒派/霍震岳.png',
+
+  // 点苍派 — 全部已就位
+  'diancang_zhangmen': 'picture/NPC/点苍派/杨天纵.png',
+  'diancang_elder':    'picture/NPC/点苍派/沐灵犀.png',
+
+  // 朝廷文官（12人）
+  'kaifeng_fuyin':      'picture/NPC/官府/包拯.png',
+  'luoyang_zhifu':      'picture/NPC/官府/赵汝成.png',
+  'changan_zhifu':      'picture/NPC/官府/韩维庸.png',
+  'xiangyang_zhifu':    'picture/NPC/官府/郭铁山.png',
+  'jiangling_zhifu':    'picture/NPC/官府/刘守安.png',
+  'chengdu_zhifu':      'picture/NPC/官府/王仲良.png',
+  'yangzhou_zhizhou':   'picture/NPC/官府/杜文清.png',
+  'suzhou_zhizhou':     'picture/NPC/官府/白修文.png',
+  'hangzhou_zhifu':     'picture/NPC/官府/林观潮.png',
+  'dali_guoxiang':      'picture/NPC/官府/高檀让.png',
+  'jiangzhou_zhizhou':  'picture/NPC/官府/司马秋客.png',
+  'tanzhou_zhifu':      'picture/NPC/官府/周必正.png',
+  'guangzhou_shibosi':  'picture/NPC/官府/陈望海.png',
+
+  // v2.1 五大宗门掌门 — 待生成
+  'riyue_leader':       'picture/NPC/日月教/东方教主.png',
+  'tiezhang_leader':    'picture/NPC/铁掌帮/铁掌水上飘.png',
+  'wudu_leader':        'picture/NPC/五毒教/五毒教主.png',
+  'xuedao_leader':      'picture/NPC/血刀门/血刀老祖.png',
+  'haisha_leader':      'picture/NPC/海沙派/海沙掌门.png',
+
+  // P7 朝廷高层 — 待生成
+  'prime_minister':     'picture/NPC/朝廷/钟元辅.png',
+  'taiwei':             'picture/NPC/朝廷/武镇岳.png',
+  'xingbu_shangshu':    'picture/NPC/朝廷/铁正卿.png',
+
+  // P7 叛军将领 — 待生成
+  'rebel_general':      'picture/NPC/叛军/铁定邦.png',
+  'rebels_strategist':  'picture/NPC/叛军/纪玄策.png',
 };
 
 // ──── 随机宗门弟子立绘池 ────
 //
 // 文件命名规范：picture/NPC/sect/{sectId}_{gender}_{n}.png
-// 每个宗门每种性别需要 3 张变体（少林仅男弟子 3 张）
-// 总计：(14 × 3 男) + (13 × 3 女) = 42 + 39 = 81 张
+// 推荐每个宗门每种性别 5 张变体（少林仅男、峨眉仅女）
+// 总计：(14 × 5 男) + (13 × 5 女) - 5(峨眉无男) - 5(少林无女) = 130 张
+// 最小可用：3 张/性别，总计 81 张
 
 /** 每个宗门每种性别的图片数量 */
 const POOL_SIZE_PER_GENDER = 3;
@@ -95,12 +154,6 @@ function resolvePoolIndex(npcId: string, poolSize: number): number {
 
 /**
  * 获取 NPC 的立绘图片路径。
- * 
- * @param npcId   - NPC 唯一 ID（gen_ 前缀为随机生成）
- * @param sect    - NPC 所属宗门
- * @param gender  - 性别（'male' | 'female'）
- * @param portraitIndex - 预存立绘池索引（随机 NPC 在生成时预计算，避免每次 re-render 换图）
- * @returns 图片路径；无匹配时返回空字符串，UI 侧应显示 fallback
  */
 export function getNpcPortrait(
   npcId: string,
@@ -129,7 +182,6 @@ export function getNpcPortrait(
 
 /**
  * 获取 NPC 立绘地图（批量查询用）。
- * 供 Camp.ts renderNearbyNpcs 等场景使用。
  */
 export function getNpcImageMap(npcIds: string[], npcDatabase?: Record<string, { sect: SectId; gender?: string; portraitIndex?: number }>): Record<string, string> {
   const map: Record<string, string> = {};
@@ -147,7 +199,6 @@ export function getNpcImageMap(npcIds: string[], npcDatabase?: Record<string, { 
 
 /**
  * 为随机生成的 NPC 预计算立绘池索引。
- * 应在 generateNpc() 中调用，将结果存入 NpcStats.portraitIndex。
  */
 export function assignRandomPortraitIndex(npcId: string, poolSize: number = POOL_SIZE_PER_GENDER): number {
   return resolvePoolIndex(npcId, poolSize);
@@ -155,7 +206,6 @@ export function assignRandomPortraitIndex(npcId: string, poolSize: number = POOL
 
 /**
  * 获取「所有需要生成的图片文件」清单。
- * 用于指导 AI 图片生成工作。
  */
 export interface PortraitGenerationTask {
   fileName: string;
@@ -168,7 +218,7 @@ export interface PortraitGenerationTask {
 export function getAllRequiredPortraits(): PortraitGenerationTask[] {
   const tasks: PortraitGenerationTask[] = [];
 
-  // 固定 NPC（尚未生成的部分由用户判断）
+  // 固定 NPC
   for (const [id, path] of Object.entries(FIXED_PORTRAIT_MAP)) {
     const name = path.split('/').pop()?.replace('.png', '') ?? id;
     tasks.push({
@@ -191,6 +241,7 @@ export function getAllRequiredPortraits(): PortraitGenerationTask[] {
     qingcheng: '青城', tangmen: '唐门', xiaoyao: '逍遥',
     quanzhen: '全真', kongtong: '崆峒', diancang: '点苍',
     riyue: '日月教', tiezhang: '铁掌帮', wudu: '五毒教', xuedao: '血刀门', haisha: '海沙派',
+    imperial_court: '朝廷', rebels: '叛军',
     none: '散修',
   };
 

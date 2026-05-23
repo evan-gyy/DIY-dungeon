@@ -75,11 +75,14 @@ window.addEventListener('DOMContentLoaded', () => {
   document.getElementById('audio-control')?.addEventListener('click', () => {
     const enabled = toggleAudio();
     const el = document.getElementById('audio-control');
-    if (el) el.textContent = enabled ? '♪ 音乐' : '♪ 静音';
+    if (el) { el.textContent = enabled ? '♪' : '🔇'; el.title = enabled ? '音乐：开' : '音乐：关'; }
   });
 
   // ── Autoplay BGM ──
   setTimeout(() => {
     switchMusic(MUSIC.main);
   }, 500);
+
+  // ── 技能校验（开发环境 console 输出）──
+  import('./data/skills').then(m => m.validateSkills());
 });

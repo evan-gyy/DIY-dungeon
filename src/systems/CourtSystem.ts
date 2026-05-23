@@ -14,6 +14,7 @@ import {
   COURT_RANK_ORDER,
   COURT_RANK_LABEL,
   COURT_RANK_LABEL_WU,
+  COURT_RANK_BASE_STATS,
   COURT_PROMOTION_REQUIREMENTS,
   SPLIT_FOCUS_PENALTY,
 } from '../data/sandboxTypes';
@@ -37,70 +38,97 @@ export interface CourtPromotionCheck {
   currentInfluence: number;
   /** 晋升进度 0-1 */
   progress: number;
+  /** 未满足的属性门详情 */
+  failedStats?: string[];
+}
+
+/** 获取属性中译简称 */
+function statShortLabel(s: keyof CourtStats): string {
+  const map: Record<keyof CourtStats, string> = {
+    strategy: '智谋', eloquence: '口才', charisma: '魅力', scholarship: '学识',
+  };
+  return map[s];
 }
 
 /**
- * 检查玩家是否可以晋升朝廷品阶。
- * 晋升条件：影响力达标。
+ * 检查玩家是否可以晋升朝廷品阶（三国志式：功绩 + 属性门 + 路线分化）。
  */
 export function canPromoteCourt(player: PlayerState): CourtPromotionCheck {
   const currentRank = (player.courtRank ?? 'commoner') as CourtRank;
   const influence = player.influence ?? 0;
   const currentIdx = COURT_RANK_ORDER.indexOf(currentRank);
+  const effective = getEffectiveCourtStats(player);
+  const path = (player.courtPath ?? 'wen') as CourtPath;
 
   if (currentIdx < 0) {
     return {
-      canPromote: false,
-      reason: '身份异常。',
-      currentRank,
-      nextRank: null,
-      minInfluence: 0,
-      currentInfluence: influence,
-      progress: 0,
+      canPromote: false, reason: '身份异常。',
+      currentRank, nextRank: null, minInfluence: 0, currentInfluence: influence, progress: 0,
     };
   }
 
-  // 已是最高
   if (currentIdx >= COURT_RANK_ORDER.length - 1) {
     return {
-      canPromote: false,
-      reason: '已是庙堂之巅。',
-      currentRank,
-      nextRank: null,
-      minInfluence: 0,
-      currentInfluence: influence,
-      progress: 1,
+      canPromote: false, reason: '已是庙堂之巅。',
+      currentRank, nextRank: null, minInfluence: 0, currentInfluence: influence, progress: 1,
     };
   }
 
   const nextRank = COURT_RANK_ORDER[currentIdx + 1];
   const requirement = nextRank ? COURT_PROMOTION_REQUIREMENTS[nextRank] : undefined;
 
-  // 没有晋升条件定义 = 不可晋升（最高）
   if (!requirement) {
     return {
-      canPromote: false,
-      reason: '已达品阶巅峰。',
-      currentRank,
-      nextRank: null,
-      minInfluence: 0,
-      currentInfluence: influence,
-      progress: 1,
+      canPromote: false, reason: '已达品阶巅峰。',
+      currentRank, nextRank: null, minInfluence: 0, currentInfluence: influence, progress: 1,
     };
   }
 
+  // Check 1: 功绩达标
   const minInf = requirement.minInfluence;
-  const progress = Math.min(1, influence / minInf);
-  const canPromote = influence >= minInf;
+  if (influence < minInf) {
+    return {
+      canPromote: false,
+      reason: `功绩不足（${influence}/${minInf}）`,
+      currentRank, nextRank: nextRank ?? null,
+      minInfluence: minInf, currentInfluence: influence,
+      progress: Math.min(1, influence / minInf),
+    };
+  }
+
+  // Check 2: 属性门（按照文武路线选对应的门）
+  const statGates = path === 'wu'
+    ? (requirement.wuStatGates ?? requirement.wenStatGates)
+    : (requirement.wenStatGates ?? requirement.wuStatGates);
+
+  if (statGates) {
+    const failedStats: string[] = [];
+    for (const [stat, required] of Object.entries(statGates) as [keyof CourtStats, number][]) {
+      const current = effective[stat] ?? 10;
+      if (current < required) {
+        failedStats.push(`${statShortLabel(stat)} ${current}/${required}`);
+      }
+    }
+    if (failedStats.length > 0) {
+      const pathLabel = path === 'wu' ? '武官' : '文官';
+      return {
+        canPromote: false,
+        reason: `${pathLabel}属性未达标的：${failedStats.join('、')}`,
+        currentRank, nextRank: nextRank ?? null,
+        minInfluence: minInf, currentInfluence: influence,
+        progress: Math.min(1, influence / minInf),
+        failedStats,
+      };
+    }
+  }
 
   return {
-    canPromote,
-    reason: canPromote ? undefined : `影响力不足（${influence}/${minInf}）`,
+    canPromote: true,
     currentRank,
     nextRank: nextRank ?? null,
     minInfluence: minInf,
     currentInfluence: influence,
-    progress,
+    progress: 1,
   };
 }
 
@@ -115,7 +143,7 @@ export interface CourtPromotionResult {
 
 /**
  * 执行朝廷晋升。
- * 晋升后不消耗影响力（影响力是累计成就，类似贡献值）。
+ * 晋升消耗功绩（影响力），类似三国志"积功升迁"的感觉。
  */
 export function executeCourtPromotion(player: PlayerState): CourtPromotionResult {
   const check = canPromoteCourt(player);
@@ -126,12 +154,26 @@ export function executeCourtPromotion(player: PlayerState): CourtPromotionResult
     return { success: false, reason: '已达最高品阶。' };
   }
 
-  const newRank = check.nextRank;
+  const newRank = check.nextRank!;
   const label = getCourtRankLabel(newRank, player.courtPath as CourtPath | null);
+  const requirement = COURT_PROMOTION_REQUIREMENTS[newRank];
+  const cost = requirement?.influenceCost ?? 0;
+
+  // 晋升后品阶保底：确保属性不低于新官位的基准
+  const rankBase = getCourtRankBaseStats(newRank);
+  const currentStats = player.courtStats ?? { strategy: 10, eloquence: 10, charisma: 10, scholarship: 10 };
+  const newStats: CourtStats = {
+    strategy: Math.max(rankBase.strategy, currentStats.strategy),
+    eloquence: Math.max(rankBase.eloquence, currentStats.eloquence),
+    charisma: Math.max(rankBase.charisma, currentStats.charisma),
+    scholarship: Math.max(rankBase.scholarship, currentStats.scholarship),
+  };
 
   const updated: PlayerState = {
     ...player,
     courtRank: newRank,
+    courtStats: newStats,
+    influence: Math.max(0, (player.influence ?? 0) - cost),
   };
 
   return { success: true, newRank, updatedPlayer: updated };
@@ -309,6 +351,31 @@ export const COURT_STAT_LABELS: Record<keyof CourtStats, { name: string; icon: s
 export const COURT_PATH_WEN_STATS: (keyof CourtStats)[] = ['eloquence', 'scholarship'];
 /** 武官路径侧重：智谋 + 魅力 */
 export const COURT_PATH_WU_STATS: (keyof CourtStats)[] = ['strategy', 'charisma'];
+
+/**
+ * 获取玩家所在品阶的朝廷属性保底值。
+ * 晋升到某品阶后，属性至少不低于此基准。
+ * 对称于战斗系统的境界基础属性（REALM_BASE_STATS）。
+ */
+export function getCourtRankBaseStats(courtRank: CourtRank): CourtStats {
+  return COURT_RANK_BASE_STATS[courtRank] ?? COURT_RANK_BASE_STATS.commoner;
+}
+
+/**
+ * 计算玩家有效朝廷属性：max(品阶保底, 经验成长值)。
+ * 这确保"升官"有意义——晋升后属性立即提升到品阶基准。
+ */
+export function getEffectiveCourtStats(player: PlayerState): CourtStats {
+  const current = player.courtStats ?? { strategy: 10, eloquence: 10, charisma: 10, scholarship: 10 };
+  const rank = (player.courtRank ?? 'commoner') as CourtRank;
+  const baseline = getCourtRankBaseStats(rank);
+  return {
+    strategy: Math.max(baseline.strategy, current.strategy),
+    eloquence: Math.max(baseline.eloquence, current.eloquence),
+    charisma: Math.max(baseline.charisma, current.charisma),
+    scholarship: Math.max(baseline.scholarship, current.scholarship),
+  };
+}
 
 // ═══════════════════════════════════════════════════════════
 // 🆕 CourtEngine 集成：三国志/太阁立志传风格任务裁决

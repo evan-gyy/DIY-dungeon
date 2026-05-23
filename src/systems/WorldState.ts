@@ -23,75 +23,133 @@ import { SECTS } from '../data/sects';
 import type { SectId } from '../data/types';
 import type { LocationId } from '../data/worldMap';
 
-// ──── 势力排名（全部从 npcDatabase 实时计算）────
+// ──── 宗门层级体系 ────
+
+export type SectTier = 'supreme' | 'first_rate' | 'second_rate' | 'fringe' | 'special';
+
+const SECT_TIER: Record<SectId, SectTier> = {
+  wudang: 'supreme', shaolin: 'supreme',
+  emei: 'first_rate', beggar: 'first_rate', quanzhen: 'first_rate', kunlun: 'first_rate', tangmen: 'first_rate', riyue: 'first_rate',
+  huashan: 'second_rate', kongtong: 'second_rate', qingcheng: 'second_rate', diancang: 'second_rate', tiezhang: 'second_rate',
+  maoshan: 'fringe', wudu: 'fringe', xuedao: 'fringe', haisha: 'fringe',
+  xiaoyao: 'special', demon: 'special',
+  imperial_court: 'supreme', rebels: 'first_rate',
+  none: 'special',
+};
+
+const TIER_LABEL: Record<SectTier, string> = { supreme: '顶尖大派', first_rate: '一流门派', second_rate: '二流门派', fringe: '旁门左道', special: '特殊' };
+const TIER_SORT: Record<SectTier, number> = { supreme: 0, first_rate: 1, second_rate: 2, fringe: 3, special: 4 };
+
+export function getSectTier(sectId: SectId): SectTier { return SECT_TIER[sectId] ?? 'special'; }
+
+// ──── 势力总览（废除排名公式，改为按层级+实际实力排列）────
 
 export interface FactionScore {
   factionId: SectId;
   name: string;
-  /** 综合评分 */
-  score: number;
-  /** 该势力实际 NPC 人数 */
+  tier: SectTier;
+  tierLabel: string;
   npcCount: number;
-  /** 平均修为等级 */
-  avgLevel: number;
-  /** 最高修为等级 */
   maxLevel: number;
-  /** 最高修为者姓名 */
   topNpcName: string;
-  rank: number;
-  trend: 'rising' | 'stable' | 'declining';
+  topNpcRank: string;
 }
 
-/** 获取所有势力排名（全部从 npcDatabase 实时计算，无一编造） */
+/** 获取所有势力概览（按层级→最高修为排列，废除 avgLevel×5+npcCount×2 的虚假排名） */
 export function getFactionRankings(): FactionScore[] {
   const p = getPlayer();
   const npcs = Object.values(p.npcDatabase ?? {});
 
-  // 按势力分组（跳过 sect='none' 的朝廷 NPC）
   const bySect = new Map<SectId, typeof npcs>();
-  for (const id of ALL_FACTIONS) {
-    bySect.set(id, []);
-  }
+  for (const id of ALL_FACTIONS) bySect.set(id, []);
   for (const npc of npcs) {
     const s = npc.sect;
     if (s === 'none' || !bySect.has(s as SectId)) continue;
     bySect.get(s as SectId)!.push(npc);
   }
 
+  const rankLabel = (lv: number, tier: SectTier): string => {
+    if (tier === 'supreme' || tier === 'special') {
+      if (lv >= 41) return '掌门级';
+      if (lv >= 31) return '长老';
+      if (lv >= 21) return '真传';
+      if (lv >= 11) return '内门';
+      return '外门';
+    }
+    if (tier === 'first_rate') {
+      if (lv >= 41) return '掌门级';
+      if (lv >= 31) return '长老';
+      if (lv >= 21) return '真传';
+      if (lv >= 11) return '内门';
+      return '外门';
+    }
+    if (lv >= 31) return '掌门级';
+    if (lv >= 21) return '长老';
+    if (lv >= 11) return '内门';
+    return '外门';
+  };
+
   const results: FactionScore[] = [];
 
   for (const factionId of ALL_FACTIONS) {
     const sectNpcs = bySect.get(factionId) ?? [];
     const npcCount = sectNpcs.length;
-    const levels = sectNpcs.map(n => n.level);
-    const avgLevel = npcCount > 0
-      ? Math.round(levels.reduce((a, b) => a + b, 0) / npcCount)
-      : 1;
-    const maxLevel = npcCount > 0 ? Math.max(...levels) : 1;
-    const topNpc = npcCount > 0
-      ? sectNpcs.reduce((a, b) => a.level > b.level ? a : b)
-      : null;
-
-    // 宗门实力 = 平均修为 × 5 + 人数 × 2
-    const score = avgLevel * 5 + npcCount * 2;
+    const maxLevel = npcCount > 0 ? Math.max(...sectNpcs.map(n => n.level)) : 1;
+    const topNpc = npcCount > 0 ? sectNpcs.reduce((a, b) => a.level > b.level ? a : b) : null;
+    const tier = getSectTier(factionId);
 
     results.push({
       factionId,
       name: (SECTS[factionId] as { name?: string })?.name ?? factionId,
-      score,
+      tier,
+      tierLabel: TIER_LABEL[tier],
       npcCount,
-      avgLevel,
       maxLevel,
       topNpcName: topNpc?.name ?? '—',
-      rank: 0,
-      trend: 'stable',
+      topNpcRank: topNpc ? rankLabel(topNpc.level, tier) : '—',
     });
   }
 
-  results.sort((a, b) => b.score - a.score);
-  results.forEach((r, i) => (r.rank = i + 1));
+  // 按层级 → 最高修为 排序
+  results.sort((a, b) => {
+    const tierDiff = TIER_SORT[a.tier] - TIER_SORT[b.tier];
+    if (tierDiff !== 0) return tierDiff;
+    return b.maxLevel - a.maxLevel;
+  });
 
   return results;
+}
+
+/** 获取当前挂起的可介入世界事件完整定义，若无则返回 null */
+export function getPendingWorldEventDef(): WorldEvent | null {
+  const p = getPlayer();
+  const pending = p.worldState?.pendingWorldEvent;
+  if (!pending) return null;
+  return WORLD_EVENT_POOL.find(e => e.id === pending.eventId) ?? null;
+}
+
+/** 获取世界事件历史 */
+export function getWorldEventHistory(): Array<{ eventId: string; title: string; description: string; turn: number; timestamp: number; category: string }> {
+  const p = getPlayer();
+  const ws = p.worldState;
+  if (!ws?.worldEvents || ws.worldEvents.length === 0) return [];
+
+  const eventMap = new Map<string, WorldEvent>();
+  for (const ev of WORLD_EVENT_POOL) eventMap.set(ev.id, ev);
+
+  return ws.worldEvents
+    .map(e => {
+      const def = eventMap.get(e.eventId);
+      return {
+        eventId: e.eventId,
+        title: def?.title ?? e.eventId,
+        description: def?.description ?? '',
+        turn: e.turn,
+        timestamp: e.timestamp,
+        category: def?.category ?? 'discovery',
+      };
+    })
+    .reverse();
 }
 
 // ──── 世界事件 ────
@@ -112,6 +170,10 @@ export interface WorldEvent {
   playerEffect?: PlayerEffect;
   category: 'conflict' | 'diplomacy' | 'discovery' | 'disaster' | 'opportunity';
   showToPlayer: boolean;
+  /** 玩家可主动介入（不立即生效，需在 WorldPanel 中选择） */
+  interactable?: boolean;
+  /** 介入按钮文字，默认"⚔️ 参与" */
+  acceptLabel?: string;
 }
 
 /** 事件池（仅影响玩家，不编造势力数值） */
@@ -123,6 +185,8 @@ const WORLD_EVENT_POOL: WorldEvent[] = [
     playerEffect: { exp: 50, flavorText: '观摩群雄切磋，获得 50 点修为。' },
     category: 'conflict',
     showToPlayer: true,
+    interactable: true,
+    acceptLabel: '⚔️ 下场切磋',
   },
   {
     id: 'bandit_raid',
@@ -131,6 +195,8 @@ const WORLD_EVENT_POOL: WorldEvent[] = [
     playerEffect: { gold: 100, exp: 30, flavorText: '剿匪获得 100 两灵石 + 30 修为。' },
     category: 'disaster',
     showToPlayer: true,
+    interactable: true,
+    acceptLabel: '🗡️ 出手相助',
   },
   {
     id: 'trade_boom',
@@ -147,6 +213,8 @@ const WORLD_EVENT_POOL: WorldEvent[] = [
     playerEffect: { gold: 150, exp: 40, flavorText: '献药方获得 150 两灵石 + 40 修为。' },
     category: 'disaster',
     showToPlayer: true,
+    interactable: true,
+    acceptLabel: '📜 献出药方',
   },
   {
     id: 'new_technique',
@@ -163,6 +231,8 @@ const WORLD_EVENT_POOL: WorldEvent[] = [
     playerEffect: { gold: 200, exp: 30, flavorText: '揭发魔教探子，获得 200 两灵石 + 30 修为。' },
     category: 'conflict',
     showToPlayer: true,
+    interactable: true,
+    acceptLabel: '🔍 协助追查',
   },
   {
     id: 'alliance_formed',
@@ -179,6 +249,8 @@ const WORLD_EVENT_POOL: WorldEvent[] = [
     playerEffect: { gold: 300, exp: 100, flavorText: '古墓机缘：获得 300 两灵石 + 100 修为！' },
     category: 'discovery',
     showToPlayer: true,
+    interactable: true,
+    acceptLabel: '🗺️ 深入探索',
   },
   {
     id: 'drought_season',
@@ -219,7 +291,8 @@ const WORLD_EVENT_POOL: WorldEvent[] = [
 export type ChronicleCategory =
   | 'world_event' | 'sect_join' | 'rank_promotion'
   | 'mission_complete' | 'npc_interaction' | 'travel'
-  | 'battle' | 'discovery' | 'court_affair';
+  | 'battle' | 'discovery' | 'court_affair'
+  | 'grand_event';
 
 export interface ChronicleEntry {
   id: string;
@@ -241,6 +314,8 @@ export interface WorldStateData {
   turn: number;
   /** 上次资源演化的回合 */
   lastEvolveTurn: number;
+  /** 等待玩家介入的事件（可介入事件不立即生效） */
+  pendingWorldEvent?: { eventId: string; turn: number };
 }
 
 export interface ChronicleData {
@@ -269,6 +344,7 @@ export function initChronicle(): ChronicleData {
 
 export function tickWorldState(): {
   worldEvent?: WorldEvent;
+  isPending?: boolean;
 } {
   let p = getPlayer();
   let ws = p.worldState ?? initWorldState();
@@ -281,22 +357,32 @@ export function tickWorldState(): {
     ws = { ...ws, lastEvolveTurn: ws.turn };
   }
 
-  // 10% 概率触发世界事件
+  // 10% 概率触发世界事件（已有 pending 事件时跳过）
   let worldEvent: WorldEvent | undefined;
-  if (Math.random() < 0.10) {
+  if (!ws.pendingWorldEvent && Math.random() < 0.10) {
     const eventIdx = Math.floor(Math.random() * WORLD_EVENT_POOL.length);
     worldEvent = WORLD_EVENT_POOL[eventIdx];
-    if (!worldEvent) return { worldEvent: undefined };
+    if (!worldEvent) {
+      const updated = { ...p, worldState: ws };
+      setPlayer(updated);
+      saveGame(updated);
+      return {};
+    }
 
-    // 应用事件对玩家的影响
+    if (worldEvent.interactable) {
+      // 可介入事件：挂起，等待玩家在 WorldPanel 处理
+      ws = { ...ws, pendingWorldEvent: { eventId: worldEvent.id, turn: ws.turn } };
+      const updated = { ...p, worldState: ws };
+      setPlayer(updated);
+      saveGame(updated);
+      return { worldEvent, isPending: true };
+    }
+
+    // 非可介入事件：立即生效
     if (worldEvent.playerEffect) {
       const pe = worldEvent.playerEffect;
-      if (pe.gold) {
-        p = { ...p, gold: (p.gold ?? 0) + pe.gold };
-      }
-      if (pe.exp) {
-        p = { ...p, exp: (p.exp ?? 0) + pe.exp };
-      }
+      if (pe.gold) p = { ...p, gold: (p.gold ?? 0) + pe.gold };
+      if (pe.exp) p = { ...p, exp: (p.exp ?? 0) + pe.exp };
       if (pe.items && pe.items.length > 0) {
         const inv = [...(p.inventory ?? [])];
         for (const itemId of pe.items) {
@@ -311,7 +397,6 @@ export function tickWorldState(): {
       }
     }
 
-    // 记录事件
     ws = {
       ...ws,
       worldEvents: [
@@ -326,6 +411,35 @@ export function tickWorldState(): {
   saveGame(updated);
 
   return { worldEvent };
+}
+
+/** 玩家选择处理挂起的世界事件（accept=true 参与获得奖励，false 跳过） */
+export function resolveWorldEvent(accept: boolean): void {
+  let p = getPlayer();
+  const ws = p.worldState ?? initWorldState();
+  if (!ws.pendingWorldEvent) return;
+
+  const { eventId, turn } = ws.pendingWorldEvent;
+  const eventDef = WORLD_EVENT_POOL.find(e => e.id === eventId);
+
+  if (accept && eventDef?.playerEffect) {
+    const pe = eventDef.playerEffect;
+    if (pe.gold) p = { ...p, gold: (p.gold ?? 0) + pe.gold };
+    if (pe.exp) p = { ...p, exp: (p.exp ?? 0) + pe.exp };
+  }
+
+  const newWs: WorldStateData = {
+    ...ws,
+    pendingWorldEvent: undefined,
+    worldEvents: [
+      ...ws.worldEvents,
+      { eventId, turn, timestamp: Date.now() },
+    ],
+  };
+
+  const updated = { ...p, worldState: newWs };
+  setPlayer(updated);
+  saveGame(updated);
 }
 
 /**
@@ -454,16 +568,20 @@ export function canJoinSect(sectId: SectId): {
 export function getSectLeaderNpcId(sectId: SectId): string | undefined {
   const map: Partial<Record<SectId, string>> = {
     wudang: 'zhang_xuansu',
-    shaolin: 'shaolin_kongjian',
-    emei: 'emei_jingxuan',
-    beggar: 'beggar_lu',
-    huashan: 'huashan_feng',
-    demon: 'demon_yang',
-    maoshan: 'maoshan_elder',
-    kunlun: 'kunlun_elder',
-    qingcheng: 'qingcheng_elder',
-    tangmen: 'tangmen_elder',
-    xiaoyao: 'xiaoyao_elder',
+    shaolin: 'shaolin_kongwen',
+    emei: 'emei_miejue',
+    beggar: 'beggar_hong',
+    huashan: 'huashan_master',
+    demon: 'demon_master',
+    maoshan: 'maoshan_zhangmen',
+    kunlun: 'kunlun_zhangmen',
+    qingcheng: 'qingcheng_zhangmen',
+    tangmen: 'tangmen_zhangmen',
+    xiaoyao: 'xiaoyao_zhangmen',
+    quanzhen: 'quanzhen_zhangmen',
+    kongtong: 'kongtong_zhangmen',
+    diancang: 'diancang_zhangmen',
+    riyue: 'demon_master',
   };
   return map[sectId];
 }

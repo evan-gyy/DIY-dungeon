@@ -15,6 +15,8 @@ export type SectId =
   | 'demon' | 'riyue' | 'wudu' | 'xuedao' | 'haisha'
   // 逍遥/特殊
   | 'xiaoyao'
+  // 官府 & 叛军
+  | 'imperial_court' | 'rebels'
   // 无门派
   | 'none';
 
@@ -69,6 +71,136 @@ export type SkillId =
   | 'riyue_qiankun_true' | 'riyue_sacred_sun' | 'riyue_tianren' | 'riyue_sun_moon_divine'
   // 渡劫
   | 'riyue_nirvana' | 'riyue_void_moon' | 'riyue_dark_sun' | 'riyue_ultimate'
+  // ── 峨眉派扩展（P6 Batch 2）──
+  // 炼气
+  | 'emei_chan_yi' | 'emei_flower_needle' | 'emei_cloud_step'
+  // 筑基
+  | 'emei_sword_breeze' | 'emei_jade_guard' | 'emei_iron_finger'
+  // 结丹
+  | 'emei_lotus_palm' | 'emei_swallow_sword' | 'emei_bell_sound'
+  // 元婴
+  | 'emei_nirvana' | 'emei_sword_phoenix' | 'emei_plum_heal'
+  // ── 丐帮扩展（P6 Batch 2）──
+  // 炼气
+  | 'beggar_wine' | 'beggar_slap' | 'beggar_roll'
+  // 筑基
+  | 'beggar_kick' | 'beggar_iron_shirt' | 'beggar_storm_fist'
+  // 结丹
+  | 'beggar_18_subdue' | 'beggar_dog_storm' | 'beggar_roar'
+  // 元婴
+  | 'beggar_overlord' | 'beggar_dragon_roar' | 'beggar_chief_fist'
+  // ── 全真教（P6 Batch 2）──
+  // 炼气
+  | 'quanzhen_sword' | 'quanzhen_qi' | 'quanzhen_fist' | 'quanzhen_step'
+  // 筑基
+  | 'quanzhen_sword_qian' | 'quanzhen_neidan' | 'quanzhen_beidou' | 'quanzhen_fu'
+  // 结丹
+  | 'quanzhen_sword_kun' | 'quanzhen_thunder' | 'quanzhen_7star_array' | 'quanzhen_sword_divide'
+  // 元婴
+  | 'quanzhen_dao_jing' | 'quanzhen_sword_lord' | 'quanzhen_shendan' | 'quanzhen_sword_star'
+  // ── 昆仑派（P6 Batch 2）──
+  // 炼气
+  | 'kunlun_sword' | 'kunlun_ice_qi' | 'kunlun_frost_palm' | 'kunlun_snow_step'
+  // 筑基
+  | 'kunlun_sword_cold' | 'kunlun_ice_guard' | 'kunlun_blizzard' | 'kunlun_freeze'
+  // 结丹
+  | 'kunlun_sword_jiuxiao' | 'kunlun_glacier' | 'kunlun_snow_veil' | 'kunlun_sword_storm'
+  // 元婴
+  | 'kunlun_hanbing' | 'kunlun_sword_peak' | 'kunlun_jade_purity' | 'kunlun_sword_frozen'
+  // ── 唐门（P6 Batch 2）──
+  // 炼气
+  | 'tang_needle' | 'tang_poison_qi' | 'tang_blade_basic' | 'tang_smoke'
+  // 筑基
+  | 'tang_dart' | 'tang_shadow_step' | 'tang_rain_needle' | 'tang_venom'
+  // 结丹
+  | 'tang_blade_adv' | 'tang_poison_mist' | 'tang_dart_storm' | 'tang_toxic_art'
+  // 元婴
+  | 'tang_blade_master' | 'tang_pear_flower' | 'tang_poison_secret' | 'tang_night_walker'
+  // ── 华山派（P6 Batch 3）──
+  // 炼气
+  | 'huashan_sword_basic' | 'huashan_mountain_qi' | 'huashan_wind_step' | 'huashan_sword_flash'
+  // 筑基
+  | 'huashan_wind_sword' | 'huashan_sword_shield' | 'huashan_storm_sword' | 'huashan_sword_heart'
+  // 结丹
+  | 'huashan_lonely_sword' | 'huashan_sword_soul' | 'huashan_mountain_guard' | 'huashan_sword_9'
+  // ── 崆峒派（P6 Batch 3）──
+  // 炼气
+  | 'kongtong_fist_basic' | 'kongtong_inner_qi' | 'kongtong_iron_arm' | 'kongtong_rock_fist'
+  // 筑基
+  | 'kongtong_storm_fist' | 'kongtong_body_guard' | 'kongtong_crush_palm' | 'kongtong_mountain_roar'
+  // 结丹
+  | 'kongtong_7_hurt' | 'kongtong_qi_shield' | 'kongtong_thunder_fist' | 'kongtong_titan_palm'
+  // ── 青城派（P6 Batch 3）──
+  // 炼气
+  | 'qingcheng_sword_basic' | 'qingcheng_dao_qi' | 'qingcheng_crane_step' | 'qingcheng_wind_sword'
+  // 筑基
+  | 'qingcheng_cloud_sword' | 'qingcheng_mist_body' | 'qingcheng_sword_qi' | 'qingcheng_dao_heart'
+  // 结丹
+  | 'qingcheng_luofu_sword' | 'qingcheng_immortal_guard' | 'qingcheng_sword_storm' | 'qingcheng_taiji_sword'
+  // ── 点苍派（P6 Batch 3）──
+  // 炼气
+  | 'diancang_sword_basic' | 'diancang_snake_qi' | 'diancang_mist_step' | 'diancang_viper_sword'
+  // 筑基
+  | 'diancang_double_sword' | 'diancang_snake_skin' | 'diancang_circling_sword' | 'diancang_southern_qi'
+  // 结丹
+  | 'diancang_sword_storm' | 'diancang_poison_soul' | 'diancang_shadow_sword' | 'diancang_king_cobra'
+  // ── 铁掌帮（P6 Batch 3）──
+  // 炼气
+  | 'tiezhang_palm_basic' | 'tiezhang_iron_qi' | 'tiezhang_sand_palm' | 'tiezhang_hard_body'
+  // 筑基
+  | 'tiezhang_iron_palm' | 'tiezhang_water_step' | 'tiezhang_fire_palm' | 'tiezhang_steel_skin'
+  // 结丹
+  | 'tiezhang_crushing_palm' | 'tiezhang_mountain_body' | 'tiezhang_thunder_palm' | 'tiezhang_supreme_palm'
+  // ── 茅山派（P6 Batch 4）──
+  // 炼气
+  | 'maoshan_talisman' | 'maoshan_ghost_qi' | 'maoshan_bind_ghost' | 'maoshan_tao_step'
+  // 筑基
+  | 'maoshan_5_thunder' | 'maoshan_exorcism' | 'maoshan_spirit_cage' | 'maoshan_taoist_heart'
+  // ── 五毒教（P6 Batch 4）──
+  // 炼气
+  | 'wudu_poison_palm' | 'wudu_insect_qi' | 'wudu_scorpion_tail' | 'wudu_poison_skin'
+  // 筑基
+  | 'wudu_centipede_bite' | 'wudu_toad_breath' | 'wudu_spider_web' | 'wudu_5_poison_array'
+  // ── 血刀门（P6 Batch 4）──
+  // 炼气
+  | 'xuedao_blade_basic' | 'xuedao_blood_qi' | 'xuedao_blood_slash' | 'xuedao_blood_thirst'
+  // 筑基
+  | 'xuedao_blood_rain' | 'xuedao_blood_armor' | 'xuedao_blood_craze' | 'xuedao_blood_sea'
+  // ── 海沙派（P6 Batch 4）──
+  // 炼气
+  | 'haisha_palm_basic' | 'haisha_tide_qi' | 'haisha_sand_palm' | 'haisha_water_step'
+  // 筑基
+  | 'haisha_wave_palm' | 'haisha_sea_guard' | 'haisha_tsunami' | 'haisha_whirlpool'
+  // ── 叛军（P7 补齐）──
+  // 炼气
+  | 'rebel_fist' | 'rebel_war_qi' | 'rebel_scout_step' | 'rebel_spear'
+  // 筑基
+  | 'rebel_iron_bone' | 'rebel_siege' | 'rebel_counter' | 'rebel_beacon'
+  // 结丹
+  | 'rebel_blood_war' | 'rebel_flanking' | 'rebel_rearguard' | 'rebel_war_sweep'
+  // ── 朝廷（P7 补齐）──
+  // 炼气
+  | 'court_fist' | 'court_authority_qi' | 'court_cane' | 'court_ritual_step'
+  // 筑基
+  | 'court_censor' | 'court_silk_guard' | 'court_arrest' | 'court_spear'
+  // 结丹
+  | 'court_gold_seal' | 'court_envoy' | 'court_iron_shield' | 'court_grace'
+  // 元婴
+  | 'court_dragon_roar' | 'court_six_strike' | 'court_royal_blade' | 'court_heaven_sword'
+  // ── 魔教（P7 补齐）──
+  // 炼气
+  | 'demon_claw' | 'demon_heart' | 'demon_soul_gaze' | 'demon_shadow_dodge'
+  // 筑基
+  | 'demon_drain' | 'demon_body' | 'demon_slash' | 'demon_confuse'
+  // 结丹
+  | 'demon_devour' | 'demon_realm' | 'demon_soul_enhance' | 'demon_purgatory'
+  // ── 逍遥派（P7 补齐）──
+  // 炼气
+  | 'xiaoyao_fist' | 'xiaoyao_free_qi' | 'xiaoyao_wind_walk' | 'xiaoyao_flower_hand'
+  // 筑基
+  | 'xiaoyao_absorb' | 'xiaoyao_snow_palm' | 'xiaoyao_wander' | 'xiaoyao_void_heart'
+  // 结丹
+  | 'xiaoyao_silk_step' | 'xiaoyao_sun_palm' | 'xiaoyao_fate_seal' | 'xiaoyao_unity'
   ;
 
 export type EnemyId =
@@ -240,7 +372,7 @@ export type StatusType =
 export type SkillType = 'attack' | 'support' | 'control' | 'passive';
 export type TargetType = 'enemy' | 'self';
 
-export type CampTabId = 'story' | 'attr' | 'bag' | 'skill' | 'relation' | 'fabao' | 'mission' | 'court' | 'world';
+export type CampTabId = 'story' | 'attr' | 'bag' | 'skill' | 'relation' | 'fabao' | 'mission' | 'court' | 'sect' | 'world' | 'sect_leader';
 
 export type ScreenId =
   | 'main' | 'saveselect' | 'create' | 'story'
@@ -490,6 +622,10 @@ export interface PlayerState {
   npcDatabase?: Record<string, NpcStats>; // NPC 数值卡数据库（可选，首次加载时初始化）
   /** 🆕 NPC 好感度字典：key=NPC的npcDbId，value=好感度数值 */
   npcAffection: Record<string, number>;
+  /** 🆕 P8: NPC 间友好度字典：key=`${idA}__${idB}`(A<B字典序)，value=-100~100 */
+  npcRelationship: Record<string, number>;
+  /** 🆕 NPC 间关系标签：key同友好度字典，value=关系标签数组（如['lover','sworn_brother']） */
+  npcRelationshipLabels: Record<string, string[]>;
   // 🆕 突破与宗门系统（沙盒模式预留）
   /** 已解锁突破的大境界列表（如 ['zhuji'] 表示筑基突破已解锁） */
   realmBreakUnlocked: string[];
@@ -499,10 +635,16 @@ export interface PlayerState {
   courtRank: string;
   /** 🆕 朝廷四维属性 */
   courtStats: { strategy: number; eloquence: number; charisma: number; scholarship: number };
+  /** 🆕 战斗属性经验值（积累足够经验→属性+1） */
+  combatStatExp: { atk: number; def: number; agi: number; crit: number };
+  /** 🆕 朝廷属性经验值（积累足够经验→属性+1） */
+  courtStatExp: { strategy: number; eloquence: number; charisma: number; scholarship: number };
   /** 🆕 朝廷影响力（朝廷的"修为"） */
   influence: number;
   /** 🆕 朝廷路线（null=未选择） */
   courtPath: 'wen' | 'wu' | null;
+  /** 🆕 职业路线选择（文官+江湖 / 武官+江湖，null=未选择，一旦选定不可更改） */
+  playerCareer: 'wen' | 'wu' | null;
   /** 🆕 上一行动领域（用于分心惩罚） */
   lastActionType: 'martial' | 'court' | 'idle';
   // 🆕 沙盒：宗门贡献值系统
@@ -531,8 +673,119 @@ export interface PlayerState {
   currentLocationId: LocationId;       // 玩家当前所在地点
   // 主角天赋系统
   playerTalent: TalentId;              // 主角天赋（默认为 dragon_vein 九霄龙脉）
+  /** 🆕 主角与 NPC 的关系标签：key=NPC的npcDbId，value=关系类型数组 */
+  npcRelations?: Record<string, PlayerNpcRelation[]>;
+  /** 🆕 势力领土控制：key=LocationId，value=控制该地的SectId（'none'=无主） */
+  territoryControl?: Record<LocationId, SectId>;
+  /** 🆕 江湖传闻列表（最近10条） */
+  worldNews?: WorldNewsItem[];
+  /** 🆕 领土攻城冷却：key=LocationId，value=下次可被攻打的回合数 */
+  siegeCooldown?: Record<string, number>;
+  // 🆕 时间系统：10回合=1月
+  gameMonth: number;         // 当前游戏月份（从1开始）
+  turnInMonth: number;       // 本月内的回合数（0-9）
+  councilCooldown: number;   // 下次议事可触发的 month 数（防止重复触发）
+  /** 🆕 偷师冷却：key="steal_<SectId>"，value=上次偷师的 month */
+  stealCooldowns: Record<string, number>;
+  /** 🆕 累计击杀数 */
+  killCount: number;
+  /** 🆕 偷师成功次数 */
+  stealSuccessCount: number;
+  /** 🆕 已获得的称号列表 */
+  playerTitles: Array<{ titleId: string; acquiredAt: number }>;
+  /** 🆕 当前激活的称号 ID（cosmetic 称号可叠加显示） */
+  activeTitle: string | null;
+  /** 🆕 悬赏板 */
+  bountyBoard: Array<{
+    id: string; targetName: string; targetLevel: number;
+    targetLocation: string; issuer: string; issuerName: string;
+    crime: string; rewardGold: number; rewardRep: number;
+    difficulty: string; generatedAt: number; expiresAt: number;
+  }>;
+  /** 🆕 当前接取的悬赏 ID */
+  activeBountyId: string | null;
+  /** 🆕 上次刷新悬赏的月份 */
+  lastBountyRefresh: number;
+  // 🆕 门派经营：每个门派的资源与稳定度
+  sectState: Record<string, SectStateData>;
+  // 🆕 P7 城池繁荣度（已被 settlementState 取代，保留兼容旧档）
+  cityProsperity?: Record<string, number>;
+  // 🆕 统一据点属性：城市和门派共用同一套属性框架
+  settlementState?: Record<string, import('./sandboxTypes').SettlementAttributes>;
+  // 🆕 P7 势力力量分
+  sectPower?: Record<string, number>;
+  // 🆕 P7 江湖大事件冷却
+  grandEventCooldown?: number;
+  // 🆕 P7 玩家大事件选择历史
+  grandEventHistory?: Array<{ eventId: string; choice: string; month: number }>;
+  // 🆕 P7 势力联盟
+  coalitions?: Array<{
+    name: string;
+    targetSect: string;
+    members: string[];
+    formedMonth: number;
+    expireMonth: number;
+  }>;
+  // 🆕 P10: 门派政务指令池（key=factionId, value=待执行的指令列表）
+  factionDirectives?: Record<string, Array<{
+    id: string;
+    type: string;
+    factionId: string;
+    label: string;
+    description: string;
+    targetLocation?: LocationId;
+    targetSect?: SectId;
+    priority: number;
+    statAffinity: { atk: number; def: number; agi: number; crit: number };
+    progressNeeded: number;
+    currentProgress: number;
+    assignedNpcId?: string;
+    claimedByPlayer?: boolean;
+    completed: boolean;
+    rewardDescription: string;
+    createdAtMonth: number;
+    expiresAtMonth: number;
+  }>>;
+  // 🆕 P10: NPC 政务记录（key=npcId）
+  factionOfficials?: Record<string, {
+    npcId: string;
+    factionId: SectId;
+    rank: string;
+    contribution: number;
+    directivesDoneThisMonth: number;
+  }>;
   _slot: number;
   _savedAt?: string;
+}
+
+/** NPC 志向类型（P8：驱动 NPC 自主行为） */
+export type NpcAmbition = 'content' | 'master' | 'power' | 'rebel' | 'avenger';
+
+/** 主角与 NPC 的关系类型 */
+export type PlayerNpcRelation = 'lover' | 'sworn_brother' | 'master' | 'student' | 'friend' | 'enemy';
+
+/** 关系标签的中文显示 */
+export const PLAYER_NPC_RELATION_LABEL: Record<PlayerNpcRelation, { label: string; icon: string; color: string }> = {
+  lover:         { label: '道侣',   icon: '💕', color: '#FF69B4' },
+  sworn_brother: { label: '结义',   icon: '🤝', color: '#FFD700' },
+  master:        { label: '师父',   icon: '👨‍🏫', color: '#9A7CFF' },
+  student:       { label: '徒弟',   icon: '📚', color: '#78BE00' },
+  friend:        { label: '好友',   icon: '💚', color: '#4CAF50' },
+  enemy:         { label: '仇敌',   icon: '💢', color: '#FD1430' },
+};
+
+/** 门派状态数据（资源 + 稳定度） */
+export interface SectStateData {
+  resources: number;  // 经济资源 0-1000
+  stability: number;  // 稳定度 0-100
+  prosperity: number; // 繁荣度 0-100（P7 新增）
+}
+
+/** 江湖传闻条目 */
+export interface WorldNewsItem {
+  text: string;
+  turn: number;
+  leftTime: number; // 展示剩余回合数
 }
 
 // ──── 战斗上下文 ────

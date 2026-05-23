@@ -7,6 +7,50 @@ import type { AttrKey, EnemyId } from '../../data/types';
 import { canPromote, executePromotion, getRankLabel, getContributionProgress } from '../../systems/PromotionSystem';
 import { initBattle } from '../../systems/BattleEngine';
 import { bus } from '../../ui/events';
+import { getActiveTitle, hasTitle, activateTitle, deactivateTitle, getTitleBonus } from '../../systems/TitleSystem';
+import { ALL_TITLES, type TitleDef } from '../../data/titles';
+
+/** 称号选择区 */
+function renderTitleSection(): string {
+  const p = getPlayer();
+  const active = getActiveTitle(p);
+  const unlocked = ALL_TITLES.filter(t => hasTitle(p, t.id));
+  const locked = ALL_TITLES.filter(t => !hasTitle(p, t.id)).slice(0, 5); // 只显示前5个未解锁的
+
+  const activeHtml = active
+    ? `<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:rgba(46,204,113,0.12);border:1px solid rgba(46,204,113,0.3);border-radius:6px;margin-bottom:10px;">
+        <span style="font-size:18px;">🏆</span>
+        <div style="flex:1;">
+          <div style="font-size:13px;color:#2ecc71;letter-spacing:1px;">${active.name}</div>
+          <div style="font-size:10px;color:var(--text-dim);">${active.desc}</div>
+        </div>
+        <button class="btn btn-xs" data-title-deactivate style="opacity:0.7;">✕ 卸下</button>
+      </div>`
+    : `<div style="padding:6px 10px;background:rgba(255,255,255,0.02);border:1px dashed rgba(255,255,255,0.08);border-radius:6px;margin-bottom:10px;text-align:center;font-size:11px;color:var(--text-dim);">
+        🏷️ 尚未激活称号
+      </div>`;
+
+  const unlockedHtml = unlocked.length > 0
+    ? `<div style="font-size:11px;color:var(--text-dim);letter-spacing:1px;margin-bottom:4px;">已解锁称号（${unlocked.length}）：</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;">
+        ${unlocked.filter(t => t.id !== (active?.id ?? '')).map(t => `
+          <button class="btn btn-xs" data-title-activate="${t.id}" style="font-size:10px;padding:3px 8px;background:rgba(52,152,219,0.1);border:1px solid rgba(52,152,219,0.25);border-radius:4px;color:#3498db;cursor:pointer;">
+            ${t.name}
+          </button>`).join('')}
+      </div>`
+    : '';
+
+  const lockedHtml = locked.length > 0
+    ? `<div style="font-size:10px;color:var(--text-dim);letter-spacing:1px;">未解锁：${locked.map(t => t.name).join(' · ')}${ALL_TITLES.length - unlocked.length > 5 ? ' …' : ''}</div>`
+    : '';
+
+  return `<div style="margin-bottom:20px;padding:12px 16px;background:rgba(201,168,76,0.04);border:1px solid rgba(201,168,76,0.15);border-radius:6px;">
+    <div style="font-size:12px;color:#c9a84c;letter-spacing:2px;margin-bottom:10px;">🏆 称号</div>
+    ${activeHtml}
+    ${unlockedHtml}
+    ${lockedHtml}
+  </div>`;
+}
 
 export function renderAttrPanel(content: HTMLElement): void {
   const p = getPlayer();
@@ -31,12 +75,21 @@ export function renderAttrPanel(content: HTMLElement): void {
     return `<button class="btn btn-xs" data-spend-attr="${attr}"${disabled}>${def.label} +${def.amount}</button>`;
   }).join('');
 
+  const tb = getTitleBonus(p);
+  const titleBonusVals = {
+    hp:  Math.floor(p.maxHp * tb.hpMul),
+    mp:  Math.floor(p.maxMp * tb.mpMul),
+    atk: Math.floor(p.atk   * tb.atkMul),
+    def: Math.floor(p.def   * tb.defMul),
+    agi: Math.floor(p.agi   * tb.agiMul),
+    crit: tb.critBonus,
+  };
   const attrRows = [
-    { icon: '❤️', name: '气血上限', base: p.maxHp, boost: ab.hp },
-    { icon: '💧', name: '内力上限', base: p.maxMp, boost: ab.mp },
-    { icon: '⚔️', name: '攻击力',    base: p.atk,   boost: ab.atk },
-    { icon: '🛡️', name: '防御力',    base: p.def,   boost: ab.def },
-    { icon: '⚡', name: '速度',      base: p.agi,   boost: ab.agi },
+    { icon: '❤️', name: '气血上限', base: p.maxHp, boost: ab.hp, tBoost: titleBonusVals.hp },
+    { icon: '💧', name: '内力上限', base: p.maxMp, boost: ab.mp, tBoost: titleBonusVals.mp },
+    { icon: '⚔️', name: '攻击力',    base: p.atk,   boost: ab.atk, tBoost: titleBonusVals.atk },
+    { icon: '🛡️', name: '防御力',    base: p.def,   boost: ab.def, tBoost: titleBonusVals.def },
+    { icon: '⚡', name: '速度',      base: p.agi,   boost: ab.agi, tBoost: titleBonusVals.agi },
   ];
 
   const contrib = p.sectContribution ?? 0;
@@ -93,6 +146,7 @@ export function renderAttrPanel(content: HTMLElement): void {
       </div>
     </div>
     ${promoHtml}
+    ${renderTitleSection()}
     ${cultPt > 0 ? `
     <div style="margin-bottom:10px;padding:10px 14px;background:rgba(155,89,182,0.12);border:1px solid rgba(155,89,182,0.4);border-radius:6px;font-size:12px;color:#c39bd3;letter-spacing:1px;line-height:1.8;">
       🎁 修为突破！可用修为点：<strong>${cultPt}</strong>，请在下方进行属性突破！
@@ -132,10 +186,10 @@ export function renderAttrPanel(content: HTMLElement): void {
           <span class="attr-icon">${a.icon}</span>
           <div class="attr-info">
             <div class="attr-name">${a.name}</div>
-            <div class="attr-value">${a.base}${a.boost > 0 ? ` <span style="color:#9b59b6;font-size:11px;">(+${a.boost})</span>` : ''}</div>
+            <div class="attr-value">${a.base}${a.boost > 0 ? ` <span style="color:#9b59b6;font-size:11px;">(+${a.boost})</span>` : ''}${a.tBoost > 0 ? ` <span style="color:#c9a84c;font-size:11px;">(+${a.tBoost}称号)</span>` : ''}</div>
           </div>
         </div>`).join('')}
-      <div class="attr-card"><span class="attr-icon">🎯</span><div class="attr-info"><div class="attr-name">暴击率</div><div class="attr-value">${p.crit}%</div></div></div>
+      <div class="attr-card"><span class="attr-icon">🎯</span><div class="attr-info"><div class="attr-name">暴击率</div><div class="attr-value">${p.crit}%${titleBonusVals.crit > 0 ? ` <span style="color:#c9a84c;font-size:11px;">(+${(titleBonusVals.crit * 100).toFixed(0)}%称号)</span>` : ''}</div></div></div>
       <div class="attr-card"><span class="attr-icon">⭐</span><div class="attr-info"><div class="attr-name">境界</div><div class="attr-value">Lv.${lv} ${realmName}</div></div></div>
       <div class="attr-card"><span class="attr-icon">💰</span><div class="attr-info"><div class="attr-name">金两</div><div class="attr-value">${p.gold}</div></div></div>
     </div>
@@ -247,4 +301,29 @@ export function renderAttrPanel(content: HTMLElement): void {
       renderAttrPanel(content);
     });
   });
+
+  // bind title activate buttons
+  content.querySelectorAll<HTMLButtonElement>('[data-title-activate]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const titleId = btn.dataset['titleActivate'];
+      if (!titleId) return;
+      const result = activateTitle(getPlayer(), titleId);
+      showToast(result.message);
+      if (result.success) {
+        saveGame(getPlayer());
+        renderAttrPanel(content);
+      }
+    });
+  });
+
+  // bind title deactivate button
+  const deactivateBtn = content.querySelector<HTMLButtonElement>('[data-title-deactivate]');
+  if (deactivateBtn) {
+    deactivateBtn.addEventListener('click', () => {
+      deactivateTitle(getPlayer());
+      saveGame(getPlayer());
+      showToast('已卸下称号。');
+      renderAttrPanel(content);
+    });
+  }
 }

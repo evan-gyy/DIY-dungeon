@@ -11,12 +11,17 @@
 // ============================================================
 
 import type { NpcStats, NpcPersonality } from '../data/npcStats';
-import type { SectId, SkillId, FabaoId } from '../data/types';
+import { NPC_STATS_INIT, getMaxAgeForLevel, getRandomInitialAge } from '../data/npcStats';
+import type { SectId, SkillId, FabaoId, NpcAmbition } from '../data/types';
+import { SECT_SKILL_TABLES } from '../data/sectSkillTables';
+import { SECTS } from '../data/sects';
 import type { TalentId } from '../data/realmConfig';
 import type { CourtStats, CourtPath, DiscipleRank, CourtRank } from '../data/sandboxTypes';
 import type { LocationId } from '../data/worldMap';
-import { calculateFinalStats } from '../data/realmConfig';
+import { calculateFinalStats, NPC_TALENT_POOL, getTalentWeight, TALENT_TIER, type TalentTier } from '../data/realmConfig';
 import { assignRandomPortraitIndex } from '../utils/npcPortrait';
+import type { SectTier } from './WorldState';
+import { getSectTier } from './WorldState';
 
 // ═════════════════════════════════════════════════════════════
 //  中文姓名池
@@ -57,71 +62,64 @@ const FEMALE_NAMES = [
 ];
 
 // ═════════════════════════════════════════════════════════════
-//  天赋 / 性格 / 职级随机池
+//  天赋 / 天骄 / 性格 / 职级随机池
 // ═════════════════════════════════════════════════════════════
 
-/** 随机 NPC 可用的天赋列表（排除主角/女主专属） */
-const NPC_TALENT_POOL: TalentId[] = [
-  'normal', 'lazy', 'diligent', 'genius',
-  'sword_heart', 'strong_as_ox', 'iron_skin', 'swift_shadow',
-  // 🆕 政务天赋
-  'strategist', 'eloquent_orator', 'born_leader', 'erudite_scholar',
-  'political_veteran', 'ambitious_official',
-  // 🆕 复合天赋
-  'warlord', 'benevolent_ruler', 'martial_scholar', 'hidden_potential',
-];
-
-/** 天赋权重（normal 最常见，专属天赋稀有） */
-const TALENT_WEIGHTS: Partial<Record<TalentId, number>> = {
-  normal: 40, lazy: 10, diligent: 12, genius: 5,
-  sword_heart: 8, strong_as_ox: 10, iron_skin: 8, swift_shadow: 7,
-  // 🆕 政务天赋（基础权重较低，有朝廷身份时提升）
-  strategist: 3, eloquent_orator: 3, born_leader: 3, erudite_scholar: 3,
-  political_veteran: 2, ambitious_official: 1,
-  // 🆕 复合天赋（稀有）
-  warlord: 2, benevolent_ruler: 1, martial_scholar: 2, hidden_potential: 2,
-};
-
 /**
- * 根据 NPC 的朝廷路线加权天赋选择。
- *
- * 文官偏向：erudite_scholar / eloquent_orator / political_veteran
- * 武官偏向：strategist / warlord / born_leader / martial_scholar
- * 无路线：标准权重（以武学天赋为主）
+ * 从天赋池中无放回抽取天赋。
+ * 权重按 TALENT_TIER_CONFIG 层级比例分配 -> 层内均分。
+ * 天骄模式：强制 2 绝世 + 1 上等。
+ * 标准 NPC：~50% 1个天赋，~30% 2个天赋，~20% 3个天赋。
  */
-function weightedPickTalent(
-  rng: () => number,
-  courtPath: CourtPath | null,
-): TalentId {
-  const adjustedWeights: Partial<Record<TalentId, number>> = { ...TALENT_WEIGHTS };
-
-  if (courtPath === 'wen') {
-    // 文官：学术/口才/政务天赋概率大幅提升
-    adjustedWeights.erudite_scholar = (adjustedWeights.erudite_scholar ?? 0) + 8;
-    adjustedWeights.eloquent_orator = (adjustedWeights.eloquent_orator ?? 0) + 7;
-    adjustedWeights.political_veteran = (adjustedWeights.political_veteran ?? 0) + 5;
-    // 军事天赋概率降低
-    adjustedWeights.warlord = 0;
-    adjustedWeights.strong_as_ox = (adjustedWeights.strong_as_ox ?? 0) - 5;
-  } else if (courtPath === 'wu') {
-    // 武官：谋略/枭雄/魅力天赋概率大幅提升
-    adjustedWeights.strategist = (adjustedWeights.strategist ?? 0) + 8;
-    adjustedWeights.warlord = (adjustedWeights.warlord ?? 0) + 7;
-    adjustedWeights.born_leader = (adjustedWeights.born_leader ?? 0) + 6;
-    adjustedWeights.martial_scholar = (adjustedWeights.martial_scholar ?? 0) + 5;
-    adjustedWeights.strong_as_ox = (adjustedWeights.strong_as_ox ?? 0) + 3;
-    // 学术天赋概率降低
-    adjustedWeights.erudite_scholar = 0;
-    adjustedWeights.eloquent_orator = (adjustedWeights.eloquent_orator ?? 0) - 1;
+function pickTalents(rng: () => number, isTianjiao: boolean): TalentId[] {
+  if (isTianjiao) {
+    // 天骄：2 绝世 + 1 上等（从对应层随机）
+    const legendary = NPC_TALENT_POOL.filter(t => TALENT_TIER[t] === 'legendary');
+    const superior = NPC_TALENT_POOL.filter(t => TALENT_TIER[t] === 'superior');
+    const pick = (pool: TalentId[], count: number, r: () => number): TalentId[] => {
+      const remaining = [...pool];
+      const result: TalentId[] = [];
+      for (let i = 0; i < count; i++) {
+        if (remaining.length === 0) break;
+        const idx = Math.floor(r() * remaining.length);
+        result.push(remaining.splice(idx, 1)[0]!);
+      }
+      return result;
+    };
+    return [...pick(legendary, 2, rng), ...pick(superior, 1, rng)];
   }
 
-  // 确保没有负权重
-  for (const key of Object.keys(adjustedWeights) as TalentId[]) {
-    if ((adjustedWeights[key] ?? 0) < 0) adjustedWeights[key] = 0;
+  // 标准 NPC：确定天赋数量（~50% 1个，~30% 2个，~20% 3个）
+  const countRoll = rng();
+  const talentCount = countRoll < 0.50 ? 1 : countRoll < 0.80 ? 2 : 3;
+
+  // 加权无放回抽取
+  const result: TalentId[] = [];
+  const remaining = [...NPC_TALENT_POOL];
+
+  for (let draw = 0; draw < talentCount; draw++) {
+    if (remaining.length === 0) break;
+    const weights = remaining.map(t => getTalentWeight(t));
+    const totalW = weights.reduce((s, w) => s + w, 0);
+    let roll = rng() * totalW;
+    let pickedIdx = 0;
+    for (let i = 0; i < remaining.length; i++) {
+      roll -= weights[i]!;
+      if (roll <= 0) { pickedIdx = i; break; }
+      pickedIdx = i;
+    }
+    result.push(remaining.splice(pickedIdx, 1)[0]!);
   }
 
-  return weightedPick(NPC_TALENT_POOL, adjustedWeights, rng, 5);
+  return result;
 }
+
+/** 天骄概率：0.5%（约每 200 个 NPC 出 1 个） */
+const TIANJIAO_CHANCE = 0.005;
+
+/** 天骄额外加成：修行×1.5，全属性+20% */
+export const TIANJIAO_CULTIVATION_MUL = 1.5;
+export const TIANJIAO_STAT_MUL = 1.20;
 
 /** 性格列表 */
 const PERSONALITY_POOL: NpcPersonality[] = [
@@ -133,14 +131,28 @@ const PERSONALITY_WEIGHTS: Record<NpcPersonality, number> = {
   aloof: 12, kind: 18, cunning: 10, upright: 15, gentle: 25, bold: 20,
 };
 
-/** 各门派为根据地的 DiscipleRank 分布（权重） */
-const SECT_RANK_DIST: Record<DiscipleRank, number> = {
-  outer: 40, inner: 30, true: 15, elder: 10, vice_leader: 3, leader: 2,
+/** P8: NPC志向列表及权重 */
+const AMBITION_POOL: NpcAmbition[] = ['content', 'master', 'power', 'rebel', 'avenger'];
+const AMBITION_WEIGHTS: Record<NpcAmbition, number> = {
+  content: 40, master: 30, power: 18, rebel: 10, avenger: 2,
 };
 
-/** 城市散修的 DiscipleRank 分布（大多是外门/无门派） */
+/** 金字塔职级比例（掌门由手写 NPC 独占，随机生成器不产出 leader/vice_leader） */
+const PYRAMID_RATIOS = {
+  elder: 0.08,   // 长老：总人数 × 8%
+  true:  0.17,   // 真传：总人数 × 17%
+  inner: 0.30,   // 内门：总人数 × 30%
+  // 外门：剩余（约 45%）
+};
+
+/** 门派据点随机 NPC 职级权重（outer/inner/true/elder，不含 leader/vice_leader） */
+const SECT_RANK_DIST: Record<DiscipleRank, number> = {
+  outer: 50, inner: 30, true: 13, elder: 7, vice_leader: 0, leader: 0,
+};
+
+/** 城市散修的 DiscipleRank 分布（大多外门/内门，极少真传/长老） */
 const CITY_RANK_DIST: Record<DiscipleRank, number> = {
-  outer: 55, inner: 25, true: 12, elder: 5, vice_leader: 2, leader: 1,
+  outer: 55, inner: 30, true: 10, elder: 5, vice_leader: 0, leader: 0,
 };
 
 // ═════════════════════════════════════════════════════════════
@@ -196,13 +208,14 @@ const BEGGAR_SKILL_TABLE: Array<[number, SkillId]> = [
   [18, 'mud_walk'], [28, 'dragon_palm'],
 ];
 
-/** 各门派技能表索引 */
+/** 各门派技能表索引（全局表覆盖17宗门，本地详细表优先） */
 const SECT_SKILL_TABLE: Partial<Record<SectId, Array<[number, SkillId]>>> = {
+  ...SECT_SKILL_TABLES,
+  // 本地 detailed table 覆盖，保证高等级 NPC 有更细致技能
   wudang: WUDANG_SKILL_TABLE,
   shaolin: SHAOLIN_SKILL_TABLE,
   emei: EMEI_SKILL_TABLE,
   beggar: BEGGAR_SKILL_TABLE,
-  // 新门派暂无专属技能表，从武当池借用（与华山/魔教一致）
 };
 
 // ═════════════════════════════════════════════════════════════
@@ -283,42 +296,64 @@ function getFabaoForLevel(level: number): {
 }
 
 // ═════════════════════════════════════════════════════════════
-//  金字塔等级分布
+//  三角金字塔等级分布（按宗门层级差异化）
 // ═════════════════════════════════════════════════════════════
 
 /**
- * 武林金字塔：越是顶尖的高手越是稀少。
+ * 三角金字塔：宗门层级越高，顶尖高手越多。
  *
- * 分布：
- *   炼气 (Lv1-10):  40%  — 大量初窥门径者
- *   筑基 (Lv11-20): 25%  — 已有小成
- *   结丹 (Lv21-30): 15%  — 一方好手
- *   元婴 (Lv31-40): 10%  — 江湖名宿
- *   化神 (Lv41-50):  6%  — 一代宗师
- *   渡劫 (Lv51-60):  3%  — 世外高人
- *   大乘 (Lv61-70):  1%  — 近乎传说
- *   飞升 (Lv71-80):  0%  — 初始不会随机生成
+ *   supreme（顶尖大派）:
+ *     炼气40% / 筑基22% / 结丹16% / 元婴10% / 化神6% / 渡劫4% / 大乘2%
+ *     掌门可达渡劫-大乘
  *
- * 参数 levelRange 钳制最终等级到门派允许的区间。
+ *   first_rate（一流门派）:
+ *     炼气42% / 筑基24% / 结丹16% / 元婴10% / 化神5% / 渡劫3%
+ *     掌门可达化神-渡劫
+ *
+ *   second_rate（二流门派）:
+ *     炼气44% / 筑基26% / 结丹16% / 元婴9% / 化神5%
+ *     掌门可达元婴-化神
+ *
+ *   fringe（旁门左道）:
+ *     炼气46% / 筑基28% / 结丹16% / 元婴7% / 化神3%
+ *     掌门可达结丹-元婴
+ *
+ *   special（特殊）:
+ *     与 first_rate 相同（逍遥派精英多，魔教人才济济）
  */
-function pyramidLevel(levelRange: [number, number], rng: () => number): number {
+const TIER_PYRAMID: Record<SectTier, number[]> = {
+  supreme:     [0.40, 0.22, 0.16, 0.10, 0.06, 0.04, 0.02],
+  first_rate:  [0.42, 0.24, 0.16, 0.10, 0.05, 0.03, 0.00],
+  second_rate: [0.44, 0.26, 0.16, 0.09, 0.05, 0.00, 0.00],
+  fringe:      [0.46, 0.28, 0.16, 0.07, 0.03, 0.00, 0.00],
+  special:     [0.40, 0.22, 0.16, 0.10, 0.06, 0.04, 0.02],
+};
+
+/** 大境界区间：[levelMin, levelMax] */
+const REALM_BANDS: Array<[number, number]> = [
+  [1, 10], [11, 20], [21, 30], [31, 40], [41, 50], [51, 60], [61, 70],
+];
+
+function pyramidLevel(sect: SectId, levelRange: [number, number], rng: () => number): number {
+  const tier = getSectTier(sect);
+  const dist = TIER_PYRAMID[tier] ?? TIER_PYRAMID['second_rate'];
   const roll = rng();
-  let realmMin: number, realmMax: number;
 
-  if (roll < 0.40)       { realmMin = 1;  realmMax = 10; }
-  else if (roll < 0.65)  { realmMin = 11; realmMax = 20; }
-  else if (roll < 0.80)  { realmMin = 21; realmMax = 30; }
-  else if (roll < 0.90)  { realmMin = 31; realmMax = 40; }
-  else if (roll < 0.96)  { realmMin = 41; realmMax = 50; }
-  else if (roll < 0.99)  { realmMin = 51; realmMax = 60; }
-  else                   { realmMin = 61; realmMax = 70; }
+  let cumulative = 0;
+  let bandIdx = 0;
+  for (let i = 0; i < dist.length; i++) {
+    cumulative += dist[i]!;
+    if (roll < cumulative) { bandIdx = i; break; }
+    bandIdx = i;
+  }
 
-  // 钳制到门派允许的等级区间
+  let [realmMin, realmMax] = REALM_BANDS[bandIdx]!;
+
+  // 钳制到宗门允许的等级区间
   realmMin = Math.max(realmMin, levelRange[0]);
   realmMax = Math.min(realmMax, levelRange[1]);
   if (realmMin > realmMax) realmMin = realmMax;
 
-  // 境界内部均匀分布（+1 因为 next rng() 消耗独立种子位）
   return realmMin + Math.floor(rng() * (realmMax - realmMin + 1));
 }
 
@@ -360,6 +395,15 @@ function getSectGenderChance(sect: SectId): [number, number] {
  * 使用种子随机保证同一 config 每次产出相同结果。
  */
 export function generateNpc(config: NpcGenConfig): NpcStats {
+  return _generateNpc(config);
+}
+
+/** 带预设职级生成（用于金字塔配额控制） */
+function generateNpcWithRank(config: NpcGenConfig, rank: DiscipleRank): NpcStats {
+  return _generateNpc(config, rank);
+}
+
+function _generateNpc(config: NpcGenConfig, presetRank?: DiscipleRank): NpcStats {
   const { sect, locationId, index, isSectHub, isCapital, levelRange, genderChance } = config;
   const seed = hashCode(`${sect}_${locationId}_${index}`);
   const rng = seededRandom(seed);
@@ -376,16 +420,24 @@ export function generateNpc(config: NpcGenConfig): NpcStats {
   // ID（gen_门派_序号）
   const id = `gen_${sect}_${String(index).padStart(3, '0')}`;
 
-  // 🆕 立绘池索引（确定性：同一 NPC 每次生成同一张图）
+  // 立绘池索引（确定性：同一 NPC 每次生成同一张图）
   const portraitIndex = assignRandomPortraitIndex(id);
 
-  // 等级（金字塔分布：弱小者众，顶尖者寡，后续根据 courtPath 调整）
-  let level = pyramidLevel(levelRange, rng);
+  // 天骄判定（0.5%，优先于其他判定）
+  const isTianjiao = rng() < TIANJIAO_CHANCE;
 
-  // 武林身份
-  const rankDist = getRankDist(isSectHub);
-  const rankKeys = Object.keys(rankDist) as DiscipleRank[];
-  const discipleRank = weightedPick(rankKeys, rankDist as any, rng, 10);
+  // 等级（三角金字塔分布：宗门层级越高，顶尖高手越多）
+  let level = pyramidLevel(sect, levelRange, rng);
+
+  // 武林身份（预设职级优先，否则按概率随机）
+  let discipleRank: DiscipleRank;
+  if (presetRank) {
+    discipleRank = presetRank;
+  } else {
+    const rankDist = getRankDist(isSectHub);
+    const rankKeys = Object.keys(rankDist) as DiscipleRank[];
+    discipleRank = weightedPick(rankKeys, rankDist as any, rng, 10);
+  }
 
   // 朝廷身份
   const courtRankDist = isCapital ? CAPITAL_COURT_RANK_DIST : COURT_RANK_DIST;
@@ -399,19 +451,27 @@ export function generateNpc(config: NpcGenConfig): NpcStats {
     courtPath = rng() < 0.35 ? 'wen' : 'wu';
   }
 
-  // 🆕 朝廷路线影响修为起点：文官修为低（炼气期 1-10），武官修为较高（筑基以上 ≥11）
+  // 朝廷路线影响修为起点：文官修为低（炼气期 1-10），武官修为较高（筑基以上 ≥11）
   if (courtPath === 'wen') {
-    level = Math.min(level, 10);           // 文官最多炼气大圆满，整日读书疏于修炼
+    level = Math.min(level, 10);
   } else if (courtPath === 'wu') {
     const maxLv = levelRange[1];
-    level = Math.max(level, Math.min(11, maxLv)); // 武官至少筑基一层，但不超过等级上限
+    level = Math.max(level, Math.min(11, maxLv));
   }
 
-  // 🆕 天赋（根据朝廷路线加权选择）
-  const talent = weightedPickTalent(rng, courtPath);
+  // 🆕 P8: 天赋（~50% 1个，~30% 2个，~20% 3个；天骄强制2绝世+1上等）
+  const talents = pickTalents(rng, isTianjiao);
 
   // 性格
   const personality = weightedPick(PERSONALITY_POOL, PERSONALITY_WEIGHTS, rng, 10);
+
+  // 🆕 P8: NPC志向（加权随机，邪道/叛军势力提高 rebel 概率）
+  let ambitionWeights = { ...AMBITION_WEIGHTS };
+  const sectAlign = SECTS[sect]?.alignment;
+  if (sectAlign === 'chaotic' || sect === 'rebels') {
+    ambitionWeights = { ...ambitionWeights, rebel: ambitionWeights.rebel + 15, content: ambitionWeights.content - 10, master: ambitionWeights.master - 5 };
+  }
+  const ambition = weightedPick(AMBITION_POOL, ambitionWeights, rng, 5);
 
   // 朝廷四维（根据路径偏重）
   const courtStats: CourtStats = generateCourtStats(rng, courtPath, level);
@@ -425,8 +485,18 @@ export function generateNpc(config: NpcGenConfig): NpcStats {
     : courtRank === 'shangshu' ? floorRand(1200, 1600, rng)
     : floorRand(1800, 2500, rng);
 
-  // 基础属性
-  const stats = calculateFinalStats(level, [talent]);
+  // 基础属性（含天赋加成 + 天骄加成）
+  let stats = calculateFinalStats(level, talents);
+  if (isTianjiao) {
+    stats = {
+      hp: Math.floor(stats.hp * TIANJIAO_STAT_MUL),
+      mp: Math.floor(stats.mp * TIANJIAO_STAT_MUL),
+      atk: Math.floor(stats.atk * TIANJIAO_STAT_MUL),
+      def: Math.floor(stats.def * TIANJIAO_STAT_MUL),
+      agi: Math.floor(stats.agi * TIANJIAO_STAT_MUL),
+      crit: stats.crit + 5, // 天骄额外 +5% 暴击
+    };
+  }
 
   // 技能
   const skills = getSkillsForLevel(sect, level);
@@ -439,7 +509,7 @@ export function generateNpc(config: NpcGenConfig): NpcStats {
   if (fabao.accessory) ownedFabao.push(fabao.accessory);
 
   return {
-    id, name, talent, sect, level,
+    id, name, talents, isTianjiao, sect, level,
     exp: 0,
     hp: stats.hp, maxHp: stats.hp,
     mp: stats.mp, maxMp: stats.mp,
@@ -454,9 +524,12 @@ export function generateNpc(config: NpcGenConfig): NpcStats {
     courtStats,
     influence,
     courtPath,
-    // 🆕 立绘系统
     gender,
     portraitIndex,
+    ambition,
+    age: getRandomInitialAge(level),
+    maxAge: getMaxAgeForLevel(level),
+    isAlive: true,
   };
 }
 
@@ -508,7 +581,7 @@ function hashCode(str: string): number {
 //  批量生成配置
 // ═════════════════════════════════════════════════════════════
 
-/** 门派根据地配置 */
+/** 门派根据地配置（P8: 按宗门层级分配人数与等级上限） */
 interface SectHubConfig {
   locationId: LocationId;
   sect: SectId;
@@ -517,20 +590,34 @@ interface SectHubConfig {
 }
 
 const SECT_HUBS: SectHubConfig[] = [
-  { locationId: 'wudang_mountain',    sect: 'wudang',     countRange: [10, 14], levelRange: [1, 30] },  // 手写已有大量武当NPC，减少随机量
-  { locationId: 'shaolin_temple',     sect: 'shaolin',    countRange: [16, 22], levelRange: [1, 30] },
-  { locationId: 'emei_mountain',      sect: 'emei',       countRange: [14, 20], levelRange: [1, 30] },
-  { locationId: 'beggar_hq',          sect: 'beggar',     countRange: [18, 24], levelRange: [1, 30] },  // 丐帮人多
-  // 🆕 新宗门根据地（略小规模）
-  { locationId: 'maoshan_daoyuan',    sect: 'maoshan',    countRange: [12, 18], levelRange: [1, 30] },
-  { locationId: 'kunlun_mountain',    sect: 'kunlun',     countRange: [10, 16], levelRange: [1, 30] },
-  { locationId: 'qingcheng_mountain', sect: 'qingcheng',  countRange: [12, 18], levelRange: [1, 30] },
-  { locationId: 'tangmen_estate',     sect: 'tangmen',    countRange: [10, 16], levelRange: [1, 30] },
-  { locationId: 'xiaoyao_valley',     sect: 'xiaoyao',    countRange: [5, 10],  levelRange: [15, 45] }, // 逍遥派精锐少
-  // 🆕 三大新宗门根据地
-  { locationId: 'zhongnan_mountain',  sect: 'quanzhen',   countRange: [12, 18], levelRange: [1, 30] },
-  { locationId: 'kongtong_mountain',  sect: 'kongtong',   countRange: [10, 16], levelRange: [1, 30] },
-  { locationId: 'diancang_mountain',  sect: 'diancang',   countRange: [8, 14],  levelRange: [1, 30] },
+  // ── 顶尖大派 (supreme): 人数多，顶尖高手可达大乘 ──
+  { locationId: 'wudang_mountain',    sect: 'wudang',     countRange: [10, 14], levelRange: [1, 70] },
+  { locationId: 'shaolin_temple',     sect: 'shaolin',    countRange: [16, 24], levelRange: [1, 65] },
+  // ── 一流门派 (first_rate): 人数中上，顶尖高手可达渡劫 ──
+  { locationId: 'emei_mountain',      sect: 'emei',       countRange: [14, 20], levelRange: [1, 55] },
+  { locationId: 'beggar_hq',          sect: 'beggar',     countRange: [18, 24], levelRange: [1, 55] },
+  { locationId: 'heimu_cliff',        sect: 'riyue',      countRange: [12, 18], levelRange: [1, 55] },
+  { locationId: 'zhongnan_mountain',  sect: 'quanzhen',   countRange: [12, 18], levelRange: [1, 55] },
+  { locationId: 'kunlun_mountain',    sect: 'kunlun',     countRange: [10, 16], levelRange: [1, 55] },
+  { locationId: 'tangmen_estate',     sect: 'tangmen',    countRange: [10, 16], levelRange: [1, 55] },
+  // ── 二流门派 (second_rate): 人数中等，顶尖可达化神 ──
+  { locationId: 'huashan_base',       sect: 'huashan',    countRange: [12, 18], levelRange: [1, 45] },
+  { locationId: 'qingcheng_mountain', sect: 'qingcheng',  countRange: [12, 18], levelRange: [1, 45] },
+  { locationId: 'kongtong_mountain',  sect: 'kongtong',   countRange: [10, 16], levelRange: [1, 45] },
+  { locationId: 'diancang_mountain',  sect: 'diancang',   countRange: [8, 14],  levelRange: [1, 45] },
+  { locationId: 'chongqing_city',     sect: 'tiezhang',   countRange: [10, 16], levelRange: [1, 40] },
+  // ── 旁门左道 (fringe): 人数较少，顶尖可达元婴 ──
+  { locationId: 'maoshan_daoyuan',    sect: 'maoshan',    countRange: [12, 18], levelRange: [1, 35] },
+  { locationId: 'dali_city',         sect: 'wudu',       countRange: [10, 16], levelRange: [1, 35] },
+  { locationId: 'liangzhou_city',    sect: 'xuedao',     countRange: [8, 14],  levelRange: [1, 35] },
+  { locationId: 'mingzhou_city',     sect: 'haisha',     countRange: [8, 14],  levelRange: [1, 35] },
+  // ── 特殊: 逍遥派精锐少但层次高 ──
+  { locationId: 'xiaoyao_valley',     sect: 'xiaoyao',    countRange: [5, 10],  levelRange: [15, 55] },
+  // ── P7 朝廷与叛军 ──
+  { locationId: 'kaifeng_city',      sect: 'imperial_court', countRange: [12, 18], levelRange: [1, 55] },
+  { locationId: 'yanjing_city',      sect: 'rebels',         countRange: [5, 9],   levelRange: [15, 55] },
+  // ── 黑月教暗桩（秘密据点，扬州的隐蔽联络点）──
+  { locationId: 'yangzhou_city',     sect: 'demon',          countRange: [4, 8],   levelRange: [15, 45] },
 ];
 
 /** 城市配置 */
@@ -575,6 +662,8 @@ const ALL_SECTS: SectId[] = [
   'wudang', 'shaolin', 'emei', 'beggar', 'huashan', 'demon',
   'maoshan', 'kunlun', 'qingcheng', 'tangmen', 'xiaoyao',
   'quanzhen', 'kongtong', 'diancang',
+  'riyue', 'tiezhang', 'wudu', 'xuedao', 'haisha',
+  'imperial_court', 'rebels',
 ];
 
 // ═════════════════════════════════════════════════════════════
@@ -599,13 +688,45 @@ export function generateAllNpcs(): Record<string, NpcStats> {
   const all: Record<string, NpcStats> = {};
   const globalRng = seededRandom(GLOBAL_SEED);
 
-  // 1. 宗门根据地 NPC
+  // 预统计手写 NPC 的职级占用（掌门/长老/真传/内门/外门，按宗门）
+  const handcraftedQuota: Record<string, Record<string, number>> = {};
+  for (const [, init] of Object.entries(NPC_STATS_INIT)) {
+    const s = init.sect;
+    const r = init.discipleRank;
+    if (s === 'none') continue;
+    if (!handcraftedQuota[s]) handcraftedQuota[s] = {};
+    handcraftedQuota[s]![r] = (handcraftedQuota[s]![r] ?? 0) + 1;
+  }
+
+  // 1. 宗门根据地 NPC（含金字塔配额控制）
   for (const hub of SECT_HUBS) {
     const [min, max] = hub.countRange;
-    const count = min + Math.floor(globalRng() * (max - min + 1));
+    const totalN = min + Math.floor(globalRng() * (max - min + 1));
+    const hc = handcraftedQuota[hub.sect] ?? {};
 
-    for (let i = 0; i < count; i++) {
-      const npc = generateNpc({
+    // 计算金字塔配额
+    const quotaElder  = Math.max(1, Math.floor(totalN * PYRAMID_RATIOS.elder)) - (hc['elder'] ?? 0);
+    const quotaTrue   = Math.max(2, Math.floor(totalN * PYRAMID_RATIOS.true))  - (hc['true'] ?? 0) - (hc['vice_leader'] ?? 0);
+    const quotaInner  = Math.max(3, Math.floor(totalN * PYRAMID_RATIOS.inner)) - (hc['inner'] ?? 0);
+    const quotaOuter  = totalN - 1; // 掌门占1（手写），剩余全部外门兜底
+
+    let genElder = 0, genTrue = 0, genInner = 0;
+
+    for (let i = 0; i < totalN; i++) {
+      // 根据剩余配额选择职级
+      let rank: DiscipleRank;
+      const roll = globalRng();
+      if (genElder < quotaElder && roll < 0.10) {
+        rank = 'elder'; genElder++;
+      } else if (genTrue < quotaTrue && roll < 0.30) {
+        rank = 'true'; genTrue++;
+      } else if (genInner < quotaInner && roll < 0.60) {
+        rank = 'inner'; genInner++;
+      } else {
+        rank = 'outer';
+      }
+
+      const npc = generateNpcWithRank({
         sect: hub.sect,
         locationId: hub.locationId,
         index: i,
@@ -613,7 +734,7 @@ export function generateAllNpcs(): Record<string, NpcStats> {
         isCapital: false,
         levelRange: hub.levelRange,
         genderChance: getSectGenderChance(hub.sect),
-      });
+      }, rank);
       all[npc.id] = npc;
     }
   }

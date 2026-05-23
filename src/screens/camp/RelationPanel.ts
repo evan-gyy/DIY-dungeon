@@ -1,7 +1,7 @@
 import { getPlayer, setPlayer } from '../../state/GameState';
 import { saveGame } from '../../state/SaveSystem';
 import { getNpcStats } from '../../systems/NpcBehavior';
-import { TALENTS } from '../../data/realmConfig';
+import { TALENTS, TALENT_TIER, TALENT_TIER_CONFIG, type TalentId } from '../../data/realmConfig';
 import { getRealmName, getExpForLevel, isRealmMaxLevel } from '../../state/LevelSystem';
 import { FABAO } from '../../data/fabao';
 import type { NpcStats, NpcPersonality } from '../../data/npcStats';
@@ -9,10 +9,12 @@ import { PERSONALITY } from '../../data/npcStats';
 import {
   canRecommend, executeRecommend,
   canRecruit, executeRecruit,
+  canRecruitUnaffiliated, executeRecruitUnaffiliated,
   canDismiss, executeDismiss,
   canAssign, executeAssign,
   getRankLabel, getAssignmentLabel,
   getMaxRecruitSlots,
+  canPersuadeNpc,
 } from '../../systems/NPCManager';
 import type { DiscipleRank, NpcAssignment } from '../../data/sandboxTypes';
 import {
@@ -24,6 +26,12 @@ import {
   getInteractionInfo, GIFT_TIERS,
   type TalkResult, type GiftResult, type SparResult,
 } from '../../systems/NPCInteraction';
+import {
+  getPlayerNpcRelations, addPlayerNpcRelation, removePlayerNpcRelation,
+  canBecomeLover, canSwornBrother, canBecomeMaster, canBecomeStudent,
+} from '../../systems/NpcRelationship';
+import { PLAYER_NPC_RELATION_LABEL, type PlayerNpcRelation } from '../../data/types';
+import { WORLD_MAP, type LocationId } from '../../data/worldMap';
 
 interface RelationChar {
   id: string;
@@ -242,145 +250,271 @@ function bindNpcCardEvents(content: HTMLElement): void {
 }
 
 export function showNpcStatsOverlay(npcDbId: string, npcName: string, npcImg: string): void {
-  // 移除旧弹窗
   document.getElementById('npc-stats-overlay')?.remove();
 
   const p = getPlayer();
   const npcDb = p.npcDatabase || {};
   const stats: NpcStats | null = npcDb[npcDbId] || null;
-  const npcSect = stats?.sect ?? '';
-  const playerSect = p.sect;
   const affection = getNpcAffection(npcDbId);
   const isRecruited = p.npcCollection?.recruited?.includes(npcDbId) ?? false;
 
-  let bodyHtml = '';
-  if (!stats) {
-    bodyHtml = `<p style="color:var(--text-dim);text-align:center;padding:20px;">暂无该角色的详细数据。</p>`;
+  const sectNames: Record<string, string> = {
+    wudang: '武当', shaolin: '少林', emei: '峨眉', beggar: '丐帮',
+    huashan: '华山', demon: '黑月教', maoshan: '茅山', kunlun: '昆仑',
+    qingcheng: '青城', tangmen: '唐门', xiaoyao: '逍遥',
+    quanzhen: '全真', kongtong: '崆峒', diancang: '点苍',
+    riyue: '日月教', tiezhang: '铁掌帮', wudu: '五毒教', xuedao: '血刀门', haisha: '海沙派',
+    none: '散修',
+  };
+
+  const realmColors: Record<string, string> = {
+    '炼气': '#e8e8e8', '筑基': '#4caf50', '结丹': '#42a5f5',
+    '元婴': '#ab47bc', '化神': '#ffd700', '渡劫': '#ef5350',
+    '大乘': '#daa520', '飞升': '#7b68ee',
+  };
+
+  const realm = stats ? getRealmName(stats.level) : '';
+  const realmColor = realmColors[realm] ?? '#c9a84c';
+  const tianjiaoClass = stats?.isTianjiao ? ' tianjiao' : '';
+  const tianjiaoBadge = stats?.isTianjiao ? '<span class="npc-stats-tianjiao-badge">🌟 天骄</span>' : '';
+
+  let infoHtml = '';
+  if (stats) {
+    infoHtml = buildStatsPanel(npcDbId, stats, p, affection, isRecruited, realmColors, sectNames, realm, realmColor);
   } else {
-    const talent = TALENTS[stats.talent];
-    const realm = getRealmName(stats.level);
-    const expNeeded = getExpForLevel(stats.level);
-    const atMax = isRealmMaxLevel(stats.level);
-    const expPct = atMax ? 100 : Math.min(100, Math.floor(stats.exp / expNeeded * 100));
-    const fabaoWeapon = stats.equippedFabao.weapon ? FABAO[stats.equippedFabao.weapon] : null;
-    const fabaoArmor = stats.equippedFabao.armor ? FABAO[stats.equippedFabao.armor] : null;
-    const fabaoAcc = stats.equippedFabao.accessory ? FABAO[stats.equippedFabao.accessory] : null;
-
-    // 🆕 双身份 + 好感度 + 性格
-    const discipleLabel = getRankLabel(stats.discipleRank);
-    const courtLabel = COURT_RANK_LABEL[stats.courtRank as CourtRank] ?? '平民';
-    const personality = stats.personality ?? 'gentle';
-    const persCfg = PERSONALITY[personality];
-
-    bodyHtml = `
-      <div class="npc-stats-body">
-        <!-- 双身份 -->
-        <div class="npc-stats-row">
-          <span class="npc-stats-label">武林身份</span>
-          <span class="npc-stats-value" style="color:#c9a84c;">${discipleLabel}</span>
-        </div>
-        <div class="npc-stats-row">
-          <span class="npc-stats-label">庙堂身份</span>
-          <span class="npc-stats-value" style="color:#8ec8a0;">${courtLabel}</span>
-        </div>
-        <div class="npc-stats-row">
-          <span class="npc-stats-label">❤️ 好感度</span>
-          <span class="npc-stats-value" style="color:#f0a0b0;">${affection} / 100</span>
-        </div>
-        <div class="npc-stats-row">
-          <span class="npc-stats-label">性格</span>
-          <span class="npc-stats-value" style="color:#c084fc;">${persCfg.icon} ${persCfg.name}</span>
-        </div>
-        <div style="font-size:11px;color:var(--text-dim);margin-bottom:6px;line-height:1.4;">${persCfg.desc}</div>
-        <div class="npc-stats-divider"></div>
-        <div class="npc-stats-row">
-          <span class="npc-stats-label">修为</span>
-          <span class="npc-stats-value" style="color:var(--text-gold);">${realm}</span>
-        </div>
-        <div class="npc-stats-row">
-          <span class="npc-stats-label">修为进度</span>
-          <span class="npc-stats-value" style="font-size:11px;color:${atMax ? '#e74c3c' : 'var(--text-dim)'};">${atMax ? '已满（等待突破契机）' : `${stats.exp} / ${expNeeded}`}</span>
-        </div>
-        <div style="height:4px;background:#1a1a2e;border-radius:2px;overflow:hidden;margin:4px 0 8px;">
-          <div style="height:100%;width:${expPct}%;background:${atMax ? '#e74c3c' : 'linear-gradient(90deg,#5dade2,#9b59b6)'};border-radius:2px;"></div>
-        </div>
-        <div class="npc-stats-row">
-          <span class="npc-stats-label">天赋</span>
-          <span class="npc-stats-value" style="color:#c084fc;">${talent?.name || '—'}</span>
-        </div>
-        <div class="npc-stats-row">
-          <span class="npc-stats-label">天赋说明</span>
-          <span class="npc-stats-value" style="font-size:11px;">${talent?.desc || '—'}</span>
-        </div>
-        <div class="npc-stats-divider"></div>
-        <div class="npc-stats-row">
-          <span class="npc-stats-label">❤️ 气血</span>
-          <span class="npc-stats-value">${stats.hp} / ${stats.maxHp}</span>
-        </div>
-        <div class="npc-stats-row">
-          <span class="npc-stats-label">💧 内力</span>
-          <span class="npc-stats-value">${stats.mp} / ${stats.maxMp}</span>
-        </div>
-        <div class="npc-stats-row">
-          <span class="npc-stats-label">⚔️ 攻击</span>
-          <span class="npc-stats-value">${stats.atk}</span>
-        </div>
-        <div class="npc-stats-row">
-          <span class="npc-stats-label">🛡️ 防御</span>
-          <span class="npc-stats-value">${stats.def}</span>
-        </div>
-        <div class="npc-stats-row">
-          <span class="npc-stats-label">💨 身法</span>
-          <span class="npc-stats-value">${stats.agi}</span>
-        </div>
-        <div class="npc-stats-row">
-          <span class="npc-stats-label">💥 暴击</span>
-          <span class="npc-stats-value">${stats.crit}%</span>
-        </div>
-        <div class="npc-stats-divider"></div>
-        <div class="npc-stats-row">
-          <span class="npc-stats-label">⚔️ 武器</span>
-          <span class="npc-stats-value" style="color:${fabaoWeapon?.colorCss || 'var(--text-dim)'};">${fabaoWeapon?.name || '无'}</span>
-        </div>
-        <div class="npc-stats-row">
-          <span class="npc-stats-label">🛡️ 衣服</span>
-          <span class="npc-stats-value" style="color:${fabaoArmor?.colorCss || 'var(--text-dim)'};">${fabaoArmor?.name || '无'}</span>
-        </div>
-        <div class="npc-stats-row">
-          <span class="npc-stats-label">💎 饰品</span>
-          <span class="npc-stats-value" style="color:${fabaoAcc?.colorCss || 'var(--text-dim)'};">${fabaoAcc?.name || '无'}</span>
-        </div>
-        ${isRecruited ? renderRecruitedActions(npcDbId, p) : ''}
-      </div>`;
+    infoHtml = `<p style="color:var(--text-dim);text-align:center;padding:20px;">暂无该角色的详细数据。</p>`;
   }
-
-  // 操作按钮区
-  const actionButtons = renderActionButtons(npcDbId, stats, p, affection, isRecruited);
 
   const overlay = document.createElement('div');
   overlay.id = 'npc-stats-overlay';
-  overlay.className = 'npc-stats-overlay';
+  overlay.className = 'npc-portrait-overlay';
   overlay.dataset['npcDbId'] = npcDbId;
   overlay.dataset['npcName'] = npcName;
   overlay.dataset['npcImg'] = npcImg;
+
   overlay.innerHTML = `
-    <div class="npc-stats-overlay-inner">
-      <div class="npc-stats-header">
-        <img src="${npcImg}" alt="${npcName}" class="npc-stats-portrait" onerror="this.style.display='none'">
-        <div class="npc-stats-title">${npcName}</div>
+    <div class="npc-portrait-bg-wrap">
+      <div class="npc-portrait-bg-blur" style="background-image:url(${npcImg});"></div>
+    </div>
+    <div class="npc-portrait-fg">
+      <div class="npc-portrait-info-badge" style="border-color:${realmColor};">
+        <div class="npi-realm" style="color:${realmColor};">${realm || '???'}${tianjiaoBadge}</div>
+        <div class="npi-sect">${stats ? `${sectNames[stats.sect] ?? stats.sect} · ${getRankLabel(stats.discipleRank)}` : ''}</div>
+        <div class="npi-name">${npcName}</div>
       </div>
-      ${bodyHtml}
-      <div class="npc-stats-actions">${actionButtons}</div>
-      <button class="npc-stats-close" id="npc-stats-close">关 闭</button>
+
+      <div class="npc-portrait-center">
+        <div class="npc-portrait-frame${tianjiaoClass}" style="--realm-glow:${realmColor};">
+          <img src="${npcImg}" alt="${npcName}" class="npc-portrait-main" onerror="this.style.display='none'">
+        </div>
+      </div>
+
+      <div class="npc-portrait-btn-row">
+        <button class="npp-btn npp-btn-info" data-action="view-stats">📊 查看信息</button>
+        <button class="npp-btn npp-btn-interact" data-action="toggle-interact">💬 互动 ▾</button>
+      </div>
+
+      <div class="npc-interact-menu hidden" id="npc-interact-menu">
+        <button class="npp-btn npp-btn-sub" data-action="talk">💬 谈话</button>
+        <button class="npp-btn npp-btn-sub" data-action="gift-dialog">🎁 送礼</button>
+        <button class="npp-btn npp-btn-sub" data-action="discuss-dao">☯️ 论道</button>
+        <button class="npp-btn npp-btn-sub" data-action="invite-travel">🧳 邀约同行</button>
+        <button class="npp-btn npp-btn-sub" data-action="ask-guidance">📜 请求指点</button>
+        <button class="npp-btn npp-btn-sub" data-action="ask-intel">🔍 打探情报</button>
+        <button class="npp-btn npp-btn-sub" data-action="spar">⚔️ 切磋</button>
+      </div>
+
+      <button class="npc-portrait-close" id="npc-portrait-close">✕</button>
+    </div>
+
+    <!-- 详细信息面板（默认隐藏） -->
+    <div class="npc-detail-panel hidden" id="npc-detail-panel">
+      <div class="npc-detail-panel-inner">
+        <div class="npc-detail-header">
+          <span class="npc-detail-title">📋 ${npcName} · 详细信息</span>
+          <button class="npc-detail-back" id="npc-detail-back">← 返回</button>
+        </div>
+        <div class="npc-detail-body">${infoHtml}</div>
+      </div>
     </div>
   `;
 
   document.body.appendChild(overlay);
 
-  // 关闭按钮
-  overlay.querySelector('#npc-stats-close')?.addEventListener('click', () => {
-    overlay.remove();
+  bindPortraitEvents(overlay, npcDbId, npcName, stats);
+}
+
+/** 构建详细属性面板 HTML */
+function buildStatsPanel(
+  npcDbId: string,
+  stats: NpcStats,
+  p: ReturnType<typeof getPlayer>,
+  affection: number,
+  isRecruited: boolean,
+  realmColors: Record<string, string>,
+  sectNames: Record<string, string>,
+  realm: string,
+  realmColor: string,
+): string {
+  const talentIds = (stats.talents?.length ? stats.talents : (stats.talent ? [stats.talent] : ['normal'])) as string[];
+  const npcTalents = talentIds.map((tid: string) => {
+    const id = tid as TalentId;
+    return { id, data: TALENTS[id], tier: TALENT_TIER[id] ?? 'common' };
   });
+  const expNeeded = getExpForLevel(stats.level);
+  const atMax = isRealmMaxLevel(stats.level);
+  const expPct = atMax ? 100 : Math.min(100, Math.floor(stats.exp / expNeeded * 100));
+  const fabaoWeapon = stats.equippedFabao.weapon ? FABAO[stats.equippedFabao.weapon] : null;
+  const fabaoArmor = stats.equippedFabao.armor ? FABAO[stats.equippedFabao.armor] : null;
+  const fabaoAcc = stats.equippedFabao.accessory ? FABAO[stats.equippedFabao.accessory] : null;
+  const sectName = sectNames[stats.sect] ?? stats.sect;
+  const discipleLabel = getRankLabel(stats.discipleRank);
+  const courtLabel = COURT_RANK_LABEL[stats.courtRank as CourtRank] ?? '平民';
+  const personality = stats.personality ?? 'gentle';
+  const persCfg = PERSONALITY[personality];
+
+  return `
+    <div class="npc-stats-identity-row">
+      <span class="npc-stats-identity-tag sect">🏛️ ${sectName} · ${discipleLabel}</span>
+      <span class="npc-stats-identity-tag court">🏯 ${courtLabel}</span>
+    </div>
+
+    <div class="npc-stats-section">
+      <div class="npc-stats-section-title"><span class="icon">☯️</span>修为境界</div>
+      <div class="npc-stats-attr-row">
+        <span class="npc-stats-attr-label">境界</span>
+        <span class="npc-stats-attr-value" style="color:${realmColor};">${realm}</span>
+      </div>
+      <div class="npc-stats-exp-bar-wrap">
+        <div class="npc-stats-attr-row">
+          <span class="npc-stats-attr-label">修为进度</span>
+          <span class="npc-stats-attr-value" style="font-size:11px;color:${atMax ? '#e74c3c' : 'var(--text-dim)'};">${atMax ? '已满' : `${stats.exp} / ${expNeeded}`}</span>
+        </div>
+        <div class="npc-stats-exp-bar">
+          <div class="npc-stats-exp-fill" style="width:${expPct}%;background:${atMax ? '#e74c3c' : `linear-gradient(90deg,${realmColor},#9b59b6)`};"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="npc-stats-section">
+      <div class="npc-stats-section-title"><span class="icon">📊</span>战斗属性</div>
+      <div class="npc-stats-attr-grid">
+        <div class="npc-stats-attr-row"><span class="npc-stats-attr-label">❤️ 气血</span><span class="npc-stats-attr-value">${stats.hp} / ${stats.maxHp}</span></div>
+        <div class="npc-stats-attr-row"><span class="npc-stats-attr-label">💧 内力</span><span class="npc-stats-attr-value">${stats.mp} / ${stats.maxMp}</span></div>
+        <div class="npc-stats-attr-row"><span class="npc-stats-attr-label">⚔️ 攻击</span><span class="npc-stats-attr-value">${stats.atk}</span></div>
+        <div class="npc-stats-attr-row"><span class="npc-stats-attr-label">🛡️ 防御</span><span class="npc-stats-attr-value">${stats.def}</span></div>
+        <div class="npc-stats-attr-row"><span class="npc-stats-attr-label">💨 身法</span><span class="npc-stats-attr-value">${stats.agi}</span></div>
+        <div class="npc-stats-attr-row"><span class="npc-stats-attr-label">💥 暴击</span><span class="npc-stats-attr-value">${stats.crit}%</span></div>
+      </div>
+    </div>
+
+    ${stats.courtStats ? `
+    <div class="npc-stats-section">
+      <div class="npc-stats-section-title"><span class="icon">📜</span>才智属性</div>
+      <div class="npc-stats-attr-grid">
+        <div class="npc-stats-attr-row"><span class="npc-stats-attr-label">🎯 智谋</span><span class="npc-stats-attr-value">${stats.courtStats.strategy}</span></div>
+        <div class="npc-stats-attr-row"><span class="npc-stats-attr-label">🗣️ 口才</span><span class="npc-stats-attr-value">${stats.courtStats.eloquence}</span></div>
+        <div class="npc-stats-attr-row"><span class="npc-stats-attr-label">✨ 魅力</span><span class="npc-stats-attr-value">${stats.courtStats.charisma}</span></div>
+        <div class="npc-stats-attr-row"><span class="npc-stats-attr-label">📖 学识</span><span class="npc-stats-attr-value">${stats.courtStats.scholarship}</span></div>
+      </div>
+    </div>
+    ` : ''}
+
+    <div class="npc-stats-section">
+      <div class="npc-stats-section-title"><span class="icon">🌟</span>天赋</div>
+      <div class="npc-stats-talents">
+        ${npcTalents.map(t => {
+          const cfg = TALENT_TIER_CONFIG[t.tier];
+          return `<span class="npc-stats-talent-tag ${t.tier}" title="${t.data?.desc ?? ''}">${cfg?.label ? `[${cfg.label}] ` : ''}${t.data?.name ?? t.id}</span>`;
+        }).join('')}
+      </div>
+    </div>
+
+    <div class="npc-stats-section">
+      <div class="npc-stats-section-title"><span class="icon">💎</span>装备法宝</div>
+      <div class="npc-stats-fabao-row">
+        <span class="npc-stats-fabao-item" style="color:${fabaoWeapon?.colorCss || 'var(--text-dim)'};">⚔️ ${fabaoWeapon?.name || '无'}</span>
+        <span class="npc-stats-fabao-item" style="color:${fabaoArmor?.colorCss || 'var(--text-dim)'};">🛡️ ${fabaoArmor?.name || '无'}</span>
+        <span class="npc-stats-fabao-item" style="color:${fabaoAcc?.colorCss || 'var(--text-dim)'};">💎 ${fabaoAcc?.name || '无'}</span>
+      </div>
+    </div>
+
+    <div class="npc-stats-section">
+      <div class="npc-stats-section-title"><span class="icon">💝</span>关系</div>
+      <div class="npc-stats-aff-row">
+        <span style="font-size:12px;color:#f0a0b0;white-space:nowrap;">❤️ ${affection}/100</span>
+        <div class="npc-stats-aff-bar-wrap">
+          <div class="npc-stats-aff-bar-fill" style="width:${affection}%;"></div>
+        </div>
+        <span class="npc-stats-personality">${persCfg.icon} ${persCfg.name}</span>
+      </div>
+      <div style="font-size:11px;color:var(--text-dim);margin-top:3px;">${persCfg.desc}</div>
+      ${renderRelationTags(npcDbId)}
+      ${renderNpcSocialRelations(npcDbId)}
+      ${renderRelationButtons(npcDbId, affection, stats)}
+    </div>
+
+    <div class="npc-stats-section">
+      <div class="npc-stats-section-title"><span class="icon">📋</span>近日经历</div>
+      <div class="npc-recent-log">${renderRecentLog(stats)}</div>
+    </div>
+
+    ${isRecruited ? renderRecruitedActions(npcDbId, p) : ''}
+    ${!isRecruited ? renderRecruitSection(npcDbId, stats, p, affection) : ''}
+  `;
+}
+
+/** 招募/推荐区域 */
+function renderRecruitSection(
+  npcDbId: string,
+  stats: NpcStats,
+  p: ReturnType<typeof getPlayer>,
+  affection: number,
+): string {
+  const buttons: string[] = [];
+  if (stats.sect === p.sect) {
+    const check = canRecruit(p, stats, affection);
+    if (check.success) {
+      buttons.push(`<button class="npc-action-btn primary" data-action="recruit" data-npc-id="${npcDbId}">招募为随从</button>`);
+    } else {
+      buttons.push(`<button class="npc-action-btn disabled" disabled title="${check.message}">招募（${check.message.slice(0, 12)}…）</button>`);
+    }
+  } else if (stats.sect === 'none') {
+    const check = canRecruitUnaffiliated(p, stats, affection);
+    if (check.success) {
+      buttons.push(`<button class="npc-action-btn primary" data-action="recruit-unaffiliated" data-npc-id="${npcDbId}">登用为随从</button>`);
+    } else {
+      buttons.push(`<button class="npc-action-btn disabled" disabled title="${check.message}">登用（${check.message.slice(0, 12)}…）</button>`);
+    }
+  } else {
+    const check = canRecommend(p, stats, affection);
+    if (check.success) {
+      const persuasion = canPersuadeNpc(p, stats, affection);
+      const persDetail = persuasion.factors.detail;
+      if (persuasion.success) {
+        buttons.push(`<button class="npc-action-btn primary" data-action="recommend" data-npc-id="${npcDbId}" title="${persDetail}">游说加入${getSectShortName(p.sect)}</button>`);
+        buttons.push(`<div style="font-size:10px;color:var(--text-gold);">🎯 ${persDetail}</div>`);
+      } else {
+        buttons.push(`<button class="npc-action-btn disabled" disabled title="${persuasion.message}">游说加入${getSectShortName(p.sect)} · 困难</button>`);
+        buttons.push(`<div style="font-size:10px;color:#e74c3c;">❌ ${persuasion.message.slice(0, 40)}</div>`);
+      }
+    } else {
+      buttons.push(`<button class="npc-action-btn disabled" disabled title="${check.message}">推荐入宗（${check.message.slice(0, 12)}…）</button>`);
+    }
+  }
+  if (buttons.length === 0) return '';
+  return `<div class="npc-stats-section"><div style="display:flex;gap:6px;flex-wrap:wrap;">${buttons.join('')}</div></div>`;
+}
+
+/** 肖像模式的事件绑定 */
+function bindPortraitEvents(
+  overlay: HTMLElement,
+  npcDbId: string,
+  npcName: string,
+  stats: NpcStats | null,
+): void {
+  // 关闭按钮
+  overlay.querySelector('#npc-portrait-close')?.addEventListener('click', () => overlay.remove());
 
   // 点击背景关闭
   overlay.addEventListener('click', (e) => {
@@ -389,15 +523,420 @@ export function showNpcStatsOverlay(npcDbId: string, npcName: string, npcImg: st
 
   // ESC 关闭
   const escHandler = (e: KeyboardEvent) => {
-    if (e.key === 'Escape') {
-      overlay.remove();
-      document.removeEventListener('keydown', escHandler);
-    }
+    if (e.key === 'Escape') { overlay.remove(); document.removeEventListener('keydown', escHandler); }
   };
   document.addEventListener('keydown', escHandler);
 
-  // 绑定操作按钮事件
-  bindActionEvents(overlay, npcDbId, npcName, stats);
+  // 互动菜单开关
+  overlay.querySelector('[data-action="toggle-interact"]')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const menu = overlay.querySelector('#npc-interact-menu')!;
+    const btn = overlay.querySelector('[data-action="toggle-interact"]')!;
+    const isHidden = menu.classList.contains('hidden');
+    menu.classList.toggle('hidden', !isHidden);
+    btn.innerHTML = isHidden ? '💬 互动 ▴' : '💬 互动 ▾';
+  });
+
+  // 查看信息 → 切换到详情面板
+  overlay.querySelector('[data-action="view-stats"]')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const detailPanel = overlay.querySelector('#npc-detail-panel')!;
+    const fg = overlay.querySelector('.npc-portrait-fg')!;
+    const bgWrap = overlay.querySelector('.npc-portrait-bg-wrap')!;
+    detailPanel.classList.remove('hidden');
+    fg.classList.add('hidden');
+    bgWrap.classList.add('dimmed');
+  });
+
+  // 返回按钮 → 回到肖像模式
+  overlay.querySelector('#npc-detail-back')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const detailPanel = overlay.querySelector('#npc-detail-panel')!;
+    const fg = overlay.querySelector('.npc-portrait-fg')!;
+    const bgWrap = overlay.querySelector('.npc-portrait-bg-wrap')!;
+    detailPanel.classList.add('hidden');
+    fg.classList.remove('hidden');
+    bgWrap.classList.remove('dimmed');
+  });
+
+  // ── 互动操作 ──
+  overlay.querySelector('[data-action="talk"]')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const menu = overlay.querySelector('#npc-interact-menu')!;
+    menu.classList.add('hidden');
+    const btn = overlay.querySelector('[data-action="toggle-interact"]')!;
+    btn.innerHTML = '💬 互动 ▾';
+    import('../../systems/NPCInteraction').then(m => {
+      const r = m.talkWithNpc(npcDbId);
+      showToast(r.message);
+    });
+  });
+
+  overlay.querySelector('[data-action="gift-dialog"]')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const menu = overlay.querySelector('#npc-interact-menu')!;
+    menu.classList.add('hidden');
+    showGiftDialog(npcDbId, npcName);
+  });
+
+  overlay.querySelector('[data-action="discuss-dao"]')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const menu = overlay.querySelector('#npc-interact-menu')!;
+    menu.classList.add('hidden');
+    import('../../systems/NPCInteraction').then(m => {
+      const r = m.discussDaoWithNpc(npcDbId);
+      showToast(r.message);
+    });
+  });
+
+  overlay.querySelector('[data-action="invite-travel"]')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const menu = overlay.querySelector('#npc-interact-menu')!;
+    menu.classList.add('hidden');
+    showInviteTravelDialog(npcDbId, npcName, stats);
+  });
+
+  overlay.querySelector('[data-action="ask-guidance"]')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const menu = overlay.querySelector('#npc-interact-menu')!;
+    menu.classList.add('hidden');
+    import('../../systems/NPCInteraction').then(m => {
+      const r = m.askNpcForGuidance(npcDbId);
+      showToast(r.message);
+    });
+  });
+
+  overlay.querySelector('[data-action="ask-intel"]')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const menu = overlay.querySelector('#npc-interact-menu')!;
+    menu.classList.add('hidden');
+    import('../../systems/NPCInteraction').then(m => {
+      const r = m.askNpcForIntel(npcDbId);
+      showToast(r.message);
+    });
+  });
+
+  overlay.querySelector('[data-action="spar"]')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const menu = overlay.querySelector('#npc-interact-menu')!;
+    menu.classList.add('hidden');
+    import('../../systems/NPCInteraction').then(m => {
+      const r = m.sparWithNpc(npcDbId);
+      if (r.needConfirm) {
+        if (confirm('此人修为远胜于你，差距悬殊。与之切磋怕是自取其辱。\n\n是否仍要挑战？')) {
+          const r2 = m.sparWithNpc(npcDbId, true);
+          showToast(r2.message);
+        }
+      } else {
+        showToast(r.message);
+      }
+    });
+  });
+
+  // 关系操作绑定
+  bindRelationEvents(overlay, npcDbId, stats);
+
+  // 招募/推荐/解除/指派事件（在详情面板中）
+  overlay.querySelector<HTMLElement>('[data-action="recruit"]')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    doRecruit(npcDbId, npcName, stats!);
+    overlay.remove();
+  });
+  overlay.querySelector<HTMLElement>('[data-action="recruit-unaffiliated"]')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    doRecruitUnaffiliated(npcDbId, npcName, stats!);
+    overlay.remove();
+  });
+  overlay.querySelector<HTMLElement>('[data-action="recommend"]')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    doRecommend(npcDbId, npcName, stats!);
+    overlay.remove();
+  });
+  overlay.querySelector<HTMLElement>('[data-action="dismiss"]')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    doDismiss(npcDbId, npcName);
+    overlay.remove();
+  });
+  overlay.querySelector<HTMLSelectElement>('.npc-assign-select')?.addEventListener('change', (e) => {
+    e.stopPropagation();
+    const select = e.target as HTMLSelectElement;
+    doAssign(npcDbId, npcName, select.value as NpcAssignment);
+    overlay.remove();
+  });
+}
+
+/** 显示送礼对话框 */
+function showGiftDialog(npcDbId: string, npcName: string): void {
+  const dlg = document.createElement('div');
+  dlg.className = 'npc-gift-dialog';
+  dlg.innerHTML = `
+    <div class="npc-gift-dialog-inner">
+      <div class="npc-gift-title">🎁 赠礼予 ${npcName}</div>
+      <div class="npc-gift-list">
+        ${GIFT_TIERS.map((t, i) => `
+          <button class="npp-btn npp-btn-gift" data-gift-tier="${i}">
+            <span class="gift-tier-label">${t.label}</span>
+            <span class="gift-tier-cost">${t.cost} 两 → +${t.baseAffection} 好感</span>
+          </button>
+        `).join('')}
+      </div>
+      <button class="npc-gift-cancel">取消</button>
+    </div>
+  `;
+  document.body.appendChild(dlg);
+
+  dlg.querySelector('.npc-gift-cancel')?.addEventListener('click', () => dlg.remove());
+  dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.remove(); });
+
+  dlg.querySelectorAll('[data-gift-tier]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const tierIdx = parseInt((btn as HTMLElement).dataset['giftTier']!, 10);
+      import('../../systems/NPCInteraction').then(m => {
+        const r = m.giveGiftToNpc(npcDbId, tierIdx);
+        showToast(r.message);
+      });
+      dlg.remove();
+    });
+  });
+}
+
+/** 显示邀约同行对话框 */
+function showInviteTravelDialog(npcDbId: string, npcName: string, stats: NpcStats | null): void {
+  const p = getPlayer();
+  const currentLoc = p.currentLocationId ?? 'wudang_mountain';
+  const loc = WORLD_MAP[currentLoc];
+  const neighbors = loc?.connections ?? [];
+
+  if (neighbors.length === 0) {
+    showToast('此处没有可前往的地点。');
+    return;
+  }
+
+  const dlg = document.createElement('div');
+  dlg.className = 'npc-gift-dialog';
+  dlg.innerHTML = `
+    <div class="npc-gift-dialog-inner">
+      <div class="npc-gift-title">🧳 邀约 ${npcName} 同行前往……</div>
+      <div class="npc-gift-list">
+        ${neighbors.map((locId: string) => {
+          const dest = WORLD_MAP[locId as LocationId];
+          return `<button class="npp-btn npp-btn-gift" data-travel-dest="${locId}">
+            <span class="gift-tier-label">📍 ${dest?.name ?? locId}</span>
+            <span class="gift-tier-cost">${dest?.region ? dest.region : '未知'}</span>
+          </button>`;
+        }).join('')}
+      </div>
+      <button class="npc-gift-cancel">取消</button>
+    </div>
+  `;
+  document.body.appendChild(dlg);
+
+  dlg.querySelector('.npc-gift-cancel')?.addEventListener('click', () => dlg.remove());
+  dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.remove(); });
+
+  dlg.querySelectorAll('[data-travel-dest]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const destId = (btn as HTMLElement).dataset['travelDest']! as LocationId;
+      import('../../systems/NPCInteraction').then(m => {
+        const r = m.inviteNpcToTravel(npcDbId, destId);
+        showToast(r.message);
+      });
+      dlg.remove();
+    });
+  });
+}
+
+// ──── 关系标签与操作渲染 ────
+
+/** 渲染该 NPC 与其他 NPC 的社交关系（好友 / 仇敌） */
+function renderNpcSocialRelations(npcDbId: string): string {
+  const p = getPlayer();
+  const npcDb = p.npcDatabase ?? {};
+  const relationship = p.npcRelationship ?? {};
+  if (Object.keys(relationship).length === 0) return '';
+
+  const friends: { id: string; name: string; aff: number }[] = [];
+  const enemies: { id: string; name: string; aff: number }[] = [];
+
+  for (const [key, aff] of Object.entries(relationship)) {
+    const parts = key.split('_');
+    const idA = parts[0];
+    const idB = parts[1];
+    if (!idA || !idB) continue;
+    if (idA !== npcDbId && idB !== npcDbId) continue;
+    const otherId = idA === npcDbId ? idB : idA;
+    const otherNpc = npcDb[otherId] as NpcStats | undefined;
+    if (!otherNpc || otherNpc.isAlive === false) continue;
+
+    if (aff >= 60) {
+      friends.push({ id: otherId, name: otherNpc.name, aff });
+    } else if (aff <= -60) {
+      enemies.push({ id: otherId, name: otherNpc.name, aff });
+    }
+  }
+
+  if (friends.length === 0 && enemies.length === 0) return '';
+
+  let html = '<div class="npc-social-relations">';
+  if (friends.length > 0) {
+    const friendTags = friends.slice(0, 4).map(f =>
+      `<span class="npc-social-tag friend" title="${f.name} · 好感 ${f.aff}">🤝 ${f.name}</span>`
+    ).join('');
+    const more = friends.length > 4 ? `<span class="npc-social-tag-more">等${friends.length}人</span>` : '';
+    html += `<div class="npc-social-row">${friendTags}${more}</div>`;
+  }
+  if (enemies.length > 0) {
+    const enemyTags = enemies.slice(0, 3).map(e =>
+      `<span class="npc-social-tag enemy" title="${e.name} · 仇恨 ${Math.abs(e.aff)}">⚔️ ${e.name}</span>`
+    ).join('');
+    const more = enemies.length > 3 ? `<span class="npc-social-tag-more">等${enemies.length}人</span>` : '';
+    html += `<div class="npc-social-row">${enemyTags}${more}</div>`;
+  }
+  html += '</div>';
+
+  return html;
+}
+
+function renderRelationTags(npcDbId: string): string {
+  const relations = getPlayerNpcRelations(npcDbId);
+  if (relations.length === 0) return '';
+
+  const tags = relations.map(r => {
+    const cfg = PLAYER_NPC_RELATION_LABEL[r];
+    return `<span class="npc-relation-tag" style="background:${cfg.color}22;border:1px solid ${cfg.color}44;color:${cfg.color};">${cfg.icon} ${cfg.label}</span>`;
+  }).join(' ');
+
+  return `<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px;">${tags}</div>`;
+}
+
+function renderRelationButtons(npcDbId: string, affection: number, stats: NpcStats | null): string {
+  if (!stats) return '';
+
+  const relations = getPlayerNpcRelations(npcDbId);
+  const buttons: string[] = [];
+
+  // 结为道侣
+  if (!relations.includes('lover')) {
+    const loverCheck = canBecomeLover(npcDbId);
+    if (loverCheck.allowed) {
+      buttons.push(`<button class="npc-relation-btn lover-btn" data-rel-action="add_lover" data-npc-id="${npcDbId}">💕 结为道侣</button>`);
+    } else if (affection >= 85 && !loverCheck.allowed) {
+      // 显示灰色按钮并说明原因
+    }
+  } else {
+    buttons.push(`<button class="npc-relation-btn danger" data-rel-action="remove_lover" data-npc-id="${npcDbId}">💔 解除道侣</button>`);
+  }
+
+  // 结义兄弟（不限性别）
+  if (!relations.includes('sworn_brother')) {
+    const swornCheck = canSwornBrother(npcDbId);
+    if (swornCheck.allowed) {
+      buttons.push(`<button class="npc-relation-btn sworn-btn" data-rel-action="add_sworn" data-npc-id="${npcDbId}">🤝 义结金兰</button>`);
+    }
+  } else {
+    buttons.push(`<button class="npc-relation-btn danger" data-rel-action="remove_sworn" data-npc-id="${npcDbId}">💔 解除结义</button>`);
+  }
+
+  // 拜师（NPC 为师父）
+  if (!relations.includes('master')) {
+    const masterCheck = canBecomeMaster(npcDbId);
+    if (masterCheck.allowed) {
+      buttons.push(`<button class="npc-relation-btn master-btn" data-rel-action="add_master" data-npc-id="${npcDbId}">👨‍🏫 拜师</button>`);
+    }
+  } else {
+    buttons.push(`<button class="npc-relation-btn danger" data-rel-action="remove_master" data-npc-id="${npcDbId}">💔 解除师徒（出师）</button>`);
+  }
+
+  // 收徒
+  if (!relations.includes('student')) {
+    const studentCheck = canBecomeStudent(npcDbId);
+    if (studentCheck.allowed) {
+      buttons.push(`<button class="npc-relation-btn student-btn" data-rel-action="add_student" data-npc-id="${npcDbId}">📚 收徒</button>`);
+    }
+  } else {
+    buttons.push(`<button class="npc-relation-btn danger" data-rel-action="remove_student" data-npc-id="${npcDbId}">💔 逐出师门</button>`);
+  }
+
+  if (buttons.length === 0) return '';
+  return `<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px;">${buttons.join('')}</div>`;
+}
+
+// ──── 关系操作事件绑定 ────
+
+function bindRelationEvents(overlay: HTMLElement, npcDbId: string, stats: NpcStats | null): void {
+  overlay.addEventListener('click', (e) => {
+    const btn = (e.target as HTMLElement).closest('[data-rel-action]') as HTMLElement | null;
+    if (!btn) return;
+    const action = btn.dataset['relAction']!;
+    const id = btn.dataset['npcId']!;
+    const npcName = stats?.name ?? id;
+
+    let confirmed = true;
+    let msg = '';
+
+    switch (action) {
+      case 'add_lover':
+        confirmed = confirm(`是否与「${npcName}」结为道侣？\n（一生一世一双人，此誓不可轻许）`);
+        if (confirmed) addPlayerNpcRelation(id, 'lover');
+        msg = `与${npcName}结为道侣`;
+        break;
+      case 'remove_lover':
+        confirmed = confirm(`是否与「${npcName}」解除道侣关系？\n（此情不再，好感-30）`);
+        if (confirmed) {
+          removePlayerNpcRelation(id, 'lover');
+          changeNpcAffection(id, -30);  // 断交道侣惩罚
+        }
+        msg = `与${npcName}解除道侣`;
+        break;
+      case 'add_sworn':
+        confirmed = confirm(`是否与「${npcName}」义结金兰？\n（不求同年同月同日生，但求同年同月同日死）`);
+        if (confirmed) addPlayerNpcRelation(id, 'sworn_brother');
+        msg = `与${npcName}义结金兰`;
+        break;
+      case 'remove_sworn':
+        confirmed = confirm(`是否与「${npcName}」解除结义？\n（手足之情就此断绝，好感-30）`);
+        if (confirmed) {
+          removePlayerNpcRelation(id, 'sworn_brother');
+          changeNpcAffection(id, -30);
+        }
+        msg = `与${npcName}解除结义`;
+        break;
+      case 'add_master':
+        confirmed = confirm(`是否拜「${npcName}」为师？\n（一日为师，终身为父）`);
+        if (confirmed) addPlayerNpcRelation(id, 'master');
+        msg = `拜${npcName}为师`;
+        break;
+      case 'remove_master':
+        confirmed = confirm(`是否脱离「${npcName}」门下？\n（师徒缘分已尽，好感-30）`);
+        if (confirmed) {
+          removePlayerNpcRelation(id, 'master');
+          changeNpcAffection(id, -30);
+        }
+        msg = `脱离${npcName}门下`;
+        break;
+      case 'add_student':
+        confirmed = confirm(`是否收「${npcName}」为徒？\n（传道授业，责无旁贷）`);
+        if (confirmed) addPlayerNpcRelation(id, 'student');
+        msg = `收${npcName}为徒`;
+        break;
+      case 'remove_student':
+        confirmed = confirm(`是否将「${npcName}」逐出师门？\n（师徒情分就此了断，好感-30）`);
+        if (confirmed) {
+          removePlayerNpcRelation(id, 'student');
+          changeNpcAffection(id, -30);
+        }
+        msg = `将${npcName}逐出师门`;
+        break;
+    }
+
+    if (confirmed && msg) {
+      saveGame(getPlayer());
+      // 关闭并重新打开弹窗以刷新
+      overlay.remove();
+      const img = stats ? (stats.gender === 'female' ? 'picture/NPC/random_female.png' : 'picture/NPC/random_male.png') : '';
+      setTimeout(() => showNpcStatsOverlay(npcDbId, npcName, img), 100);
+    }
+  });
 }
 
 // ──── 操作按钮渲染 ────
@@ -432,6 +971,14 @@ function renderActionButtons(
       buttons.push(`<button class="npc-action-btn primary" data-action="recruit" data-npc-id="${npcDbId}">招募为随从</button>`);
     } else {
       buttons.push(`<button class="npc-action-btn disabled" disabled title="${check.message}">招募为随从（${check.message.slice(0, 15)}…）</button>`);
+    }
+  } else if (stats.sect === 'none') {
+    // 无宗门隶属NPC（城市散修）→ 可直接登用
+    const check = canRecruitUnaffiliated(p, stats, affection);
+    if (check.success) {
+      buttons.push(`<button class="npc-action-btn primary" data-action="recruit-unaffiliated" data-npc-id="${npcDbId}">登用为随从</button>`);
+    } else {
+      buttons.push(`<button class="npc-action-btn disabled" disabled title="${check.message}">登用（${check.message.slice(0, 15)}…）</button>`);
     }
   } else {
     const check = canRecommend(p, stats, affection);
@@ -489,6 +1036,12 @@ function bindActionEvents(overlay: HTMLElement, npcDbId: string, npcName: string
     overlay.remove();
   });
 
+  // 登用无隶属NPC按钮
+  overlay.querySelector<HTMLElement>('[data-action="recruit-unaffiliated"]')?.addEventListener('click', () => {
+    doRecruitUnaffiliated(npcDbId, npcName, stats);
+    overlay.remove();
+  });
+
   // 推荐入宗按钮
   overlay.querySelector<HTMLElement>('[data-action="recommend"]')?.addEventListener('click', () => {
     doRecommend(npcDbId, npcName, stats);
@@ -530,8 +1083,18 @@ function bindActionEvents(overlay: HTMLElement, npcDbId: string, npcName: string
   // 切磋
   overlay.querySelector<HTMLElement>('[data-action="spar"]')?.addEventListener('click', () => {
     const result = sparWithNpc(npcDbId);
-    showToast(result.message);
-    refreshNpcOverlay(overlay);
+    if (result.needConfirm) {
+      const confirmed = confirm(
+        `此人修为远胜于你，差距悬殊。与之切磋怕是自取其辱。\n\n是否仍要挑战？`
+      );
+      if (!confirmed) return;
+      const result2 = sparWithNpc(npcDbId, true);
+      showToast(result2.message);
+      refreshNpcOverlay(overlay);
+    } else {
+      showToast(result.message);
+      refreshNpcOverlay(overlay);
+    }
   });
 }
 
@@ -592,6 +1155,36 @@ function doRecruit(npcDbId: string, npcName: string, stats: NpcStats): void {
   showToast(`✅ ${npcName}已成为你的随从！`);
 }
 
+function doRecruitUnaffiliated(npcDbId: string, npcName: string, stats: NpcStats): void {
+  const p = getPlayer();
+  const affection = getNpcAffection(npcDbId);
+  const check = canRecruitUnaffiliated(p, stats, affection);
+  if (!check.success) {
+    showToast(check.message);
+    return;
+  }
+
+  const result = executeRecruitUnaffiliated(p, stats);
+  const updated = {
+    ...p,
+    npcDatabase: { ...p.npcDatabase, [npcDbId]: result.npc },
+    npcCollection: { ...p.npcCollection, recruited: result.recruited, maxSlots: result.maxSlots, assignments: result.assignments, assignmentTargets: result.assignmentTargets },
+  };
+  setPlayer(updated);
+  saveGame(updated);
+
+  import('../../systems/WorldState').then(m => {
+    m.addChronicleEntry({
+      category: 'npc_interaction',
+      title: '登用贤才',
+      description: `${p.name}登用了散修${npcName}，引入${getSectShortName(p.sect)}。`,
+    });
+  });
+
+  refreshRelationPanel();
+  showToast(`✅ ${npcName}已被登用，加入${getSectShortName(p.sect)}并成为你的随从！`);
+}
+
 function doDismiss(npcDbId: string, npcName: string): void {
   const p = getPlayer();
   const check = canDismiss(p, npcDbId);
@@ -642,6 +1235,22 @@ function getSectShortName(sect: string): string {
 
 function showToast(msg: string): void {
   import('../../ui/toast').then(m => m.showToast(msg));
+}
+
+/** 渲染 NPC 近期经历日志 */
+function renderRecentLog(stats: NpcStats): string {
+  const log = stats.recentLog ?? [];
+  if (log.length === 0) {
+    return '<div class="npc-recent-log-empty">暂无记录</div>';
+  }
+  // 倒序显示（最新的在前），最多 8 条
+  return log.slice().reverse().slice(0, 8).map(entry => {
+    // 恶意互动标记红色
+    const hostile = entry.includes('挑衅') || entry.includes('激斗') || entry.includes('暗算')
+      || entry.includes('谣言') || entry.includes('夺宝') || entry.includes('复仇');
+    const cls = hostile ? 'npc-recent-log-item hostile' : 'npc-recent-log-item';
+    return `<div class="${cls}">${entry}</div>`;
+  }).join('');
 }
 
 /** 强制刷新关系面板 */

@@ -4,15 +4,32 @@
 
 // ──── 天赋系统（从 npcStats.ts 移入，解决循环依赖）────
 
-export type TalentId = 
+export type TalentId =
+  // 通用天赋（原有）
   | 'sword_heart' | 'lazy' | 'diligent' | 'genius' | 'normal'
-  | 'strong_as_ox' | 'iron_skin' | 'swift_shadow'  // 通用天赋
-  | 'dragon_vein' | 'sword_heart_frost'  // 🆕 特殊天赋：主角和女主专属
-  // 🆕 政务天赋（朝堂）
+  | 'strong_as_ox' | 'iron_skin' | 'swift_shadow'
+  // 特殊天赋：主角和女主专属
+  | 'dragon_vein' | 'sword_heart_frost'
+  // 政务天赋（朝堂）
   | 'strategist' | 'eloquent_orator' | 'born_leader' | 'erudite_scholar'
   | 'political_veteran' | 'ambitious_official'
-  // 🆕 复合天赋（江湖-朝廷跨界）
-  | 'warlord' | 'benevolent_ruler' | 'martial_scholar' | 'hidden_potential';
+  | 'iron_face' | 'mastermind' | 'governance' | 'reformist'
+  | 'silver_tongue' | 'righteous_judge'
+  // 复合天赋（江湖-朝廷跨界）
+  | 'warlord' | 'benevolent_ruler' | 'martial_scholar' | 'hidden_potential'
+  // 🆕 P8 绝世天赋（3个）
+  | 'sword_saint' | 'dragon_awakened' | 'innate_dao_body'
+  // 🆕 P8 上等天赋（6个）
+  | 'battle_genius' | 'iron_fortress' | 'wind_chaser'
+  | 'meditation_master' | 'poison_master' | 'formation_expert'
+  // 🆕 P8 中等天赋（9个新）
+  | 'copper_skin' | 'precise' | 'calm_mind' | 'tough' | 'nimble'
+  | 'focused' | 'resilient' | 'sharp_eye' | 'enduring'
+  // 🆕 P8 下等天赋（7个新）
+  | 'clumsy' | 'weak_constitution' | 'coward' | 'forgetful'
+  | 'reckless' | 'greedy' | 'plain'
+  // 🆕 P8 诅咒天赋（3个）
+  | 'sickly' | 'qi_deviation' | 'waste';
 
 export interface TalentData {
   name: string;
@@ -26,18 +43,93 @@ export interface TalentData {
     atkMul?: number;
     defMul?: number;
     agiMul?: number;
+    critBonus?: number;      // 暴击率绝对值加成
   };
   // 🆕 朝廷天赋加成
   courtBonus?: {
-    strategy?: number;          // 智谋加成（绝对值）
-    eloquence?: number;         // 口才加成
-    charisma?: number;          // 魅力加成
-    scholarship?: number;       // 学识加成
-    influenceGainMul?: number;  // 影响力获取倍率
-    militaryPowerMul?: number;  // 朝廷武力乘数（修为→朝堂武力的转化倍率）
+    strategy?: number;
+    eloquence?: number;
+    charisma?: number;
+    scholarship?: number;
+    influenceGainMul?: number;
+    militaryPowerMul?: number;
   };
   // 🆕 分类标签
   category?: 'martial' | 'court' | 'hybrid';
+}
+
+// ──── 天赋层级（P8: 36天赋 × 5层权重）────
+
+export type TalentTier = 'legendary' | 'superior' | 'common' | 'inferior' | 'cursed';
+
+export interface TalentTierConfig {
+  tier: TalentTier;
+  weight: number;   // 该层总权重
+  label: string;    // 显示名称
+}
+
+export const TALENT_TIER_CONFIG: Record<TalentTier, TalentTierConfig> = {
+  legendary: { tier: 'legendary', weight: 3,  label: '绝世' },
+  superior:  { tier: 'superior',  weight: 11, label: '上等' },
+  common:    { tier: 'common',    weight: 45, label: '中等' },
+  inferior:  { tier: 'inferior',  weight: 28, label: '下等' },
+  cursed:    { tier: 'cursed',    weight: 11, label: '诅咒' },
+};
+
+/** 每个天赋的层级分类 */
+export const TALENT_TIER: Record<TalentId, TalentTier> = {
+  // 绝世
+  sword_saint: 'legendary', dragon_awakened: 'legendary', innate_dao_body: 'legendary',
+  // 上等
+  battle_genius: 'superior', iron_fortress: 'superior', wind_chaser: 'superior',
+  meditation_master: 'superior', poison_master: 'superior', formation_expert: 'superior',
+  // 中等
+  sword_heart: 'common', diligent: 'common', genius: 'common',
+  strong_as_ox: 'common', iron_skin: 'common', swift_shadow: 'common',
+  copper_skin: 'common', precise: 'common', calm_mind: 'common',
+  tough: 'common', nimble: 'common', focused: 'common',
+  resilient: 'common', sharp_eye: 'common', enduring: 'common',
+  // 下等
+  normal: 'inferior', lazy: 'inferior', clumsy: 'inferior',
+  weak_constitution: 'inferior', coward: 'inferior', forgetful: 'inferior',
+  reckless: 'inferior', greedy: 'inferior', plain: 'inferior',
+  // 诅咒
+  sickly: 'cursed', qi_deviation: 'cursed', waste: 'cursed',
+  // 专属/朝堂/复合 — 不参与NPC随机池
+  dragon_vein: 'legendary', sword_heart_frost: 'legendary',
+  strategist: 'superior', eloquent_orator: 'superior', born_leader: 'superior',
+  erudite_scholar: 'superior', political_veteran: 'superior', ambitious_official: 'inferior',
+  iron_face: 'superior', mastermind: 'superior', governance: 'superior',
+  reformist: 'common', silver_tongue: 'common', righteous_judge: 'superior',
+  warlord: 'superior', benevolent_ruler: 'superior', martial_scholar: 'common', hidden_potential: 'common',
+};
+
+/** NPC 随机天赋池（排除主角/女主专属；朝堂+复合天赋纳入随机池） */
+export const NPC_TALENT_POOL: TalentId[] = [
+  'sword_saint', 'dragon_awakened', 'innate_dao_body',
+  'battle_genius', 'iron_fortress', 'wind_chaser',
+  'meditation_master', 'poison_master', 'formation_expert',
+  'sword_heart', 'diligent', 'genius', 'strong_as_ox', 'iron_skin', 'swift_shadow',
+  'copper_skin', 'precise', 'calm_mind', 'tough', 'nimble',
+  'focused', 'resilient', 'sharp_eye', 'enduring',
+  'normal', 'lazy', 'clumsy', 'weak_constitution', 'coward', 'forgetful',
+  'reckless', 'greedy', 'plain',
+  'sickly', 'qi_deviation', 'waste',
+  // P8 朝堂天赋纳入随机池
+  'strategist', 'eloquent_orator', 'born_leader', 'erudite_scholar',
+  'political_veteran', 'ambitious_official',
+  'iron_face', 'mastermind', 'governance', 'reformist',
+  'silver_tongue', 'righteous_judge',
+  // P8 复合天赋纳入随机池
+  'warlord', 'benevolent_ruler', 'martial_scholar', 'hidden_potential',
+];
+
+/** NPC 天赋权重（按层级比例分配） */
+export function getTalentWeight(talentId: TalentId): number {
+  const tier = TALENT_TIER[talentId];
+  const tierWeight = TALENT_TIER_CONFIG[tier]?.weight ?? 5;
+  const tierTalents = NPC_TALENT_POOL.filter(t => TALENT_TIER[t] === tier).length;
+  return tierWeight / tierTalents; // 均分层级权重
 }
 
 export const TALENTS: Record<TalentId, TalentData> = {
@@ -109,6 +201,42 @@ export const TALENTS: Record<TalentId, TalentData> = {
     courtBonus: { charisma: -5, influenceGainMul: 1.40 },
     category: 'court',
   },
+  iron_face: {
+    name: '铁面无私', desc: '口才+20，魅力+15，智谋+10，影响力获取+20%',
+    cultivationMul: 1.0, skillLearnBonus: 0.0,
+    courtBonus: { eloquence: 20, charisma: 15, strategy: 10, influenceGainMul: 1.20 },
+    category: 'court',
+  },
+  mastermind: {
+    name: '运筹帷幄', desc: '智谋+25，影响力获取+20%',
+    cultivationMul: 1.0, skillLearnBonus: 0.0,
+    courtBonus: { strategy: 25, influenceGainMul: 1.20 },
+    category: 'court',
+  },
+  governance: {
+    name: '经世之才', desc: '四维各+10，影响力获取+25%',
+    cultivationMul: 1.0, skillLearnBonus: 0.0,
+    courtBonus: { strategy: 10, eloquence: 10, charisma: 10, scholarship: 10, influenceGainMul: 1.25 },
+    category: 'court',
+  },
+  reformist: {
+    name: '革新派', desc: '学识+20，智谋+10，影响力获取+15%',
+    cultivationMul: 1.0, skillLearnBonus: 0.0,
+    courtBonus: { scholarship: 20, strategy: 10, influenceGainMul: 1.15 },
+    category: 'court',
+  },
+  silver_tongue: {
+    name: '唇枪舌剑', desc: '口才+25，魅力+10，影响力获取+10%',
+    cultivationMul: 1.0, skillLearnBonus: 0.0,
+    courtBonus: { eloquence: 25, charisma: 10, influenceGainMul: 1.10 },
+    category: 'court',
+  },
+  righteous_judge: {
+    name: '明镜高悬', desc: '学识+15，口才+15，魅力+15，影响力获取+15%',
+    cultivationMul: 1.0, skillLearnBonus: 0.0,
+    courtBonus: { scholarship: 15, eloquence: 15, charisma: 15, influenceGainMul: 1.15 },
+    category: 'court',
+  },
 
   // ═══════════════════════════════════════════════════════════
   // 🆕 复合天赋（江湖×朝廷跨界 — 掌门武艺通神≠统兵同样高）
@@ -138,9 +266,197 @@ export const TALENTS: Record<TalentId, TalentData> = {
   hidden_potential: {
     name: '大器晚成', desc: '修行速度-20%，等级≥30后四维各+25',
     cultivationMul: 0.8, skillLearnBonus: 0.0,
-    // courtBonus 需运行时按 level 动态计算，此处为基础值
     courtBonus: {},
     category: 'hybrid',
+  },
+
+  // ═══════════════════════════════════════════════════════════
+  // 🆕 P8 绝世天赋（3个 — 万中无一）
+  // ═══════════════════════════════════════════════════════════
+
+  sword_saint: {
+    name: '剑心通明', desc: '剑法威力×1.5，身法+15%，修行速度×1.8',
+    cultivationMul: 1.8, skillLearnBonus: 0.15,
+    statBonus: { atkMul: 1.50, agiMul: 1.15 },
+    category: 'martial',
+  },
+  dragon_awakened: {
+    name: '龙脉觉醒', desc: '全属性+20%，修行速度×1.5',
+    cultivationMul: 1.5, skillLearnBonus: 0.1,
+    statBonus: { hpMul: 1.20, mpMul: 1.20, atkMul: 1.20, defMul: 1.20, agiMul: 1.20 },
+    category: 'hybrid',
+  },
+  innate_dao_body: {
+    name: '天生道体', desc: '修行速度×2.0，真气+30%，气血+10%',
+    cultivationMul: 2.0, skillLearnBonus: 0.1,
+    statBonus: { mpMul: 1.30, hpMul: 1.10 },
+    category: 'martial',
+  },
+
+  // ═══════════════════════════════════════════════════════════
+  // 🆕 P8 上等天赋（6个 — 一方豪杰）
+  // ═══════════════════════════════════════════════════════════
+
+  battle_genius: {
+    name: '战斗天才', desc: '攻击+30%，防御+10%',
+    cultivationMul: 1.0, skillLearnBonus: 0.05,
+    statBonus: { atkMul: 1.30, defMul: 1.10 },
+    category: 'martial',
+  },
+  iron_fortress: {
+    name: '铜墙铁壁', desc: '防御+40%，气血+15%',
+    cultivationMul: 1.0, skillLearnBonus: 0.0,
+    statBonus: { defMul: 1.40, hpMul: 1.15 },
+    category: 'martial',
+  },
+  wind_chaser: {
+    name: '疾风掠影', desc: '身法+35%，暴击+5%',
+    cultivationMul: 1.0, skillLearnBonus: 0.05,
+    statBonus: { agiMul: 1.35, critBonus: 5 },
+    category: 'martial',
+  },
+  meditation_master: {
+    name: '静心悟道', desc: '修行速度×1.3，真气+20%',
+    cultivationMul: 1.3, skillLearnBonus: 0.1,
+    statBonus: { mpMul: 1.20 },
+    category: 'martial',
+  },
+  poison_master: {
+    name: '毒术精通', desc: '攻击+20%，暴击+10%',
+    cultivationMul: 1.0, skillLearnBonus: 0.0,
+    statBonus: { atkMul: 1.20, critBonus: 10 },
+    category: 'martial',
+  },
+  formation_expert: {
+    name: '阵法大师', desc: '防御+20%，身法+15%',
+    cultivationMul: 1.0, skillLearnBonus: 0.05,
+    statBonus: { defMul: 1.20, agiMul: 1.15 },
+    category: 'martial',
+  },
+
+  // ═══════════════════════════════════════════════════════════
+  // 🆕 P8 中等天赋（9个新 — 可堪一用）
+  // ═══════════════════════════════════════════════════════════
+
+  copper_skin: {
+    name: '钢筋铁骨', desc: '气血+20%，防御+5%',
+    cultivationMul: 1.0, skillLearnBonus: 0.0,
+    statBonus: { hpMul: 1.20, defMul: 1.05 },
+    category: 'martial',
+  },
+  precise: {
+    name: '百步穿杨', desc: '暴击+8%，攻击+5%',
+    cultivationMul: 1.0, skillLearnBonus: 0.0,
+    statBonus: { critBonus: 8, atkMul: 1.05 },
+    category: 'martial',
+  },
+  calm_mind: {
+    name: '心如止水', desc: '真气+15%，修行速度×1.1',
+    cultivationMul: 1.1, skillLearnBonus: 0.05,
+    statBonus: { mpMul: 1.15 },
+    category: 'martial',
+  },
+  tough: {
+    name: '坚韧不拔', desc: '气血+15%，防御+10%',
+    cultivationMul: 1.0, skillLearnBonus: 0.0,
+    statBonus: { hpMul: 1.15, defMul: 1.10 },
+    category: 'martial',
+  },
+  nimble: {
+    name: '身轻如燕', desc: '身法+12%',
+    cultivationMul: 1.0, skillLearnBonus: 0.0,
+    statBonus: { agiMul: 1.12 },
+    category: 'martial',
+  },
+  focused: {
+    name: '心无旁骛', desc: '修行速度×1.15',
+    cultivationMul: 1.15, skillLearnBonus: 0.05,
+    category: 'martial',
+  },
+  resilient: {
+    name: '铁骨铮铮', desc: '气血+15%，防御+5%',
+    cultivationMul: 1.0, skillLearnBonus: 0.0,
+    statBonus: { hpMul: 1.15, defMul: 1.05 },
+    category: 'martial',
+  },
+  sharp_eye: {
+    name: '明察秋毫', desc: '攻击+10%，暴击+3%',
+    cultivationMul: 1.0, skillLearnBonus: 0.0,
+    statBonus: { atkMul: 1.10, critBonus: 3 },
+    category: 'martial',
+  },
+  enduring: {
+    name: '气脉悠长', desc: '真气+10%，修行速度×1.1',
+    cultivationMul: 1.1, skillLearnBonus: 0.0,
+    statBonus: { mpMul: 1.10 },
+    category: 'martial',
+  },
+
+  // ═══════════════════════════════════════════════════════════
+  // 🆕 P8 下等天赋（7个新 — 略有不足）
+  // ═══════════════════════════════════════════════════════════
+
+  clumsy: {
+    name: '笨手笨脚', desc: '身法-10%',
+    cultivationMul: 1.0, skillLearnBonus: -0.05,
+    statBonus: { agiMul: 0.90 },
+    category: 'martial',
+  },
+  weak_constitution: {
+    name: '体弱', desc: '气血-15%',
+    cultivationMul: 1.0, skillLearnBonus: 0.0,
+    statBonus: { hpMul: 0.85 },
+    category: 'martial',
+  },
+  coward: {
+    name: '胆小如鼠', desc: '防御-10%，攻击-5%',
+    cultivationMul: 1.0, skillLearnBonus: 0.0,
+    statBonus: { defMul: 0.90, atkMul: 0.95 },
+    category: 'martial',
+  },
+  forgetful: {
+    name: '健忘', desc: '技能学习成功率-15%',
+    cultivationMul: 1.0, skillLearnBonus: -0.15,
+    category: 'martial',
+  },
+  reckless: {
+    name: '莽撞', desc: '攻击+10%，防御-15%（有得有失）',
+    cultivationMul: 1.0, skillLearnBonus: 0.0,
+    statBonus: { atkMul: 1.10, defMul: 0.85 },
+    category: 'martial',
+  },
+  greedy: {
+    name: '贪得无厌', desc: '无战斗影响（影响交互）',
+    cultivationMul: 1.0, skillLearnBonus: 0.0,
+    category: 'martial',
+  },
+  plain: {
+    name: '平庸之辈', desc: '无特殊天赋',
+    cultivationMul: 1.0, skillLearnBonus: 0.0,
+    category: 'martial',
+  },
+
+  // ═══════════════════════════════════════════════════════════
+  // 🆕 P8 诅咒天赋（3个 — 天妒之命）
+  // ═══════════════════════════════════════════════════════════
+
+  sickly: {
+    name: '体弱多病', desc: '气血-30%，修行速度×0.6',
+    cultivationMul: 0.6, skillLearnBonus: 0.0,
+    statBonus: { hpMul: 0.70 },
+    category: 'martial',
+  },
+  qi_deviation: {
+    name: '走火入魔', desc: '真气-40%，暴击-5%，修行速度×0.8',
+    cultivationMul: 0.8, skillLearnBonus: -0.1,
+    statBonus: { mpMul: 0.60, critBonus: -5 },
+    category: 'martial',
+  },
+  waste: {
+    name: '天生废柴', desc: '全属性-20%，修行速度×0.5',
+    cultivationMul: 0.5, skillLearnBonus: -0.1,
+    statBonus: { hpMul: 0.80, mpMul: 0.80, atkMul: 0.80, defMul: 0.80, agiMul: 0.80 },
+    category: 'martial',
   },
 };
 
@@ -324,7 +640,8 @@ export function calculateFinalStats(
     agiMul: 1.0,
   };
   
-  // 3. 应用天赋乘数（从 TALENTS 配置中动态获取）
+  // 3. 累积天赋属性乘数与暴击加成
+  let critBonus = 0;
   for (const talentId of talents) {
     const talentMul = getTalentMultipliers(talentId);
     if (talentMul.hpMul) multipliers.hpMul *= talentMul.hpMul;
@@ -333,7 +650,14 @@ export function calculateFinalStats(
     if (talentMul.defMul) multipliers.defMul *= talentMul.defMul;
     if (talentMul.agiMul) multipliers.agiMul *= talentMul.agiMul;
   }
-  
+  // 累积 critBonus
+  for (const talentId of talents) {
+    const talent = TALENTS[talentId];
+    if (talent?.statBonus?.critBonus) {
+      critBonus += talent.statBonus.critBonus;
+    }
+  }
+
   // 4. 计算最终属性
   const final: BaseStats & { crit: number } = {
     hp: Math.floor(base.hp * multipliers.hpMul),
@@ -341,7 +665,7 @@ export function calculateFinalStats(
     atk: Math.floor(base.atk * multipliers.atkMul),
     def: Math.floor(base.def * multipliers.defMul),
     agi: Math.floor(base.agi * multipliers.agiMul),
-    crit: 5,  // 基础暴击率5%
+    crit: Math.max(0, 5 + critBonus),  // 基础暴击率5% + 天赋加成
   };
   
   return final;

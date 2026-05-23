@@ -132,12 +132,16 @@ export type MissionStatus = 'available' | 'accepted' | 'completed' | 'failed';
 export type MissionType =
   | 'combat' | 'escort' | 'gather' | 'investigate' | 'teach' | 'diplomacy' | 'special';
 
+export type MissionTrack = 'jianghu' | 'court_wen' | 'court_wu' | 'universal';
+
 export type MissionDifficulty = 'easy' | 'normal' | 'hard' | 'legendary';
 
 export interface MissionDef {
   id: string;
   title: string;
   type: MissionType;
+  /** 所属轨道：决定属性经验分配和货币类型 */
+  track: MissionTrack;
   difficulty: MissionDifficulty;
   description: string;
   issuer: SectId;
@@ -183,10 +187,9 @@ export interface ActiveMission {
  * 当前覆盖现有 6 个 SectId，后续扩展新势力时补充。
  */
 export type FactionAlignment =
-  | 'righteous'    // 正道：崇尚侠义，锄强扶弱（武当/少林/峨眉/丐帮）
-  | 'neutral'      // 中立：明哲保身，不偏不倚（华山）
-  | 'unorthodox'   // 邪道：行事诡异，不择手段（预留）
-  | 'chaotic';     // 混乱：随心所欲，不可预测（魔教）
+  | 'righteous'    // 正道：崇尚侠义，锄强扶弱
+  | 'neutral'      // 中立：明哲保身，不偏不倚
+  | 'chaotic';     // 邪道：行事不择手段，随心所欲
 
 /** 势力间关系状态 */
 export type FactionRelation = 'allied' | 'friendly' | 'neutral' | 'tense' | 'hostile' | 'at_war';
@@ -217,26 +220,17 @@ export const ALIGNMENT_AFFINITY: Record<string, Record<string, { affinity: numbe
   righteous: {
     righteous:   { affinity: +30, desc: '志同道合，共行侠义' },
     neutral:     { affinity: +10, desc: '敬其正道，略有往来' },
-    unorthodox:  { affinity: -30, desc: '正邪不两立' },
-    chaotic:     { affinity: -20, desc: '行事诡异，难以信任' },
+    chaotic:     { affinity: -25, desc: '正邪不两立' },
   },
   neutral: {
     righteous:   { affinity: +10, desc: '敬其正道' },
     neutral:     { affinity: +15, desc: '井水不犯河水' },
-    unorthodox:  { affinity: -5,  desc: '略有提防' },
     chaotic:     { affinity: -10, desc: '保持距离' },
   },
-  unorthodox: {
-    righteous:   { affinity: -30, desc: '正邪不两立' },
-    neutral:     { affinity: -5,  desc: '井水不犯河水' },
-    unorthodox:  { affinity: +20, desc: '臭味相投' },
-    chaotic:     { affinity: +10, desc: '各行其道' },
-  },
   chaotic: {
-    righteous:   { affinity: -20, desc: '难以理解' },
+    righteous:   { affinity: -25, desc: '正邪不两立' },
     neutral:     { affinity: -10, desc: '不可预测' },
-    unorthodox:  { affinity: +10, desc: '各行其道' },
-    chaotic:     { affinity: +5,  desc: '混乱中的默契' },
+    chaotic:     { affinity: +10, desc: '混乱中的默契' },
   },
 };
 
@@ -269,12 +263,15 @@ export const FACTION_DEFS: Record<SectId, { alignment: FactionAlignment; culture
   diancang: { alignment: 'neutral',   culture: ['sword', 'mountain', 'remote', 'southern'] },
   // 无门派（散修/朝堂纯文官）
   none:     { alignment: 'neutral',   culture: [] },
+  // 🆕 P7 朝廷与叛军
+  imperial_court: { alignment: 'neutral',   culture: ['imperial', 'order', 'power', 'bureaucracy'] },
+  rebels:         { alignment: 'chaotic',  culture: ['rebel', 'restoration', 'loyalty', 'frontier'] },
   // 🆕 P9 五大新势力
   riyue:    { alignment: 'chaotic',     culture: ['moon', 'sun', 'forbidden', 'power', 'shadow'] },
-  tiezhang: { alignment: 'unorthodox', culture: ['fist', 'clan', 'water', 'brute-force'] },
+  tiezhang: { alignment: 'neutral', culture: ['fist', 'clan', 'water', 'brute-force'] },
   wudu:     { alignment: 'chaotic',    culture: ['poison', 'snake', 'ritual', 'gu-magic'] },
   xuedao:   { alignment: 'chaotic',    culture: ['blood', 'blade', 'chaos', 'slaughter'] },
-  haisha:   { alignment: 'unorthodox', culture: ['sea', 'pirate', 'southern', 'mercenary'] },
+  haisha:   { alignment: 'chaotic', culture: ['sea', 'pirate', 'southern', 'mercenary'] },
 };
 
 // ──── P1-3: 双身份系统（庙堂之上 + 武林之中）────
@@ -470,6 +467,11 @@ export interface SandboxPlayerFields {
   courtPath: CourtPath | null;
   /** 上一行动领域（用于分心惩罚判定） */
   lastActionType: LastActionType;
+  // ── P10: 门派政务 ──
+  /** 各势力当前活跃指令池（key = factionId） */
+  factionDirectives: Record<string, FactionDirective[]>;
+  /** NPC 政务记录（key = npcId） */
+  factionOfficials: Record<string, FactionOfficial>;
 }
 
 // ═════════════════════════════════════════════════════════
@@ -511,14 +513,82 @@ export function getCourtRankLabel(rank: CourtRank, path: CourtPath | null): stri
   return COURT_RANK_LABEL[rank];
 }
 
-/** 朝廷晋升所需影响力门槛 */
-export const COURT_PROMOTION_REQUIREMENTS: Partial<Record<CourtRank, { minInfluence: number }>> = {
-  xiucai:   { minInfluence: 100 },    // 平民→秀才/校尉
-  juren:    { minInfluence: 300 },    // 秀才→举人/都尉
-  jinshi:   { minInfluence: 600 },    // 举人→进士/将军
-  hanlin:   { minInfluence: 1000 },   // 进士→翰林/大将军
-  shangshu: { minInfluence: 1600 },   // 翰林→尚书/太尉
-  zaixiang: { minInfluence: 2500 },   // 尚书→宰相/大司马
+/** 朝廷晋升条件（三国志式：功绩门槛 + 属性门 + 功绩消耗） */
+export interface CourtPromotionRequirement {
+  minInfluence: number;
+  /** 晋升时消耗的功绩（影响力），防止"挂机攒够就升" */
+  influenceCost: number;
+  /** 文官路径属性门（口才→魅力→学识，自然成长即可达标） */
+  wenStatGates?: Partial<CourtStats>;
+  /** 武官路径属性门（智谋→魅力→口才，领军者所需） */
+  wuStatGates?: Partial<CourtStats>;
+}
+
+/**
+ * 朝廷晋升需求表。
+ *
+ * 设计原则：
+ * - 属性门极低 —— 你做任务自然积累的属性一定够
+ * - 不存在"功绩够了还要刻意刷属性"的情况
+ * - 文官重"辩+学"，武官重"策+魅"
+ * - 晋升消耗功绩（参考三国志的"花钱买官"感），防止无脑堆数值
+ */
+export const COURT_PROMOTION_REQUIREMENTS: Partial<Record<CourtRank, CourtPromotionRequirement>> = {
+  xiucai: {
+    minInfluence: 100,
+    influenceCost: 0,          // 初次入仕不消耗
+    wenStatGates: { eloquence: 12 },  // 做 2-3 次任务自然就有
+    wuStatGates:  { strategy: 12 },
+  },
+  juren: {
+    minInfluence: 300,
+    influenceCost: 50,
+    wenStatGates: { eloquence: 22, charisma: 18 },
+    wuStatGates:  { strategy: 22, charisma: 18 },
+  },
+  jinshi: {
+    minInfluence: 600,
+    influenceCost: 100,
+    wenStatGates: { eloquence: 28, scholarship: 22 },
+    wuStatGates:  { strategy: 28, charisma: 22 },
+  },
+  hanlin: {
+    minInfluence: 1000,
+    influenceCost: 200,
+    wenStatGates: { eloquence: 35, charisma: 28, scholarship: 25 },
+    wuStatGates:  { strategy: 35, charisma: 28 },
+  },
+  shangshu: {
+    minInfluence: 1600,
+    influenceCost: 350,
+    wenStatGates: { eloquence: 45, charisma: 38, scholarship: 35 },
+    wuStatGates:  { strategy: 45, charisma: 38 },
+  },
+  zaixiang: {
+    minInfluence: 2500,
+    influenceCost: 500,
+    wenStatGates: { eloquence: 55, charisma: 48, scholarship: 45 },
+    wuStatGates:  { strategy: 55, charisma: 48 },
+  },
+};
+
+/**
+ * 朝廷品阶基础属性（晋升即获得属性保底）。
+ *
+ * 设计理念（太阁立志传V灵感）：
+ * - 每个朝廷品阶对应一个"身份能力基准值"
+ * - 晋升后属性至少达到此基准（若经验值已超过，则取经验值）
+ * - 有效属性 = max(品阶基准, 经验成长值)
+ * - 这与战斗系统的境界基础属性（REALM_BASE_STATS）形成对称设计
+ */
+export const COURT_RANK_BASE_STATS: Record<CourtRank, CourtStats> = {
+  commoner:  { strategy: 10, eloquence: 10, charisma: 10, scholarship: 10 },
+  xiucai:    { strategy: 15, eloquence: 18, charisma: 15, scholarship: 18 },
+  juren:     { strategy: 22, eloquence: 28, charisma: 22, scholarship: 28 },
+  jinshi:    { strategy: 30, eloquence: 38, charisma: 30, scholarship: 38 },
+  hanlin:    { strategy: 40, eloquence: 50, charisma: 40, scholarship: 50 },
+  shangshu:  { strategy: 52, eloquence: 62, charisma: 52, scholarship: 62 },
+  zaixiang:  { strategy: 65, eloquence: 78, charisma: 65, scholarship: 78 },
 };
 
 /**
@@ -535,3 +605,389 @@ export const SPLIT_FOCUS_PENALTY_INFLUENCE = 0.30;  // 影响力惩罚（可独�
 
 /** 朝廷四维初始范围（玩家初始值在此范围内随机） */
 export const COURT_STATS_INITIAL_RANGE = { min: 5, max: 20 };
+
+// ═════════════════════════════════════════════════════════
+//  P10: 门派政务官阶 + 势力指令池
+// ═════════════════════════════════════════════════════════
+
+/**
+ * 门派政务官阶（行政系统，独立于武林 discipleRank 和朝廷 courtRank）。
+ *
+ * NPC 通过贡献点数 + 在势力内的相对属性排名晋升。
+ * 官阶决定：每月可执行的势力指令数量 + 议事投票权重。
+ *
+ * 设计原则：
+ * - 所有属性门槛使用"势力内排名百分比"（相对值），不用绝对值
+ * - 晋升需要：贡献达标 + 相关属性在势力内前 X%
+ * - 玩家和 NPC 共享同一套官阶系统
+ */
+export type FactionOfficialRank =
+  | 'retainer'      // 门客（默认，无固定职司）
+  | 'steward'       // 管事（初阶政务官）
+  | 'director'      // 执事（中阶专业官，分野：度支/武备/外务）
+  | 'councilor'     // 参议（高阶决策官，可影响势力议事）
+  | 'vice_leader'   // 副掌门（二把手）
+  | 'leader';       // 掌门（最高决策者，唯一）
+
+/** 官阶 → 中文标签 */
+export const FACTION_RANK_LABEL: Record<FactionOfficialRank, string> = {
+  retainer:    '门客',
+  steward:     '管事',
+  director:    '执事',
+  councilor:   '参议',
+  vice_leader: '副掌门',
+  leader:      '掌门',
+};
+
+/** 官阶顺序（从低到高） */
+export const FACTION_RANK_ORDER: FactionOfficialRank[] = [
+  'retainer', 'steward', 'director', 'councilor', 'vice_leader', 'leader',
+];
+
+/**
+ * 官阶晋升配置。
+ *
+ * statGate 使用势力内排名百分比（0~1 之间，越小越严格）：
+ * - 例 `{ stat: 'atk', topFraction: 0.5 }` → 需在势力内 atk 排前 50%
+ * - `{ stat: 'agi', topFraction: 0.3 }` → 需在势力内 agi 排前 30%
+ * - 多个 statGate 为 AND 关系
+ */
+export interface FactionRankConfig {
+  rank: FactionOfficialRank;
+  label: string;
+  tier: number;                   // 0-5
+  maxDirectives: number;          // 每月可执行指令数
+  councilVotes: number;           // 议事投票权重
+  minContribution: number;        // 最低贡献点
+  statGates: Array<{ stat: 'atk' | 'def' | 'agi' | 'crit'; topFraction: number }>;
+  /** 每月的资源俸禄 */
+  stipend: number;
+}
+
+export const FACTION_RANK_CONFIGS: Record<FactionOfficialRank, FactionRankConfig> = {
+  retainer: {
+    rank: 'retainer', label: '门客', tier: 0,
+    maxDirectives: 1, councilVotes: 0, minContribution: 0,
+    statGates: [], stipend: 0,
+  },
+  steward: {
+    rank: 'steward', label: '管事', tier: 1,
+    maxDirectives: 1, councilVotes: 1, minContribution: 80,
+    statGates: [
+      { stat: 'agi', topFraction: 0.7 },
+      { stat: 'def', topFraction: 0.7 },
+    ],
+    stipend: 10,
+  },
+  director: {
+    rank: 'director', label: '执事', tier: 2,
+    maxDirectives: 2, councilVotes: 2, minContribution: 200,
+    statGates: [
+      { stat: 'agi', topFraction: 0.5 },
+      { stat: 'atk', topFraction: 0.5 },
+    ],
+    stipend: 20,
+  },
+  councilor: {
+    rank: 'councilor', label: '参议', tier: 3,
+    maxDirectives: 3, councilVotes: 4, minContribution: 450,
+    statGates: [
+      { stat: 'agi', topFraction: 0.35 },
+      { stat: 'atk', topFraction: 0.35 },
+      { stat: 'def', topFraction: 0.35 },
+    ],
+    stipend: 40,
+  },
+  vice_leader: {
+    rank: 'vice_leader', label: '副掌门', tier: 4,
+    maxDirectives: 4, councilVotes: 7, minContribution: 800,
+    statGates: [
+      { stat: 'agi', topFraction: 0.2 },
+      { stat: 'atk', topFraction: 0.2 },
+      { stat: 'def', topFraction: 0.2 },
+    ],
+    stipend: 70,
+  },
+  leader: {
+    rank: 'leader', label: '掌门', tier: 5,
+    maxDirectives: 5, councilVotes: 10, minContribution: 1500,
+    statGates: [
+      { stat: 'agi', topFraction: 0.1 },
+      { stat: 'atk', topFraction: 0.1 },
+      { stat: 'crit', topFraction: 0.1 },
+    ],
+    stipend: 120,
+  },
+};
+
+// ──── 属性中译（游戏术语规范）───
+
+/** 战斗四维中译 */
+export const COMBAT_STAT_LABEL: Record<string, string> = {
+  atk: '武力',
+  def: '防御',
+  agi: '身法',
+  crit: '会心',
+};
+
+/** 朝廷四维中译 */
+export const COURT_STAT_LABEL: Record<string, string> = {
+  strategy: '智谋',
+  eloquence: '口才',
+  charisma: '魅力',
+  scholarship: '学识',
+};
+
+// ──── 势力指令池 ────
+
+/**
+ * 势力 AI 议事产出的指令类型。
+ *
+ * 三轨并行：
+ *   军务轨（siege/trade/diplomacy/develop/patrol/scout）— 势力级战略指令
+ *   政务轨（court_*）— 朝廷任务，使用 CourtStats 裁决
+ *   江湖轨（challenge/escort/seek_doctor/hunt_treasure/meditate/arena）— 个人历练
+ */
+export type FactionDirectiveType =
+  // 军务轨（势力战略）
+  | 'siege'       // 攻城略地（发兵攻打目标地点）
+  | 'trade'       // 经商牟利（跑商赚取资源）
+  | 'diplomacy'   // 外交往来（改善/离间他势力关系）
+  | 'develop'     // 发展内政（提升繁荣度/稳定度）
+  | 'patrol'      // 巡逻守备（提升短期防御 + 镇压叛乱）
+  | 'scout'       // 刺探情报（侦察目标势力/地点）
+  // 江湖轨（个人历练）
+  | 'challenge'   // 挑战高手（以武会友，切磋成名）
+  | 'escort'      // 护送镖车（保镖走镖，赚取酬金）
+  | 'seek_doctor' // 寻访名医（求医问药，疗伤续命）
+  | 'hunt_treasure' // 寻宝探秘（探索秘境，搜寻宝物）
+  | 'meditate'    // 闭关修炼（潜心悟道，提升修为）
+  | 'arena'       // 擂台比武（守擂争雄，扬名立万）
+  | 'recruit';    // 招募人才（劝说散修加入势力）
+
+export const DIRECTIVE_LABEL: Record<FactionDirectiveType, string> = {
+  siege:     '攻城',
+  trade:     '经商',
+  diplomacy: '外交',
+  develop:   '发展',
+  patrol:    '守备',
+  scout:     '侦察',
+  challenge: '挑战',
+  escort:    '护镖',
+  seek_doctor: '求医',
+  hunt_treasure: '寻宝',
+  meditate:  '闭关',
+  arena:     '擂台',
+  recruit:   '招募',
+};
+
+/** 指令所属轨道 */
+export type DirectiveTrack = 'military' | 'court' | 'jianghu';
+
+/** 获取指令类型的轨道归属 */
+export function getDirectiveTrack(type: FactionDirectiveType): DirectiveTrack {
+  switch (type) {
+    case 'siege': case 'trade': case 'diplomacy':
+    case 'develop': case 'patrol': case 'scout':
+    case 'recruit':
+      return 'military';
+    case 'challenge': case 'escort': case 'seek_doctor':
+    case 'hunt_treasure': case 'meditate': case 'arena':
+      return 'jianghu';
+  }
+}
+
+/**
+ * 势力指令（一条可由 NPC 认领执行的任务）。
+ *
+ * 与旧的 executeAssign() "存字符串"不同，这里的指令：
+ * - 由 FactionAI 议事产生
+ * - 带statAffinity（用于 NPC 自动匹配：高 atk 认领 siege，高 agi 认领 trade）
+ * - 有进度条 + 过期时间
+ * - 完成后结算势力属性变化
+ */
+export interface FactionDirective {
+  id: string;
+  type: FactionDirectiveType;
+  factionId: SectId;
+  label: string;
+  description: string;
+  /** 目标地点（siege/scout/trade） */
+  targetLocation?: LocationId;
+  /** 目标势力（diplomacy/scout/siege） */
+  targetSect?: SectId;
+  /** 1-10，越高 NPC 越优先认领 */
+  priority: number;
+  /**
+   * 属性亲密度（战斗四维），表示各类属性对完成此指令的贡献权重。
+   * NPC 的 stat × affinity 之和决定 NPC 完成指令的效率。
+   * 军务轨主要使用此字段。
+   */
+  statAffinity: { atk: number; def: number; agi: number; crit: number };
+  /**
+   * 朝廷属性亲密度（江湖轨任务使用）。
+   * 例如 seek_doctor 绑定魅力(charisma)，meditate 绑定学识(scholarship)。
+   * 两个 affinity 并行计算：总进度 = 战斗亲和 + 朝廷亲和。
+   */
+  courtAffinity?: { strategy: number; eloquence: number; charisma: number; scholarship: number };
+  /** 完成所需的总工作量 */
+  progressNeeded: number;
+  currentProgress: number;
+  /** 已认领此指令的 NPC ID */
+  assignedNpcId?: string;
+  /** 玩家是否认领此指令 */
+  claimedByPlayer?: boolean;
+  completed: boolean;
+  /** 完成后的势力属性变化描述 */
+  rewardDescription: string;
+  /** 创建月份 */
+  createdAtMonth: number;
+  /** 过期月份（超时自动移除） */
+  expiresAtMonth: number;
+}
+
+/**
+ * NPC 在势力内的政务记录。
+ * 存储于 PlayerState.factionOfficials。
+ */
+export interface FactionOfficial {
+  npcId: string;
+  factionId: SectId;
+  rank: FactionOfficialRank;
+  /** 势力贡献点（功勋），用于晋升判定 */
+  contribution: number;
+  /** 本月已执行指令数 */
+  directivesDoneThisMonth: number;
+}
+
+/** 势力指令每月基数（每个 faction 每月生成的指令数量基础值） */
+export const DIRECTIVE_BASE_COUNT = 1;
+
+/** 每多控制一个城市/据点，额外 +1 指令上限 */
+export const DIRECTIVE_PER_TERRITORY = 1;
+
+/** 指令最大数量 */
+export const DIRECTIVE_MAX = 6;
+
+/** 指令默认过期月数 */
+export const DIRECTIVE_EXPIRE_MONTHS = 3;
+
+/** 执行一条指令需要的最低官阶 */
+export const DIRECTIVE_MIN_RANK: Record<FactionDirectiveType, FactionOfficialRank> = {
+  siege:     'director',
+  diplomacy: 'steward',
+  trade:     'steward',
+  develop:   'steward',
+  patrol:    'steward',
+  scout:     'steward',
+  // 江湖轨：门客即可执行（个人历练，无需势力职衔）
+  challenge:     'retainer',
+  escort:        'retainer',
+  seek_doctor:   'retainer',
+  hunt_treasure: 'retainer',
+  meditate:      'retainer',
+  arena:         'retainer',
+  recruit:       'steward',
+};
+
+// ═════════════════════════════════════════════════════════
+//  统一据点属性（三国志式：城市与门派共享同一套属性框架）
+// ═════════════════════════════════════════════════════════
+
+/**
+ * 据点属性（城市和门派据点共用）。
+ *
+ * 城市 = 高商业/低武学的据点
+ * 门派 = 高武学/低商业的据点
+ * 差异体现在权重不同，而非字段不同。
+ */
+export interface SettlementAttributes {
+  /** 人口 0-100（影响税收、征兵上限） */
+  population: number;
+  /** 繁荣度 0-100（综合经济指标） */
+  prosperity: number;
+  /** 商业值 0-100（跑商收益、税率潜力） */
+  commerce: number;
+  /** 农业值 0-100（粮食供给、人口增长基础） */
+  agriculture: number;
+  /** 驻军 0-100（防御敌军的能力） */
+  garrison: number;
+  /** 城防值 0-100（攻城难度） */
+  fortification: number;
+  /** 治安 0-100（低治安→盗贼/叛乱风险） */
+  publicOrder: number;
+  /** 开发值 0-100（影响增长速率） */
+  development: number;
+  /** 武学值 0-100（仅门派据点有，城市默认为0） */
+  martialArts: number;
+  /** 学术值 0-100（影响 NPC 培养速度） */
+  academy: number;
+  /** 城市等级（仅城市有意义） */
+  cityRank?: 'capital' | 'major' | 'minor';
+}
+
+/** 城市默认属性（按等级分档） */
+export const CITY_DEFAULTS: Record<string, SettlementAttributes> = {
+  capital: {
+    population: 80, prosperity: 65, commerce: 75, agriculture: 55,
+    garrison: 60, fortification: 70, publicOrder: 70, development: 55,
+    martialArts: 0, academy: 60, cityRank: 'capital',
+  },
+  major: {
+    population: 55, prosperity: 45, commerce: 50, agriculture: 45,
+    garrison: 40, fortification: 45, publicOrder: 60, development: 35,
+    martialArts: 0, academy: 35, cityRank: 'major',
+  },
+  minor: {
+    population: 30, prosperity: 25, commerce: 25, agriculture: 30,
+    garrison: 20, fortification: 20, publicOrder: 50, development: 15,
+    martialArts: 0, academy: 15, cityRank: 'minor',
+  },
+};
+
+/** 门派据点默认属性（按势力层级分档） */
+export const SECT_SETTLEMENT_DEFAULTS: Record<string, SettlementAttributes> = {
+  supreme: {
+    population: 40, prosperity: 50, commerce: 30, agriculture: 35,
+    garrison: 50, fortification: 55, publicOrder: 65, development: 45,
+    martialArts: 85, academy: 65,
+  },
+  first_rate: {
+    population: 30, prosperity: 40, commerce: 20, agriculture: 25,
+    garrison: 35, fortification: 40, publicOrder: 55, development: 30,
+    martialArts: 65, academy: 45,
+  },
+  second_rate: {
+    population: 20, prosperity: 30, commerce: 15, agriculture: 20,
+    garrison: 25, fortification: 25, publicOrder: 50, development: 20,
+    martialArts: 45, academy: 30,
+  },
+  fringe: {
+    population: 12, prosperity: 15, commerce: 8, agriculture: 15,
+    garrison: 15, fortification: 15, publicOrder: 40, development: 10,
+    martialArts: 30, academy: 15,
+  },
+};
+
+/**
+ * 势力层级 → 据点默认属性键的映射。
+ * 用于初始化门派据点。
+ */
+export const SECT_TIER_TO_SETTLEMENT: Record<string, string> = {
+  supreme: 'supreme',
+  first_rate: 'first_rate',
+  second_rate: 'second_rate',
+  fringe: 'fringe',
+  special: 'first_rate', // 逍遥等特殊门派按一流处理
+};
+
+/**
+ * 每月据点自然变化量（用于 monthly tick）。
+ */
+export const SETTLEMENT_MONTHLY_TICK: Partial<SettlementAttributes> = {
+  prosperity: 2,    // 繁荣度自然增长 +2/月
+  commerce: 1,      // 商业微增
+  agriculture: 1,   // 农业微增
+  publicOrder: 1,   // 治安自然恢复（无战事时）
+  development: 1,   // 开发微增
+};

@@ -20,6 +20,8 @@ import {
 } from '../data/sandboxTypes';
 import { getPlayer, setPlayer } from '../state/GameState';
 import { saveGame } from '../state/SaveSystem';
+import { computeSectPower } from './SectManagement';
+import { SECTS } from '../data/sects';
 
 // ──── 外交事件类型 ────
 
@@ -128,6 +130,9 @@ const BASE_TRUST: Record<string, Record<string, number>> = {
   qingcheng:{ wudang: 40, shaolin: 35, emei: 55, beggar: 40, huashan: 45, demon: 25, maoshan: 45, kunlun: 40, tangmen: 35, xiaoyao: 35 },
   tangmen: { wudang: 30, shaolin: 25, emei: 40, beggar: 30, huashan: 35, demon: 40, maoshan: 30, kunlun: 30, qingcheng: 35, xiaoyao: 25 },
   xiaoyao: { wudang: 50, shaolin: 45, emei: 40, beggar: 35, huashan: 30, demon: 15, maoshan: 45, kunlun: 40, qingcheng: 35, tangmen: 25 },
+  // 🆕 P7 朝廷与叛军
+  imperial_court: { wudang: 70, shaolin: 65, emei: 55, beggar: 50, huashan: 50, demon: 5, maoshan: 55, kunlun: 45, qingcheng: 45, tangmen: 35, xiaoyao: 30, quanzhen: 60, kongtong: 40, diancang: 45, riyue: 10, tiezhang: 35, wudu: 15, xuedao: 10, haisha: 20, rebels: 10 },
+  rebels:         { wudang: 20, shaolin: 15, emei: 20, beggar: 25, huashan: 25, demon: 40, maoshan: 15, kunlun: 20, qingcheng: 25, tangmen: 30, xiaoyao: 20, quanzhen: 15, kongtong: 20, diancang: 25, riyue: 35, tiezhang: 30, wudu: 35, xuedao: 40, haisha: 30, imperial_court: 10 },
 };
 
 /** 所有势力 ID 列表（排除 'none'） */
@@ -136,6 +141,7 @@ export const ALL_FACTIONS: SectId[] = [
   'maoshan', 'kunlun', 'qingcheng', 'tangmen', 'xiaoyao',
   'quanzhen', 'kongtong', 'diancang',
   'riyue', 'tiezhang', 'wudu', 'xuedao', 'haisha',
+  'imperial_court', 'rebels',
 ];
 
 // ──── 内部工具函数 ────
@@ -152,6 +158,7 @@ function factionName(id: SectId): string {
     tangmen: '唐门', xiaoyao: '逍遥派',
     quanzhen: '全真教', kongtong: '崆峒派', diancang: '点苍派',
     riyue: '日月教', tiezhang: '铁掌帮', wudu: '五毒教', xuedao: '血刀门', haisha: '海沙派',
+    imperial_court: '朝廷', rebels: '叛军',
     none: '散修',
   };
   return names[id] ?? id;
@@ -403,7 +410,7 @@ export function getFactionAlignment(id: SectId): FactionAlignment {
  */
 export function getAlignmentLabel(alignment: FactionAlignment): string {
   const labels: Record<FactionAlignment, string> = {
-    righteous: '正道', neutral: '中立', unorthodox: '邪道', chaotic: '混乱',
+    righteous: '正道', neutral: '中立', chaotic: '邪道',
   };
   return labels[alignment] ?? alignment;
 }
@@ -468,4 +475,276 @@ export function getTrustColor(trust: number): string {
   if (trust >= 30) return 'trust-neutral';
   if (trust >= 15) return 'trust-tense';
   return 'trust-hostile';
+}
+
+// ──── P7 势力联盟系统 ────
+
+export interface Coalition {
+  name: string;
+  targetSect: SectId;
+  members: SectId[];
+  formedMonth: number;
+  expireMonth: number;
+}
+
+/** 霸权阈值：超过此比例触发反霸联盟 */
+const HEGEMONY_THRESHOLD = 0.35;
+/** 联盟解散阈值：目标力量降至低于此比例 */
+const DISSOLVE_THRESHOLD = 0.25;
+/** 联盟默认持续月数 */
+const COALITION_DURATION = 6;
+
+/**
+ * 每月检查是否需要组建联盟。
+ * 当任一势力力量超过全图 35%，其他势力自动形成反霸联盟。
+ */
+export function tickCoalitions(): void {
+  const p = getPlayer();
+  const month = p.gameMonth ?? 1;
+  let coalitions = (p.coalitions ?? []) as Array<{
+    name: string; targetSect: string; members: string[];
+    formedMonth: number; expireMonth: number;
+  }>;
+
+  // 1. 清理已过期或已失效的联盟
+  coalitions = coalitions.filter(c => {
+    if (month >= c.expireMonth) return false;
+    const targetPower = computeSectPower(c.targetSect as SectId);
+    const totalPower = computeTotalWorldPower();
+    if (totalPower > 0 && targetPower / totalPower < DISSOLVE_THRESHOLD) return false;
+    return true;
+  });
+
+  // 2. 检查是否需要组建新联盟
+  const allSects = Object.keys(FACTION_DEFS).filter(s => s !== 'none' && s !== 'imperial_court' && s !== 'rebels') as SectId[];
+  const totalPower = computeTotalWorldPower();
+
+  for (const sectId of allSects) {
+    const power = computeSectPower(sectId);
+    if (totalPower === 0 || power / totalPower < HEGEMONY_THRESHOLD) continue;
+
+    // 检查是否已有针对该势力的联盟
+    const existing = coalitions.find(c => c.targetSect === sectId);
+    if (existing) continue;
+
+    // 组建联盟：挑选 3-5 个其他势力
+    const candidates = allSects
+      .filter(s => s !== sectId)
+      .map(s => ({ id: s, power: computeSectPower(s) }))
+      .sort((a, b) => b.power - a.power);
+
+    const memberCount = Math.min(5, Math.max(3, Math.floor(candidates.length * 0.4)));
+    const members = candidates.slice(0, memberCount).map(c => c.id);
+
+    const sectName = SECTS[sectId]?.name ?? sectId;
+    coalitions.push({
+      name: `反${sectName}盟`,
+      targetSect: sectId,
+      members,
+      formedMonth: month,
+      expireMonth: month + COALITION_DURATION,
+    });
+
+    // 改善联盟成员间关系
+    for (let i = 0; i < members.length; i++) {
+      for (let j = i + 1; j < members.length; j++) {
+        modifyFactionTrust(members[i]!, members[j]!, 10, '联盟缔结');
+      }
+    }
+  }
+
+  setPlayer({ ...getPlayer(), coalitions });
+}
+
+/** 计算全图总力量值 */
+function computeTotalWorldPower(): number {
+  const allSects = Object.keys(FACTION_DEFS).filter(s => s !== 'none') as SectId[];
+  return allSects.reduce((sum, s) => sum + computeSectPower(s), 0);
+}
+
+/** 获取针对某势力的活跃联盟 */
+export function getActiveCoalitionTargeting(targetSect: SectId): Coalition | null {
+  const p = getPlayer();
+  const coalitions = (p.coalitions ?? []) as Coalition[];
+  const month = p.gameMonth ?? 1;
+  return coalitions.find(c => c.targetSect === targetSect && month < c.expireMonth) ?? null;
+}
+
+/** 检查某势力是否在活跃联盟中 */
+export function isInCoalition(sectId: SectId): boolean {
+  const p = getPlayer();
+  const coalitions = (p.coalitions ?? []) as Coalition[];
+  const month = p.gameMonth ?? 1;
+  return coalitions.some(c => month < c.expireMonth &&
+    ((c.members as string[]).includes(sectId)));
+}
+
+/** 获取某势力所属联盟（可能是成员或目标） */
+export function getSectCoalition(sectId: SectId): Coalition | null {
+  const p = getPlayer();
+  const coalitions = (p.coalitions ?? []) as Coalition[];
+  const month = p.gameMonth ?? 1;
+  return coalitions.find(c => month < c.expireMonth &&
+    ((c.members as string[]).includes(sectId) || c.targetSect === sectId)) ?? null;
+}
+
+/** 获取所有活跃联盟 */
+export function getActiveCoalitions(): Coalition[] {
+  const p = getPlayer();
+  const coalitions = (p.coalitions ?? []) as Coalition[];
+  const month = p.gameMonth ?? 1;
+  return coalitions.filter(c => month < c.expireMonth);
+}
+
+// ═══════════════════════════════════════════════════════════
+// Player-driven diplomacy (Direction E)
+// ═══════════════════════════════════════════════════════════
+
+export type PlayerDiplomacyAction = 'send_envoy' | 'declare_war' | 'propose_alliance' | 'sue_for_peace';
+
+interface DiplomacyActionConfig {
+  label: string;
+  icon: string;
+  minTrustRequirement: [number, number];
+  trustEffect: number;
+  cost: { type: 'resources' | 'contribution'; amount: number };
+  minRank: string;
+}
+
+const DIPLOMACY_ACTIONS: Record<PlayerDiplomacyAction, DiplomacyActionConfig> = {
+  send_envoy: {
+    label: '遣使修好', icon: '🤝',
+    minTrustRequirement: [0, 95],
+    trustEffect: 12,
+    cost: { type: 'resources', amount: 80 },
+    minRank: 'inner',
+  },
+  declare_war: {
+    label: '宣战', icon: '⚔️',
+    minTrustRequirement: [0, 100],
+    trustEffect: -40,
+    cost: { type: 'resources', amount: 200 },
+    minRank: 'elder',
+  },
+  propose_alliance: {
+    label: '缔结同盟', icon: '🛡️',
+    minTrustRequirement: [60, 100],
+    trustEffect: 20,
+    cost: { type: 'resources', amount: 300 },
+    minRank: 'elder',
+  },
+  sue_for_peace: {
+    label: '求和', icon: '🕊️',
+    minTrustRequirement: [1, 20],
+    trustEffect: 25,
+    cost: { type: 'resources', amount: 400 },
+    minRank: 'elder',
+  },
+};
+
+const DIPLO_RANK_ORDER = ['outer', 'inner', 'true', 'elder', 'vice_leader', 'leader'];
+
+export interface DiplomaticActionResult {
+  success: boolean;
+  message: string;
+  newTrust: number;
+  newRelation: string;
+}
+
+/** 玩家主动发起外交行动。职级/信任/资源三重检查，自动扣除成本并更新关系。 */
+export function playerDiplomaticAction(
+  actionType: PlayerDiplomacyAction,
+  targetSect: SectId,
+): DiplomaticActionResult {
+  const p = getPlayer();
+  const playerSect = p.sect as SectId;
+  const config = DIPLOMACY_ACTIONS[actionType];
+  const currentTrust = getFactionTrust(playerSect, targetSect);
+
+  const playerRankIdx = DIPLO_RANK_ORDER.indexOf(p.discipleRank);
+  const requiredIdx = DIPLO_RANK_ORDER.indexOf(config.minRank);
+  if (playerRankIdx < requiredIdx) {
+    return { success: false, message: `需要 ${config.minRank}+ 身份。`, newTrust: currentTrust, newRelation: getFactionRelationLabel(playerSect, targetSect) };
+  }
+
+  const [minT, maxT] = config.minTrustRequirement;
+  if (currentTrust < minT) {
+    return { success: false, message: `关系过于紧张。信任 ${currentTrust}，需 ≥${minT}。`, newTrust: currentTrust, newRelation: getFactionRelationLabel(playerSect, targetSect) };
+  }
+  if (currentTrust > maxT) {
+    return { success: false, message: '当前关系已无需此行。', newTrust: currentTrust, newRelation: getFactionRelationLabel(playerSect, targetSect) };
+  }
+
+  const sectState = (p as any).sectState?.[playerSect];
+  const resources = sectState?.resources ?? 0;
+  if (config.cost.type === 'resources' && resources < config.cost.amount) {
+    return { success: false, message: `资源不足（需 ${config.cost.amount}，当前 ${resources}）。`, newTrust: currentTrust, newRelation: getFactionRelationLabel(playerSect, targetSect) };
+  }
+  if (config.cost.type === 'contribution' && (p.sectContribution ?? 0) < config.cost.amount) {
+    return { success: false, message: `贡献不足（需 ${config.cost.amount}，当前 ${p.sectContribution ?? 0}）。`, newTrust: currentTrust, newRelation: getFactionRelationLabel(playerSect, targetSect) };
+  }
+
+  if (config.cost.type === 'resources') {
+    import('./SectManagement').then(m => m.updateSectState(playerSect, { resources: -config.cost.amount }));
+  } else {
+    setPlayer({ ...p, sectContribution: (p.sectContribution ?? 0) - config.cost.amount });
+  }
+
+  modifyFactionTrust(playerSect, targetSect, config.trustEffect, config.label);
+
+  if (actionType === 'declare_war') {
+    import('./FactionWarfare').then(m => m.tryTriggerSiege());
+  }
+
+  const newTrust = getFactionTrust(playerSect, targetSect);
+  return {
+    success: true,
+    message: `${factionName(playerSect)} 向 ${factionName(targetSect)} ${config.label}。信任 ${currentTrust} → ${newTrust}`,
+    newTrust,
+    newRelation: getFactionRelationLabel(playerSect, targetSect),
+  };
+}
+
+/** 获取某势力的可用外交行动列表（供 UI 渲染按钮） */
+export function getAvailableDiplomacyActions(targetSect: SectId): Array<{
+  action: PlayerDiplomacyAction; label: string; icon: string;
+  enabled: boolean; reason: string; cost: string;
+}> {
+  const p = getPlayer();
+  const playerSect = p.sect as SectId;
+  const trust = getFactionTrust(playerSect, targetSect);
+  const playerRankIdx = DIPLO_RANK_ORDER.indexOf(p.discipleRank);
+
+  return (Object.entries(DIPLOMACY_ACTIONS) as [PlayerDiplomacyAction, DiplomacyActionConfig][])
+    .map(([action, config]) => {
+      const [minT, maxT] = config.minTrustRequirement;
+      const requiredIdx = DIPLO_RANK_ORDER.indexOf(config.minRank);
+      const costLabel = config.cost.type === 'resources' ? `💰${config.cost.amount}` : `⭐${config.cost.amount}`;
+      let enabled = true;
+      let reason = '';
+      if (playerRankIdx < requiredIdx) { enabled = false; reason = `需${config.minRank}+`; }
+      else if (trust < minT) { enabled = false; reason = `信任${trust}/${minT}`; }
+      else if (trust > maxT) { enabled = false; reason = '无需'; }
+      return { action, label: config.label, icon: config.icon, enabled, reason, cost: costLabel };
+    });
+}
+
+/** 获取所有势力间关系快照（供 SVG 关系图渲染） */
+export function getAllRelationsSnapshot(): Array<{
+  a: SectId; b: SectId; trust: number; relation: string; relationLabel: string;
+}> {
+  const p = getPlayer();
+  const relations = p.factionRelations ?? {};
+  const snapshots: Array<{ a: SectId; b: SectId; trust: number; relation: string; relationLabel: string }> = [];
+  const sorted = [...ALL_FACTIONS].sort();
+  for (let i = 0; i < sorted.length; i++) {
+    for (let j = i + 1; j < sorted.length; j++) {
+      const a = sorted[i]!;
+      const b = sorted[j]!;
+      const data = relations[a]?.[b];
+      if (!data) continue;
+      snapshots.push({ a, b, trust: data.trust, relation: data.relation, relationLabel: relationLabel(data.relation as FactionRelation) });
+    }
+  }
+  return snapshots;
 }

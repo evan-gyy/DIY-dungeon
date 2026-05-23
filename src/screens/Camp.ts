@@ -10,18 +10,31 @@ import { renderRelationPanel } from './camp/RelationPanel';
 import { renderFabaoPanel } from './camp/FabaoPanel';
 import { renderMissionPanel } from './camp/MissionPanel';
 import { renderCourtPanel } from './camp/CourtPanel';
+import { renderSectPanel } from './camp/SectPanel';
 import { renderWorldPanel } from './camp/WorldPanel';
+import { renderSectLeaderPanel } from './camp/SectLeaderPanel';
+import { TITLE_MAP } from '../data/titles';
 import { initWorldState, initChronicle } from '../systems/WorldState';
 import { showToast } from '../ui/toast';
-import { initNpcDatabase, tickNpcBehaviors } from '../systems/NpcBehavior';
+import { initNpcDatabase, tickNpcBehaviors, tickQuarterlySectRecruitment } from '../systems/NpcBehavior';
+import { tryTriggerSiege } from '../systems/FactionWarfare';
+import { initSectState, tickSectNaturalChange, isSectBase, getCouncilContext } from '../systems/SectManagement';
+import type { CouncilContext } from '../systems/SectManagement';
 import { getMaxRecruitSlots, getAssignmentLabel, getRankLabel } from '../systems/NPCManager';
 import { updateMissionProgress } from '../systems/MissionSystem';
-import { initFactionRelations, tickFactionDiplomacy } from '../systems/FactionSystem';
+import { initFactionRelations, tickFactionDiplomacy, tickCoalitions } from '../systems/FactionSystem';
+import { factionAITick, tickFollowerDirectiveClaim, tickPlayerDirectiveProgress } from '../systems/FactionAI';
+import { tickFollowerProposals } from '../systems/FollowerProposal';
+import { tryTriggerGrandEvent } from '../systems/GrandEventSystem';
+import { tickAmbitionEvents } from '../systems/AmbitionSystem';
+import { showGrandEventScreen } from './camp/GrandEventScreen';
 import { WORLD_MAP, type LocationId } from '../data/worldMap';
+import { SECTS } from '../data/sects';
 import { getRealmName } from '../state/LevelSystem';
 import { getNpcPortrait } from '../utils/npcPortrait';
 import type { CampTabId } from '../data/types';
-import type { DiscipleRank, NpcAssignment } from '../data/sandboxTypes';
+import type { DiscipleRank, NpcAssignment, SettlementAttributes } from '../data/sandboxTypes';
+import { getLocationRelation } from '../systems/SettlementActions';
 
 export function renderCampTopbar(): void {
   const p = getPlayer();
@@ -41,6 +54,129 @@ export function renderCampTopbar(): void {
   renderMapBar();
 }
 
+/** 朝廷品阶中文名 */
+function getCourtRankLabelText(rank: string, path: string | null): string {
+  const labelMap: Record<string, string> = {
+    commoner: '白身', xiucai: '秀才', juren: '举人', jinshi: '进士',
+    county_official: '知县', prefecture_official: '知府', minister: '尚书', grand_secretary: '大学士',
+  };
+  const wuLabelMap: Record<string, string> = {
+    commoner: '白身', xiucai: '武生', juren: '武举', jinshi: '武进士',
+    county_official: '校尉', prefecture_official: '都尉', minister: '将军', grand_secretary: '大将军',
+  };
+  if (path === 'wu') return wuLabelMap[rank] ?? rank;
+  return labelMap[rank] ?? rank;
+}
+
+/** 师门身份中文名 */
+function getRankLabelText(rank: string): string {
+  const labels: Record<string, string> = {
+    outer: '外门弟子', inner: '内门弟子', true: '真传弟子',
+    elder: '长老', vice_leader: '副掌门', leader: '掌门',
+  };
+  return labels[rank] ?? rank;
+}
+
+// ──── 据点信息（地图栏内嵌面板）────
+
+type SettlementStatKey2 = Exclude<keyof SettlementAttributes, 'cityRank'>;
+
+const SETTLEMENT_ATTR_LABELS2: Record<SettlementStatKey2, { icon: string; name: string }> = {
+  population:    { icon: '👥', name: '人口' },
+  prosperity:    { icon: '💰', name: '繁荣' },
+  commerce:      { icon: '🏪', name: '商业' },
+  agriculture:   { icon: '🌾', name: '农业' },
+  garrison:      { icon: '🛡️', name: '驻军' },
+  fortification: { icon: '🏰', name: '城防' },
+  publicOrder:   { icon: '⚖️', name: '治安' },
+  development:   { icon: '🔧', name: '开发' },
+  martialArts:   { icon: '🥋', name: '武学' },
+  academy:       { icon: '📚', name: '学术' },
+};
+
+function renderSettlementInfoInMapBar(locId: string): void {
+  const btn = document.getElementById('map-settlement-btn');
+  const panel = document.getElementById('camp-settlement-info');
+  if (!btn || !panel) return;
+
+  const p = getPlayer();
+  const state = (p.settlementState ?? {})[locId];
+  const isSandbox = p.gameMode === 'sandbox';
+
+  if (!isSandbox || !state) {
+    btn.style.display = 'none';
+    panel.style.display = 'none';
+    return;
+  }
+
+  btn.style.display = 'flex';
+  const loc = WORLD_MAP[locId as LocationId];
+  const locName = loc?.name ?? '未知';
+  const ctx = getLocationRelation(locId as LocationId);
+  const sectIcon = (SECTS as Record<string, { icon: string; name: string }>)[ctx.ownerFaction];
+  const isSect = isSectBase(locId as LocationId);
+
+  // 据点特色
+  let featureHtml = '';
+  if (isSect) {
+    const ma = state.martialArts ?? 0;
+    const ac = state.academy ?? 0;
+    if (ma >= 70) featureHtml += '<div style="color:#ffd700;">🥋 武学圣地：武学传承深厚，弟子习武事半功倍</div>';
+    else if (ma >= 40) featureHtml += '<div style="color:#e67e22;">⚔️ 习武之地：有一定的武学传承</div>';
+    if (ac >= 60) featureHtml += '<div style="color:#c39bd3;">📚 学术重镇：经藏丰富，学究辈出</div>';
+    else if (ac >= 30) featureHtml += '<div style="color:#85c1e9;">📖 书香之地：略有文风底蕴</div>';
+  } else {
+    const pop = state.population ?? 0;
+    const com = state.commerce ?? 0;
+    if (pop >= 60) featureHtml += '<div style="color:#27ae60;">🏙️ 繁华都会：人口稠密，商贾云集</div>';
+    else if (pop >= 30) featureHtml += '<div style="color:#f0b27a;">🏘️ 中等城镇：市井热闹，生活便利</div>';
+    if (com >= 60) featureHtml += '<div style="color:#c9a84c;">💎 商业枢纽：四方商路汇聚，物资丰富</div>';
+  }
+  if (!featureHtml) featureHtml = '<div style="color:var(--text-dim);">🏷️ 暂无显著特色</div>';
+
+  const attrBars = (Object.keys(SETTLEMENT_ATTR_LABELS2) as SettlementStatKey2[])
+    .map(k => {
+      const val = (state as unknown as Record<string, number>)[k] ?? 0;
+      const { icon, name } = SETTLEMENT_ATTR_LABELS2[k];
+      const barColor = val >= 70 ? 'linear-gradient(90deg,#27ae60,#2ecc71)'
+        : val >= 40 ? 'linear-gradient(90deg,#f39c12,#f0b27a)'
+        : 'linear-gradient(90deg,#e74c3c,#ef5350)';
+      return `<div class="settlement-attr-row">
+        <span class="settlement-attr-label">${icon} ${name}</span>
+        <div class="settlement-attr-bar"><div style="height:100%;width:${val}%;background:${barColor};border-radius:3px;"></div></div>
+        <span class="settlement-attr-val">${val}</span>
+      </div>`;
+    }).join('');
+
+  panel.innerHTML = `<div class="settlement-header">
+    <span class="settlement-header-icon">${isSect ? '🏯' : '🏙️'}</span>
+    <div>
+      <div class="settlement-header-name">${locName}</div>
+      <div class="settlement-header-desc">${loc?.description ?? ''}</div>
+    </div>
+  </div>
+  <div class="settlement-faction">
+    🏴 控制势力：${sectIcon ? `<span>${sectIcon.icon}</span>` : ''}
+    <span class="settlement-faction-owner">${ctx.ownerLabel}</span>
+  </div>
+  <div class="settlement-section-title">📊 据点属性</div>
+  ${attrBars}
+  <div class="settlement-section-title">🏷️ 据点特色</div>
+  <div class="settlement-feature">${featureHtml}</div>`;
+
+  // Toggle handler
+  const togglePanel = () => {
+    if (panel.style.display === 'none') {
+      panel.style.display = 'block';
+      btn.textContent = '▲';
+    } else {
+      panel.style.display = 'none';
+      btn.textContent = '📊';
+    }
+  };
+  btn.onclick = togglePanel;
+}
+
 /**
  * 渲染营地顶部地图导航栏
  * 显示当前所在地点和相邻可前往地点
@@ -58,10 +194,69 @@ export function renderMapBar(): void {
   // 隐藏描述文字
   const descEl = document.getElementById('map-location-desc');
   if (descEl) descEl.style.display = 'none';
-  
+
+  // 🆕 门派属性显示（在位置名称右侧）
+  const sectResEl = document.getElementById('map-sect-resources');
+  if (sectResEl) {
+    const sectId = isSectBase(locId);
+    if (sectId && p.sect === sectId) {
+      const state = p.sectState?.[sectId];
+      if (state) {
+        sectResEl.textContent = `💰${state.resources} 🏛️${state.stability}`;
+        sectResEl.style.display = '';
+      } else {
+        sectResEl.style.display = 'none';
+      }
+    } else {
+      sectResEl.style.display = 'none';
+    }
+  }
+
+  // 🆕 身份徽章：朝廷品阶 + 师门身份
+  const courtBadge = document.getElementById('map-court-rank-badge');
+  if (courtBadge) {
+    const courtRank = p.courtRank ?? 'commoner';
+    if (courtRank !== 'commoner' && courtRank !== 'none') {
+      const label = getCourtRankLabelText(courtRank, p.courtPath ?? null);
+      courtBadge.textContent = `🏛️ ${label}`;
+      courtBadge.style.display = '';
+      courtBadge.onclick = () => switchCampTab('court');
+    } else {
+      courtBadge.style.display = 'none';
+    }
+  }
+
+  const sectBadge = document.getElementById('map-sect-rank-badge');
+  if (sectBadge) {
+    if (p.sect && p.sect !== 'none') {
+      const rank = p.discipleRank ?? 'outer';
+      const label = getRankLabelText(rank);
+      const sectName = SECTS[p.sect]?.name ?? p.sect;
+      sectBadge.textContent = `🏯 ${sectName}·${label}`;
+      sectBadge.style.display = '';
+      sectBadge.onclick = () => switchCampTab('sect');
+    } else {
+      sectBadge.style.display = 'none';
+    }
+  }
+
+  // 🆕 称号徽章
+  const titleBadge = document.getElementById('map-title-badge');
+  if (titleBadge) {
+    if (p.activeTitle && TITLE_MAP[p.activeTitle]) {
+      titleBadge.textContent = `🏆 ${TITLE_MAP[p.activeTitle]!.name}`;
+      titleBadge.style.display = '';
+    } else {
+      titleBadge.style.display = 'none';
+    }
+  }
+
   // 清空附近地点按钮（通过地图弹窗进行移动）
   const nearbyEl = document.getElementById('map-nearby-locations');
   if (nearbyEl) nearbyEl.innerHTML = '';
+
+  // ── 据点信息面板 ──
+  renderSettlementInfoInMapBar(locId);
 }
 
 /**
@@ -107,12 +302,33 @@ export function travelToLocation(destId: LocationId): void {
     const moves = moveResults.map(r => r.detail).join('；');
     showToast(`🌍 ${moves}`);
   }
-  
+  showNpcInteractionToast(tickResults);
+
+  // 势力领土争夺
+  const siegeResult = tryTriggerSiege();
+  if (siegeResult.happened && siegeResult.newsText) {
+    showToast(`📰 江湖传闻：${siegeResult.newsText}`);
+  }
+  showWorldNewsToast();
+
+  // 时间推进
+  advanceTurn();
+
   // 更新UI
   renderCampTopbar();
   renderSidebar();
   switchCampTab(getCampTab());  // 刷新当前面板内容
   showToast(`前往了【${destLoc.name}】`);
+
+  // 旅行随机遭遇（20%概率）
+  import('../systems/EncounterSystem').then(m => {
+    const encounter = m.tryTravelEncounter(currentLoc.id, destId);
+    if (encounter) {
+      import('./camp/StoryPanel').then(sp =>
+        setTimeout(() => sp.showEncounterDialog(encounter), 600)
+      );
+    }
+  });
 }
 
 /**
@@ -378,15 +594,22 @@ export function renderSidebar(): void {
       statusClass = 'nearby-npc-status-rank';
     }
     
-    return `<div class="nearby-npc-card" data-npc-db-id="${npc.id}" data-npc-name="${npc.name}" data-npc-img="${imgPath}">
+    const isTianjiao = npc.isTianjiao === true;
+    const tianjiaoClass = isTianjiao ? 'npc-tianjiao' : '';
+    const tianjiaoStar = isTianjiao ? ' 🌟' : '';
+
+    const lastActivity = npc.recentLog?.at(-1) ?? '';
+
+    return `<div class="nearby-npc-card ${tianjiaoClass}" data-npc-db-id="${npc.id}" data-npc-name="${npc.name}" data-npc-img="${imgPath}">
       <div class="nearby-npc-img-wrap">
         <img src="${imgPath}" alt="${npc.name}" onerror="this.style.display='none'">
         <div class="nearby-npc-img-fallback" style="display:${imgPath ? 'none' : 'flex'};">?</div>
       </div>
       <div class="nearby-npc-info">
-        <div class="nearby-npc-name">${npc.name}</div>
+        <div class="nearby-npc-name">${npc.name}${tianjiaoStar}</div>
         <div class="nearby-npc-realm">${realm}</div>
         <div class="nearby-npc-status ${statusClass}">${statusText}</div>
+        ${lastActivity ? `<div class="nearby-npc-activity">${lastActivity}</div>` : ''}
         <div class="nearby-npc-location">📍 ${locName}</div>
       </div>
     </div>`;
@@ -424,7 +647,9 @@ export function switchCampTab(tab: CampTabId): void {
   if (tab === 'relation') renderRelationPanel(content);
   if (tab === 'mission')  renderMissionPanel(content);
   if (tab === 'court')   renderCourtPanel(content);
+  if (tab === 'sect')    renderSectPanel(content);
   if (tab === 'world')   renderWorldPanel(content);
+  if (tab === 'sect_leader') renderSectLeaderPanel(content);
 }
 
 export function doRest(): void {
@@ -441,6 +666,17 @@ export function doRest(): void {
     const moves = moveResults.map(r => r.detail).join('；');
     showToast(`🌙 ${moves}`);
   }
+  showNpcInteractionToast(tickResults);
+
+  // 势力领土争夺
+  const siegeResult2 = tryTriggerSiege();
+  if (siegeResult2.happened && siegeResult2.newsText) {
+    showToast(`📰 江湖传闻：${siegeResult2.newsText}`);
+  }
+  showWorldNewsToast();
+
+  // 时间推进
+  advanceTurn();
 
   // 🆕 沙盒：休息/执行日常行动触发任务进度（gather/teach 类）
   updateMissionProgress('daily_action', updated.currentLocationId);
@@ -575,6 +811,28 @@ export function enterCamp(): void {
     p = { ...p, chronicle: initChronicle() };
     needSave = true;
   }
+  // 🆕 时间系统：旧存档兼容
+  if (p.gameMonth === undefined) {
+    p = { ...p, gameMonth: 1, turnInMonth: 0, councilCooldown: 0 };
+    needSave = true;
+  }
+  // 🆕 门派经营：旧存档兼容
+  if (!p.sectState || Object.keys(p.sectState).length === 0) {
+    p = { ...p, sectState: initSectState() };
+    needSave = true;
+  }
+  // 🆕 统一据点属性：旧存档兼容初始化
+  if (!p.settlementState || Object.keys(p.settlementState).length === 0) {
+    import('../systems/SectManagement').then(m => m.initSettlements());
+  }
+  // 🆕 P8: NPC 间友好度关系初始化（仅在沙盒模式，有 NPC 数据库时）
+  if (p.gameMode === 'sandbox' && p.npcDatabase && Object.keys(p.npcDatabase).length > 0) {
+    if (!p.npcRelationship || Object.keys(p.npcRelationship).length === 0) {
+      import('../systems/NpcRelationship').then(m => {
+        m.initAllNpcRelationships();
+      });
+    }
+  }
   if (needSave) {
     setPlayer(p);
     saveGame(p);
@@ -583,12 +841,18 @@ export function enterCamp(): void {
   showScreen('camp');
   switchMusic(MUSIC.main);
 
-  // 沙盒模式：将"人物活动"标签改为"日常修行"
+  // 沙盒模式：将"人物活动"标签改为行走江湖
   const storyBtn = document.getElementById('nav-btn-story');
   if (storyBtn) {
     storyBtn.innerHTML = p.gameMode === 'sandbox'
-      ? '<span class="nav-icon">📋</span>日常修行'
+      ? '<span class="nav-icon">📋</span>行走江湖'
       : '<span class="nav-icon">💬</span>人物活动';
+  }
+
+  // 掌门模式：显示/隐藏掌门大殿标签
+  const leaderBtn = document.getElementById('nav-btn-leader');
+  if (leaderBtn) {
+    leaderBtn.style.display = p.discipleRank === 'leader' ? '' : 'none';
   }
 
   renderCampTopbar();
@@ -665,4 +929,200 @@ function showSkillReminder(type: 'learn_first' | 'equip_first'): void {
 
 function closeSkillReminder(): void {
   document.getElementById('skill-reminder')?.classList.add('hidden');
+}
+
+/** 时间推进：每次旅行/休息/日常任务后 +1 回合 */
+export function advanceTurn(): void {
+  const p = getPlayer();
+  let turnInMonth = (p.turnInMonth ?? 0) + 1;
+  let gameMonth = p.gameMonth ?? 1;
+  let councilCooldown = p.councilCooldown ?? 0;
+
+  const isNewMonth = turnInMonth >= 10;
+
+  if (isNewMonth) {
+    turnInMonth = 0;
+    gameMonth += 1;
+    councilCooldown = Math.max(0, councilCooldown - 1);
+
+    // 🆕 月度 CG 动画
+    showMonthTransition(gameMonth);
+
+    // 🆕 全局 NPC 批量行为更新
+    tickNpcBehaviors();
+
+    // 🆕 P8: NPC志向驱动的大事件（叛离/篡位/约战/自立门户/复仇）
+    tickAmbitionEvents();
+
+    // 🆕 AI 势力月度行动
+    factionAITick();
+
+    // 🆕 月度攻城事件（世界自动演算）
+    const siegeResult = tryTriggerSiege();
+    if (siegeResult.happened && siegeResult.newsText) {
+      showToast(`📰 江湖急报：${siegeResult.newsText}`);
+    }
+
+    // 🆕 随从自动认领江湖任务
+    tickFollowerDirectiveClaim();
+
+    // 🆕 玩家势力任务进度推进（月度结算）
+    const directiveResults = tickPlayerDirectiveProgress();
+    for (const msg of directiveResults) {
+      setTimeout(() => showToast(msg), 1500);
+    }
+
+    // 🆕 称号检查（月度结算）
+    import('../systems/TitleSystem').then(m => {
+      const titleMsgs = m.tickTitleCheck();
+      for (const msg of titleMsgs) {
+        setTimeout(() => showToast(msg), 2000);
+      }
+    });
+
+    // 🆕 宗门季度纳新（每3个月）
+    if (gameMonth % 3 === 0) {
+      const recruitResults = tickQuarterlySectRecruitment();
+      for (const r of recruitResults) {
+        setTimeout(() => showToast(`🏫 ${r.detail}`), 2200);
+      }
+    }
+
+    // 🆕 悬赏板刷新（月度结算）
+    import('../systems/BountySystem').then(m => {
+      const bountyMsgs = m.tickBountyRefresh();
+      for (const msg of bountyMsgs) {
+        setTimeout(() => showToast(msg), 2500);
+      }
+    });
+
+    // 🆕 NPC 间关系演化（月度：道侣/师徒/结义等）
+    import('../systems/NpcRelationshipSystem').then(m => {
+      const relationEvents = m.tickNpcRelationships();
+      for (const ev of relationEvents) {
+        setTimeout(() => showToast(`💞 ${ev.narrative}`), 3000);
+      }
+    });
+
+    // 🆕 随从献策（月度概率触发）
+    const newProposals = tickFollowerProposals();
+    for (const prop of newProposals) {
+      setTimeout(() => {
+        showToast(`💡 ${prop.followerName}献策：「${prop.title}」—— 前往随从面板查看详情`);
+      }, 2500);
+    }
+
+    // 🆕 统一据点月度增长
+    import('../systems/SectManagement').then(m => m.tickSettlements());
+
+    // 🆕 联盟系统月度检查
+    tickCoalitions();
+
+    // 🆕 月初刷新 UI（延迟以配合动画）
+    setTimeout(() => {
+      renderSidebar();
+      const content = document.getElementById('camp-content');
+      if (content) {
+        const tab = getCampTab();
+        if (tab === 'world') renderWorldPanel(content);
+        if (tab === 'story') renderStoryPanel(content);
+      }
+    }, 1800);
+  }
+
+  // 每回合：门派自然增长/衰退
+  tickSectNaturalChange();
+
+  setPlayer({ ...p, turnInMonth, gameMonth, councilCooldown });
+
+  // 月初触发议事检查
+  if (isNewMonth) {
+    checkCouncilTrigger();
+
+    // 🆕 江湖大事件（延迟以避免与议事重叠）
+    setTimeout(() => {
+      const grandEvent = tryTriggerGrandEvent();
+      if (grandEvent) {
+        showGrandEventScreen(grandEvent);
+      }
+    }, 3500);
+  }
+
+  // 每回合展示世界新闻
+  showWorldNewsToast();
+}
+
+/** 月度过渡动画 */
+function showMonthTransition(month: number): void {
+  const div = document.createElement('div');
+  div.className = 'month-transition';
+  div.textContent = `—— 第 ${month} 月 ——`;
+  document.body.appendChild(div);
+  setTimeout(() => div.remove(), 2200);
+}
+
+/** 检查是否触发月度议事 */
+function checkCouncilTrigger(): void {
+  const p = getPlayer();
+  const playerSect = p.sect;
+  if (!playerSect || playerSect === 'none') return;
+
+  // 冷却是否到期？
+  if ((p.councilCooldown ?? 0) > (p.gameMonth ?? 1)) return;
+
+  // 门派资源是否足够？
+  const state = p.sectState?.[playerSect];
+  if (!state || state.resources <= 50) {
+    showToast(`📜 ${SECTS[playerSect]?.name ?? playerSect}门派困顿，本月无力召开议事。`);
+    return;
+  }
+
+  const locId = p.currentLocationId ?? 'wudang_mountain';
+
+  // 玩家是否在门派据点？
+  const baseSectId = isSectBase(locId);
+
+  if (baseSectId === playerSect) {
+    // 在据点 → 直接触发议事
+    const ctx = getCouncilContext(playerSect);
+    setTimeout(() => {
+      import('./camp/CouncilScreen').then(m => m.showCouncilScreen(ctx));
+    }, 300);
+  } else {
+    // 不在据点 → 信使来报
+    const sectName = SECTS[playerSect]?.name ?? playerSect;
+    showToast(`📨 ${sectName}急召：速回总舵参加本月议事！`);
+  }
+}
+
+/** 回合结束后展示当前地点的 NPC 互动摘要 */
+function showNpcInteractionToast(tickResults: ReturnType<typeof tickNpcBehaviors>): void {
+  const interactResults = tickResults.filter(r => r.action === 'npc_interact');
+  if (interactResults.length === 0) return;
+  const maxShow = 3;
+  const shown = interactResults.slice(0, maxShow).map(r => r.detail).join('；');
+  const more = interactResults.length > maxShow ? `…等${interactResults.length}起事件` : '';
+  showToast(`📜 周围动向：${shown}${more}`);
+}
+
+/** 显示最近的江湖传闻（过期的自动清除） */
+function showWorldNewsToast(): void {
+  const p = getPlayer();
+  const news = p.worldNews ?? [];
+  if (news.length === 0) return;
+
+  // 清除过期新闻并显示最新一条
+  const active = news.filter(n => n.leftTime > 0);
+  if (active.length === 0) {
+    setPlayer({ ...p, worldNews: [] });
+    return;
+  }
+
+  // 显示最新一条
+  const latest = active[0]!;
+  showToast(`📰 ${latest.text}`);
+
+  // 递减 leftTime 并移除过期
+  const updated = active.map(n => ({ ...n, leftTime: n.leftTime - 1 })).filter(n => n.leftTime > 0);
+  setPlayer({ ...p, worldNews: updated });
 }

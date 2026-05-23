@@ -141,13 +141,30 @@ export function confirmCreate(): void {
       factionRelations: {} as Record<string, Record<string, { relation: string; trust: number; lastEvent?: string; lastEventTurn?: number }>>,
       diplomacyTickCounter: 0,
       npcAffection: {} as Record<string, number>,
+      npcRelationship: {} as Record<string, number>,
+      npcRelationshipLabels: {} as Record<string, string[]>,
       currentLocationId: 'kaifeng_city', // 沙盒起点：东京汴梁
       playerTalent: 'dragon_vein',
       _slot: _pendingSlot,
       courtStats: { strategy: 10, eloquence: 10, charisma: 10, scholarship: 10 },
+      combatStatExp: { atk: 0, def: 0, agi: 0, crit: 0 },
+      courtStatExp: { strategy: 0, eloquence: 0, charisma: 0, scholarship: 0 },
       influence: 0,
       courtPath: null,
+      playerCareer: null,
       lastActionType: 'idle',
+      gameMonth: 1,
+      turnInMonth: 0,
+      councilCooldown: 0,
+      stealCooldowns: {},
+      killCount: 0,
+      stealSuccessCount: 0,
+      playerTitles: [],
+      activeTitle: null,
+      bountyBoard: [],
+      activeBountyId: null,
+      lastBountyRefresh: 0,
+      sectState: {},
     };
 
     setPlayer(player);
@@ -164,7 +181,7 @@ export function confirmCreate(): void {
         mp: newStats.mp, maxMp: newStats.mp,
         atk: newStats.atk, def: newStats.def, agi: newStats.agi, crit: newStats.crit,
         level: 1, exp: 0,
-        chapter: 2,  // 沙盒不使用章节系统，直接解锁日常修行
+        chapter: 2,  // 沙盒不使用章节系统，直接解锁行走江湖
         tutorialDone: true,
       };
       setPlayer(updated);
@@ -222,13 +239,30 @@ export function confirmCreate(): void {
       factionRelations: {} as Record<string, Record<string, { relation: string; trust: number; lastEvent?: string; lastEventTurn?: number }>>,
       diplomacyTickCounter: 0,
       npcAffection: {} as Record<string, number>,
+      npcRelationship: {} as Record<string, number>,
+      npcRelationshipLabels: {} as Record<string, string[]>,
       currentLocationId: 'wudang_mountain',
       playerTalent: 'dragon_vein',
       _slot: _pendingSlot,
       courtStats: { strategy: 10, eloquence: 10, charisma: 10, scholarship: 10 },
+      combatStatExp: { atk: 0, def: 0, agi: 0, crit: 0 },
+      courtStatExp: { strategy: 0, eloquence: 0, charisma: 0, scholarship: 0 },
       influence: 0,
       courtPath: null,
+      playerCareer: null,
       lastActionType: 'idle',
+      gameMonth: 1,
+      turnInMonth: 0,
+      councilCooldown: 0,
+      stealCooldowns: {},
+      killCount: 0,
+      stealSuccessCount: 0,
+      playerTitles: [],
+      activeTitle: null,
+      bountyBoard: [],
+      activeBountyId: null,
+      lastBountyRefresh: 0,
+      sectState: {},
     };
     setPlayer(player);
     saveGame(player, _pendingSlot);
