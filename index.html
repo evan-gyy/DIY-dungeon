@@ -8,7 +8,7 @@
 <body>
 
 <canvas id="bg-canvas"></canvas>
-<button id="audio-control">♪ 音乐</button>
+<button id="audio-control" title="音乐：开">♪</button>
 <div id="toast"></div>
 
 <!-- =========================================================
@@ -120,11 +120,16 @@
         <span class="map-icon">🗺️</span>
         <span class="map-location-label" id="map-location-label">武当外门</span>
         <span class="map-sect-resources" id="map-sect-resources" style="display:none;"></span>
+        <button class="map-settlement-btn" id="map-settlement-btn" style="display:none;" title="据点详情">📊</button>
+        <span class="map-rank-badge court-rank-badge" id="map-court-rank-badge" style="display:none;" title="朝廷品阶">🏛️</span>
+        <span class="map-rank-badge sect-rank-badge" id="map-sect-rank-badge" style="display:none;" title="宗门情况">🏯</span>
+        <span class="map-rank-badge title-badge" id="map-title-badge" style="display:none;" title="当前称号">🏆</span>
       </div>
       <div class="map-bar-right" id="map-nearby-locations">
         <!-- 通过地图弹窗进行移动 -->
       </div>
     </div>
+    <div class="camp-settlement-info" id="camp-settlement-info" style="display:none;"></div>
     <nav class="camp-nav">
       <button class="camp-nav-btn" data-tab="story" id="nav-btn-story"><span class="nav-icon">💬</span>人物活动</button>
       <button class="camp-nav-btn" data-tab="attr"><span class="nav-icon">📊</span>角色属性</button>
@@ -134,7 +139,9 @@
       <button class="camp-nav-btn" data-tab="relation"><span class="nav-icon">👥</span>人物关系</button>
       <button class="camp-nav-btn" data-tab="mission"><span class="nav-icon">📋</span>宗门任务</button>
       <button class="camp-nav-btn" data-tab="court"><span class="nav-icon">🏛️</span>庙堂之上</button>
+      <button class="camp-nav-btn" data-tab="sect"><span class="nav-icon">🏯</span>宗门情况</button>
       <button class="camp-nav-btn" data-tab="world"><span class="nav-icon">🌏</span>江湖态势</button>
+      <button class="camp-nav-btn" data-tab="sect_leader" id="nav-btn-leader" style="display:none;"><span class="nav-icon">👑</span>掌门大殿</button>
     </nav>
     <div class="camp-content" id="camp-content"></div>
     <aside class="camp-sidebar" id="camp-sidebar">
